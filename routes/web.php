@@ -16,3 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
    phpinfo();
 });
+
+Route::get('/test', function(){
+	dd('Testing git remote');
+});
