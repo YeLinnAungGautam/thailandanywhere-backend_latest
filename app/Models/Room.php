@@ -10,7 +10,16 @@ class Room extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','hotel_id','extra_price','room_price','description','cost','max_person'];
+    protected $fillable = [
+        'name',
+        'hotel_id',
+        'extra_price',
+        'room_price',
+        'description',
+        'cost',
+        'max_person',
+        'is_extra'
+    ];
 
     public function hotel(): BelongsTo
     {
@@ -22,5 +31,5 @@ class Room extends Model
         return $this->hasMany(RoomImage::class);
     }
 
-    
+
 }

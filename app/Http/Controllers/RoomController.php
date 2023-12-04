@@ -12,7 +12,6 @@ use App\Traits\ImageManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-
 class RoomController extends Controller
 {
     use ImageManager;
@@ -35,6 +34,7 @@ class RoomController extends Controller
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(RoomResource::collection($data)
             ->additional([
                 'meta' => [
@@ -58,7 +58,8 @@ class RoomController extends Controller
             'extra_price' => $request->extra_price,
             'room_price' => $request->room_price,
             'description' => $request->description,
-            'max_person'  => $request->max_person
+            'max_person' => $request->max_person,
+            'is_extra' => $request->is_extra ?? 0
         ]);
 
         if ($request->file('images')) {
@@ -67,7 +68,6 @@ class RoomController extends Controller
                 RoomImage::create(['room_id' => $save->id, 'image' => $fileData['fileName']]);
             };
         }
-
 
         return $this->success(new RoomResource($save), 'Successfully created', 200);
     }
@@ -87,7 +87,7 @@ class RoomController extends Controller
      */
     public function update(UpdateRoomRequest $request, Room $room)
     {
-        
+
         $room->update([
             'name' => $request->name ?? $room->name,
             'hotel_id' => $request->hotel_id ?? $room->hotel_id,
@@ -95,13 +95,13 @@ class RoomController extends Controller
             'description' => $request->description ?? $room->description,
             'extra_price' => $request->extra_price ?? $room->extra_price,
             'room_price' => $request->room_price ?? $room->room_price,
-            'max_person' => $request->max_person
+            'max_person' => $request->max_person,
+            'is_extra' => $request->is_extra ?? 0
         ]);
 
         if ($request->file('images')) {
 
-            if($room->images)
-            {
+            if($room->images) {
                 foreach ($room->images as $image) {
                     Storage::delete('public/images/' . $image->image);
                     $image->delete();
@@ -122,17 +122,18 @@ class RoomController extends Controller
      */
     public function destroy(Room $room)
     {
-        $room_images = RoomImage::where('room_id','=',$room->id)->get();
+        $room_images = RoomImage::where('room_id', '=', $room->id)->get();
 
-        foreach($room_images as $room_image){
+        foreach($room_images as $room_image) {
 
             Storage::delete('public/images/' . $room_image->image);
 
         }
 
-        RoomImage::where('room_id',$room->id)->delete();
+        RoomImage::where('room_id', $room->id)->delete();
 
         $room->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
     }
 }

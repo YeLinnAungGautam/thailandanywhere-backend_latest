@@ -35,6 +35,7 @@ class HotelController extends Controller
                 $q->whereIn('id', function ($q1) use ($max_price) {
                     $q1->select('hotel_id')
                         ->from('rooms')
+                        ->where('is_extra', 0)
                         ->where('room_price', '<=', $max_price);
                 });
             })
