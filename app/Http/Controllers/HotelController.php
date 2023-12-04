@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Hotel;
-use App\Models\HotelImage;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Models\HotelContract;
-use App\Traits\HttpResponses;
-use App\Http\Resources\HotelResource;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\StoreHotelRequest;
 use App\Http\Requests\UpdateHotelRequest;
+use App\Http\Resources\HotelResource;
+use App\Models\Hotel;
+use App\Models\HotelContract;
+use App\Models\HotelImage;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class HotelController extends Controller
 {
@@ -25,14 +25,31 @@ class HotelController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $max_price = (int) $request->query('max_price');
+        $city_id = $request->query('city_id');
+        $place = $request->query('place');
 
-        $query = Hotel::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
+        $query = Hotel::query()
+            ->with('rooms')
+            ->when($max_price, function ($q) use ($max_price) {
+                $q->whereIn('id', function ($q1) use ($max_price) {
+                    $q1->select('hotel_id')
+                        ->from('rooms')
+                        ->where('room_price', '<=', $max_price);
+                });
+            })
+            ->when($city_id, function ($c_query) use ($city_id) {
+                $c_query->where('city_id', $city_id);
+            })
+            ->when($place, function ($p_query) use ($place) {
+                $p_query->where('place', $place);
+            })
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('name', 'LIKE', "%{$search}%");
+            });
 
         $data = $query->paginate($limit);
+
         return $this->success(HotelResource::collection($data)
             ->additional([
                 'meta' => [
@@ -49,16 +66,16 @@ class HotelController extends Controller
     public function store(StoreHotelRequest $request)
     {
         $save = Hotel::create([
-             'name' => $request->name,
-             'payment_method' => $request->payment_method,
-             'bank_name' => $request->bank_name,
-             'bank_account_number' => $request->bank_account_number,
-             'city_id' => $request->city_id,
-             'account_name' => $request->account_name,
-             'place' => $request->place,
-             'legal_name' => $request->legal_name,
-             'contract_due' => $request->contract_due,
-         ]);
+            'name' => $request->name,
+            'payment_method' => $request->payment_method,
+            'bank_name' => $request->bank_name,
+            'bank_account_number' => $request->bank_account_number,
+            'city_id' => $request->city_id,
+            'account_name' => $request->account_name,
+            'place' => $request->place,
+            'legal_name' => $request->legal_name,
+            'contract_due' => $request->contract_due,
+        ]);
 
         $contractArr = [];
 
@@ -127,8 +144,7 @@ class HotelController extends Controller
 
         if ($request->file('images')) {
 
-            if($hotel->images)
-            {
+            if($hotel->images) {
                 foreach ($hotel->images as $image) {
                     Storage::delete('public/images/' . $image->image);
                     $image->delete();
@@ -150,17 +166,18 @@ class HotelController extends Controller
      */
     public function destroy(Hotel $hotel)
     {
-        $hotel_images = HotelImage::where('hotel_id','=',$hotel->id)->get();
+        $hotel_images = HotelImage::where('hotel_id', '=', $hotel->id)->get();
 
-        foreach($hotel_images as $hotel_image){
+        foreach($hotel_images as $hotel_image) {
 
             Storage::delete('public/images/' . $hotel_image->image);
 
         }
 
-        HotelImage::where('hotel_id',$hotel->id)->delete();
+        HotelImage::where('hotel_id', $hotel->id)->delete();
 
         $hotel->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
     }
 }

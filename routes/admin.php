@@ -20,13 +20,12 @@ use App\Http\Controllers\Admin\PrivateVanTourController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\RoomController;
-use App\Http\Controllers\Admin\ReportController;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -35,7 +34,7 @@ Route::get('/reservations/{id}/receipt', [ReservationController::class, 'printRe
 Route::get('/hotel-reservation/{id}/receipt', [ReservationController::class, 'printReservationHotel']);
 Route::get('/vantour-reservation/{id}/receipt', [ReservationController::class, 'printReservationVantour']);
 
-Route::get('/customer-sale',[ReportController::class,'getCustomerSale']);
+Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 
 Route::get('/super', function () {
     return 'this is super admin only';
@@ -44,15 +43,15 @@ Route::get('/super', function () {
 
 Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
-    Route::get('/sales-report',[ReportController::class, 'salesAmount']);
-    Route::get('/sales-count',[ReportController::class, 'salesCount']);
-    Route::get('/bookings-count',[ReportController::class, 'bookingsCount']);
-    Route::get('/reservations-count',[ReportController::class, 'reservationsCount']);
+    Route::get('/sales-report', [ReportController::class, 'salesAmount']);
+    Route::get('/sales-count', [ReportController::class, 'salesCount']);
+    Route::get('/bookings-count', [ReportController::class, 'bookingsCount']);
+    Route::get('/reservations-count', [ReportController::class, 'reservationsCount']);
 
-    Route::get('/reports',[ReportController::class, 'index']);
+    Route::get('/reports', [ReportController::class, 'index']);
 
-    Route::get('/get-reports/{id}',[ReportController::class, 'getSelectData']);
-    Route::get('/get-each-user-report',[ReportController::class, 'getEachUserSaleCount']);
+    Route::get('/get-reports/{id}', [ReportController::class, 'getSelectData']);
+    Route::get('/get-each-user-report', [ReportController::class, 'getEachUserSaleCount']);
 
     Route::apiResource('admins', AdminController::class);
     Route::get('/me', [AuthController::class, 'me']);

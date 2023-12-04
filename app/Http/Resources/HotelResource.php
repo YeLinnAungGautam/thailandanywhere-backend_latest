@@ -14,7 +14,8 @@ class HotelResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
+        // return parent::toArray($request); 
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -29,6 +30,7 @@ class HotelResource extends JsonResource
             'rooms' => $this->rooms,
             'contacts' => HotelContractResource::collection($this->contracts),
             'images' => HotelImageResource::collection($this->images),
+            'lowest_room_price' => $this->rooms->sortBy('room_price')->first()->room_price ?? 0,
             'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,

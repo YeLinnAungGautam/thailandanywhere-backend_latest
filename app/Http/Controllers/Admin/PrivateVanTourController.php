@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use App\Models\PrivateVanTour;
-use Illuminate\Validation\Rule;
-use App\Models\PrivateVanTourImage;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\PrivateVanTourResource;
 use App\Http\Requests\StorePrivateVanTourRequest;
 use App\Http\Requests\UpdatePrivateVanTourRequest;
+use App\Http\Resources\PrivateVanTourResource;
+use App\Models\PrivateVanTour;
+use App\Models\PrivateVanTourImage;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PrivateVanTourController extends Controller
 {
@@ -26,16 +25,24 @@ class PrivateVanTourController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $max_price = (int) $request->query('max_price');
 
-        $query = PrivateVanTour::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
-
-        $query->orderBy('created_at', 'desc');
+        $query = PrivateVanTour::query()
+            ->with('cars')
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($max_price, function ($q) use ($max_price) {
+                $q->whereIn('id', function ($q1) use ($max_price) {
+                    $q1->select('private_van_tour_id')
+                        ->from('private_van_tour_cars')
+                        ->where('price', '<=', $max_price);
+                });
+            })
+            ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
+
         return $this->success(PrivateVanTourResource::collection($data)
             ->additional([
                 'meta' => [
@@ -212,6 +219,7 @@ class PrivateVanTourController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Models\AirlineTicket;
-use App\Traits\HttpResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AirlineTicketResource;
+use App\Models\AirlineTicket;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
 
 class AirlineTicketController extends Controller
 {
@@ -20,14 +20,22 @@ class AirlineTicketController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $airline_id = $request->query('airline_id');
 
-        $query = AirlineTicket::query();
+        $query = AirlineTicket::query()
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('description', 'LIKE', "%{$search}%");
+            })
+            ->when($airline_id, function ($a_query) use ($airline_id) {
+                $a_query->where('airline_id', $airline_id);
+            });
 
         if ($search) {
             $query->where('description', 'LIKE', "%{$search}%");
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(AirlineTicketResource::collection($data)
             ->additional([
                 'meta' => [
@@ -82,6 +90,7 @@ class AirlineTicketController extends Controller
     public function destroy(AirlineTicket $airline_ticket)
     {
         $airline_ticket->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
     }
 }
