@@ -19,7 +19,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://sales-admin.thanywhere.com','http://staging-admin.thanywhere.com','https://staging-admin.thanywhere.com','http://localhost:5173'],
+    'allowed_origins' => [
+        'https://sales-admin.thanywhere.com',
+        'http://staging-admin.thanywhere.com',
+        'https://staging-admin.thanywhere.com',
+        'http://localhost:5173',
+        'http://mm.thanywhere.com'
+    ],
 
     'allowed_origins_patCterns' => [],
 
