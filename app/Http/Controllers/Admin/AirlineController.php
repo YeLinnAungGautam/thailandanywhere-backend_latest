@@ -20,14 +20,18 @@ class AirlineController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $max_price = (int) $request->query('max_price');
 
-        $query = Airline::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
+        $query = Airline::query()
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($max_price, function ($p_query) use ($max_price) {
+                $p_query->where('starting_balance', '<=', $max_price);
+            });
 
         $data = $query->paginate($limit);
+
         return $this->success(AirlineResource::collection($data)
             ->additional([
                 'meta' => [
@@ -52,7 +56,7 @@ class AirlineController extends Controller
 
         if($file = $request->file('contract')) {
             $fileData = $this->uploads($file, 'contracts/');
-            $data['contract'] =  $fileData['fileName'];
+            $data['contract'] = $fileData['fileName'];
         }
 
         $save = Airline::create($data);
@@ -95,6 +99,7 @@ class AirlineController extends Controller
     public function destroy(Airline $airline)
     {
         $airline->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
     }
 }

@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\GroupTour;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use App\Models\GroupTourImage;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\GroupTourResource;
 use App\Http\Requests\StoreGroupTourRequest;
 use App\Http\Requests\UpdateGroupTourRequest;
+use App\Http\Resources\GroupTourResource;
+use App\Models\GroupTour;
+use App\Models\GroupTourImage;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class GroupTourController extends Controller
 {
@@ -25,16 +25,21 @@ class GroupTourController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $city_id = $request->query('city_id');
 
-        $query = GroupTour::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
-
-        $query->orderBy('created_at', 'desc');
+        $query = GroupTour::query()
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($city_id, function ($c_query) use ($city_id) {
+                $c_query->whereIn('id', function ($q) use ($city_id) {
+                    $q->select('group_tour_id')->from('group_tour_cities')->where('city_id', $city_id);
+                });
+            })
+            ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
+
         return $this->success(GroupTourResource::collection($data)
             ->additional([
                 'meta' => [
@@ -192,6 +197,7 @@ class GroupTourController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }

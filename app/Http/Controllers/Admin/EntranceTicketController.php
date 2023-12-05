@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\EntranceTicketContract;
-use App\Models\HotelContract;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use App\Models\EntranceTicket;
-use App\Models\EntranceTicketImage;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\EntranceTicketResource;
 use App\Http\Requests\StoreEntranceTicketRequest;
 use App\Http\Requests\UpdateEntranceTicketRequest;
+use App\Http\Resources\EntranceTicketResource;
+use App\Models\EntranceTicket;
+use App\Models\EntranceTicketContract;
+use App\Models\EntranceTicketImage;
 use App\Models\EntranceTicketVariation;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EntranceTicketController extends Controller
 {
@@ -28,18 +27,16 @@ class EntranceTicketController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $city_id = $request->query('city_id');
 
-        $query = EntranceTicket::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
-
-        
-
-        $query->orderBy('created_at', 'desc');
+        $query = EntranceTicket::query()
+            ->when($search, function ($query) use ($search) {
+                $query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
+
         return $this->success(EntranceTicketResource::collection($data)
             ->additional([
                 'meta' => [
@@ -260,6 +257,7 @@ class EntranceTicketController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }

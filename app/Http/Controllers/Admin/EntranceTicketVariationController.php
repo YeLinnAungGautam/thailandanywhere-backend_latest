@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EntranceTicketVariationResource;
 use App\Models\EntranceTicketVariation;
+use App\Traits\HttpResponses;
+use Illuminate\Http\Request;
 
 class EntranceTicketVariationController extends Controller
 {
@@ -17,20 +17,21 @@ class EntranceTicketVariationController extends Controller
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
-        $search = $request->query('search');
 
-        $query = EntranceTicketVariation::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
-        
-        
-        if ($request->entrance_ticket_id) {
-            $query->where('entrance_ticket_id', $request->entrance_ticket_id);
-        }
+        $query = EntranceTicketVariation::query()
+            ->when($request->query('search'), function ($query) use ($request) {
+                $query->where('name', 'LIKE', "%{$request->query('search')}%");
+            })
+            ->when($request->entrance_ticket_id, function ($et_query) use ($request) {
+                $et_query->where('entrance_ticket_id', $request->entrance_ticket_id);
+            })
+            ->when($request->query('max_price'), function ($q) use ($request) {
+                $max_price = (int) $request->query('max_price');
+                $q->where('price', '<=', $max_price);
+            });
 
         $data = $query->paginate($limit);
+
         return $this->success(EntranceTicketVariationResource::collection($data)
             ->additional([
                 'meta' => [
@@ -92,6 +93,7 @@ class EntranceTicketVariationController extends Controller
     public function destroy(EntranceTicketVariation $entrance_tickets_variation)
     {
         $entrance_tickets_variation->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
     }
 }

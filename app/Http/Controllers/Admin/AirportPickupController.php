@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Models\AirportPickup;
-use App\Traits\HttpResponses;
-use App\Models\AirportPickupImage;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\AirportPickupResource;
 use App\Http\Requests\StoreAirportPickupRequest;
 use App\Http\Requests\UpdateAirportPickupRequest;
+use App\Http\Resources\AirportPickupResource;
+use App\Models\AirportPickup;
+use App\Models\AirportPickupImage;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AirportPickupController extends Controller
 {
@@ -25,16 +25,27 @@ class AirportPickupController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $city_id = $request->query('city_id');
+        $car_id = $request->query('car_id');
 
-        $query = AirportPickup::query();
-
-        if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
-        }
-
-        $query->orderBy('created_at', 'desc');
+        $query = AirportPickup::query()
+            ->when($search, function ($s_query) use ($search) {
+                $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($city_id, function ($ct_query) use ($city_id) {
+                $ct_query->whereIn('id', function ($q1) use ($city_id) {
+                    $q1->select('airport_pickup_id')->from('airport_pickup_cities')->where('city_id', $city_id);
+                });
+            })
+            ->when($car_id, function ($c_query) use ($car_id) {
+                $c_query->whereIn('id', function ($q1) use ($car_id) {
+                    $q1->select('airport_pickup_id')->from('airport_pickup_cars')->where('car_id', $car_id);
+                });
+            })
+            ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
+
         return $this->success(AirportPickupResource::collection($data)
             ->additional([
                 'meta' => [
@@ -209,6 +220,7 @@ class AirportPickupController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }
