@@ -27,11 +27,15 @@ class EntranceTicketController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
-        $city_id = $request->query('city_id');
 
         $query = EntranceTicket::query()
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($request->query('city_id'), function ($c_query) use ($request) {
+                $c_query->whereIn('id', function ($q) use ($request) {
+                    $q->select('entrance_ticket_id')->from('entrance_ticket_cities')->where('city_id', $request->query('city_id'));
+                });
             })
             ->orderBy('created_at', 'desc');
 
