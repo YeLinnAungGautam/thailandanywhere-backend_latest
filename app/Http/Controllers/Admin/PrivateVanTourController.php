@@ -39,6 +39,11 @@ class PrivateVanTourController extends Controller
                         ->where('price', '<=', $max_price);
                 });
             })
+            ->when($request->query('city_id'), function ($c_q) use ($request) {
+                $c_q->whereIn('id', function ($qq) use ($request) {
+                    $qq->select('private_van_tour_id')->from('private_van_tour_cities')->where('city_id', $request->query('city_id'));
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
