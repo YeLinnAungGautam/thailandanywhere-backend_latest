@@ -56,6 +56,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('admins', AdminController::class);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('current-sale-rank', [AdminController::class, 'getCurrentSaleRank']);
 
     Route::get('categories-list', [CategoryController::class, 'getCategoryList']);
     Route::get('tags-list', [TagController::class, 'getTagList']);

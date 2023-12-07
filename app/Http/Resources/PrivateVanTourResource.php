@@ -3,8 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class PrivateVanTourResource extends JsonResource
 {
@@ -27,6 +27,7 @@ class PrivateVanTourResource extends JsonResource
             'tags' => PrivateVanTourTagResource::collection($this->tags),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
+            'lowest_car_price' => $this->cars()->orderByPivot('price')->first()->pivot->price ?? 0,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

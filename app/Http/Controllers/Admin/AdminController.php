@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Admin;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminResource;
+use App\Models\Admin;
+use App\Services\SaleReportService;
+use App\Traits\HttpResponses;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -101,6 +102,15 @@ class AdminController extends Controller
     public function destroy(Admin $admin)
     {
         $admin->delete();
+
         return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    /**
+     * Get current sale ranking of the auth user
+     */
+    public function getCurrentSaleRank()
+    {
+        return $this->success(['rank' => SaleReportService::getSaleRank(auth('sanctum')->user())], 200);
     }
 }
