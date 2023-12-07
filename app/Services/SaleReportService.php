@@ -21,7 +21,7 @@ class SaleReportService
 
     public static function getSaleCount(?string $date = null): Collection
     {
-        $date = $date ?? Carbon::now()->subDays(2)->format('Y-m-d');
+        $date = $date ?? Carbon::now()->format('Y-m-d');
 
         return Booking::query()
             ->whereDate('created_at', $date)
