@@ -92,7 +92,7 @@
     <div id="watermark">
         <img src="{{ public_path() . '/assets/hotel_template.jpg' }}" height="100%" width="100%" />
     </div>
-    
+
     <div>
         <div style="margin-top: 430px;
         padding: 0px 23px">
@@ -109,8 +109,11 @@
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation ID:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}
-</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation Code:</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->slip_code ?? '-' }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
@@ -150,7 +153,7 @@
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Check-In:
                         </td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        {{ Carbon\Carbon::parse($data->checkin_date)->format('d F Y') }} 
+                        {{ Carbon\Carbon::parse($data->checkin_date)->format('d F Y') }}
                         </td>
                     </tr>
                     <td style="width:30%;font-size:13px;padding-bottom:12px!important">Check-Out:
@@ -199,7 +202,7 @@
     @if ($data->payment_status === 'not_paid') color:red; @endif">
     {{ ucwords(str_replace('_', ' ', $data->payment_status)) }}
 </td>
-                        
+
                     </tr>
                 </tbody>
             </table>

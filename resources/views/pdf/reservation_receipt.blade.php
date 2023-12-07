@@ -109,8 +109,11 @@
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation ID:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}
-                    </td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation Code:</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->slip_code ?? '-' }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
