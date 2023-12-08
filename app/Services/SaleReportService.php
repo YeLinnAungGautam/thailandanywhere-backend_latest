@@ -74,7 +74,7 @@ class SaleReportService
         $results = BookingResource::collection($data);
 
         $items = [];
-
+        $one = [];
         foreach($results as $res) {
             foreach($res->items as $res1) {
                 $reserve_types = substr($res1->product_type, 11);

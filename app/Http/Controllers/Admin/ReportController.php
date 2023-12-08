@@ -56,16 +56,23 @@ class ReportController extends Controller
 
     public function getSelectData($date)
     {
-        $report_service = new SaleReportService($date);
+
+        $sales_amount = $this->salesData($date);
+        $sales_count = $this->salesCountData($date);
+        $bookings = $this->bookingsData($date);
+        $reservations = $this->reservationsData($date);
+
+        $date = 'Date: '.Carbon::parse($date)->format('d F Y');
+
 
         $data = [
-            'sales' => $report_service->getSaleData(),
-            'sales_count' => $report_service->getSaleCountData(),
-            'bookings' => $report_service->getBookingData(),
-            'reservations' => $report_service->getReservationsData()
+            'sales' => $sales_amount,
+            'sales_count' => $sales_count,
+            'bookings' => $bookings,
+            'reservations' => $reservations
         ];
 
-        return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));
+        return $this->success($data, $date);
 
     }
 
@@ -232,6 +239,162 @@ class ReportController extends Controller
         return $this->success($data, 'Reservations Count');
     }
 
+    public function salesData($date)
+    {
+        $data = Booking::select('created_by', DB::raw('SUM(grand_total) as total'))
+            ->groupBy('created_by')
+            ->whereDate('created_at', Carbon::parse($date)->format('Y-m-d'))
+            ->get();
+
+        foreach($data as $result) {
+            $agents[] = $result->createdBy->name;
+            $amount[] = $result->total;
+        }
+
+        $data = [
+            'agents' => isset($agents) ? $agents : null,
+            'amount' => isset($amount) ? $amount : null,
+        ];
+
+        return $this->success($data, 'Sales Amount');
+
+    }
+
+    public function salesCountData($date)
+    {
+
+        $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+            ->groupBy('created_by')
+            ->whereDate('created_at', '=', date($date))
+            ->get();
+
+
+        foreach($data as $result) {
+            $agents[] = $result->createdBy->name;
+            $amount[] = $result->total;
+        }
+
+        $data = [
+            'agents' => isset($agents) ? $agents : null,
+            'amount' => isset($amount) ? $amount : null,
+        ];
+
+        return $this->success($data, 'Sales Count');
+
+    }
+
+    public function bookingsData($date)
+    {
+
+        $data = Booking::select('created_by', DB::raw('COUNT(id) as total'))
+            ->groupBy('created_by')
+            ->whereDate('created_at', '=', date($date))
+            ->get();
+
+        foreach($data as $result) {
+            $agents[] = $result->createdBy->name;
+            $booking[] = $result->total;
+        }
+
+        $data = [
+            'agents' => isset($agents) ? $agents : null,
+            'bookings' => isset($booking) ? $booking : null,
+        ];
+
+        return $this->success($data, 'Bookings Count');
+
+    }
+
+    public function reservationsData($date)
+    {
+
+        $query = Booking::query();
+
+        $query->whereDate('created_at', date($date));
+
+        $data = $query->get();
+
+        $results = BookingResource::collection($data);
+
+        $items = [];
+
+        foreach($results as $key => $res) {
+            foreach($res->items as $res1) {
+                $reserve_types = substr($res1->product_type, 11);
+
+                if($reserve_types == 'Hotel') {
+
+                    $datetime1 = new DateTime($res1->checkin_date);
+                    $datetime2 = new DateTime($res1->checkout_date);
+                    $interval = $datetime1->diff($datetime2);
+                    $days = $interval->format('%a');
+
+                    $price = $res1->quantity * $res1->selling_price * $days;
+
+                } else {
+
+                    $price = $res1->quantity * $res1->selling_price;
+
+                }
+
+                $one[] = [
+                    'product_type' => $reserve_types,
+                    'price' => $price
+                ];
+
+                $items[] = [
+                    'product_type' => $reserve_types,
+                    'prices' => $price
+                ];
+            }
+        }
+
+        $count_bookings = array_count_values(array_column($items, 'product_type'));
+
+        foreach($count_bookings as $value) {
+            $booking[] = $value;
+        }
+
+        $new_array = [];
+        foreach ($one as $value) {
+            if(array_key_exists($value['product_type'], $new_array)) {
+                $value['price'] += $new_array[$value['product_type']]['price'];
+            }
+            $new_array[$value['product_type']] = $value;
+        }
+
+        foreach($new_array as $res) {
+            $type[] = $res['product_type'];
+            $prices[] = $res['price'];
+
+        }
+        $data = [
+            'agents' => isset($type) ? $type : null,
+            'amount' => isset($booking) ? $booking : null,
+            'prices' => isset($prices) ? $prices : null,
+        ];
+
+        return $this->success($data, 'Reservations Count');
+    }
+
+    //     public function getEachUserSaleCount()
+    // {
+    //     $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+    //         ->groupBy('created_by')
+    //         ->get();
+
+    //     foreach ($data as $result) {
+    //         $agents[] = $result->createdBy->name;
+    //         $amount[] = $result->total;
+    //     }
+
+    //     $responseData = array(
+    //         'agents' => isset($agents) ? $agents : null,
+    //         'amount' => isset($amount) ? $amount : null,
+    //     );
+
+    //     return $this->success($responseData, 'Sales Count');
+    // }
     public function getEachUserSaleCount()
     {
         $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
@@ -245,6 +408,27 @@ class ReportController extends Controller
 
         return $this->success($responseData, 'Sales Count');
     }
+    // public function getEachUserSaleCount($selectedMonth)
+    // {
+    //     $currentMonth = Carbon::now()->format('m');
+
+    //     if ($selectedMonth != $currentMonth) {
+    //         // The selected month is not the current month, handle this case as needed
+    //         return $this->error('Invalid month selected', 400);
+    //     }
+
+    //     $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+    //         ->groupBy('created_by')
+    //         ->whereMonth('created_at', '=', $selectedMonth)
+    //         ->get();
+
+    //     $responseData = [
+    //         'agents' => $data->pluck('createdBy.name')->toArray(),
+    //         'amount' => $data->pluck('total')->toArray(),
+    //     ];
+
+    //     return $this->success($responseData, 'Sales Count');
+    // }
 
     public function getCustomerSale()
     {
@@ -263,5 +447,18 @@ class ReportController extends Controller
 
         return $this->success($data, 'Customers Sale');
 
+    }
+
+    public function generalSaleReport(string $date)
+    {
+        $report_service = new SaleReportService($date);
+
+        $data = [
+            'sales' => $report_service->getSaleData(),
+            'sales_count' => $report_service->getSaleCountData(),
+            'bookings' => $report_service->getBookingData(),
+        ];
+
+        return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));
     }
 }
