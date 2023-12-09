@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class Booking extends Model
 {
@@ -92,7 +93,11 @@ class Booking extends Model
         $previousBookingsCount = static::where('created_by', $user->id)->count();
 
         // Construct the booking ID
-        $bookingId = $fullName . '-' . str_pad($previousBookingsCount + 1, 4, '0', STR_PAD_LEFT);
+        $bookingId = $fullName . '-' . str_pad($previousBookingsCount + 1, 4, '0', STR_PAD_LEFT) . '-' . Str::upper(Str::random(6));
+
+        if (static::where('crm_id', $bookingId)->exists()) {
+            return self::generateCrmID();
+        }
 
         return $bookingId;
     }
