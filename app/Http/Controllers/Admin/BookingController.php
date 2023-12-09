@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\BookingItem;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Resources\BookingResource;
-use App\Http\Resources\InclusiveResource;
 use App\Models\BookingReceipt;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class BookingController extends Controller
@@ -103,6 +102,7 @@ class BookingController extends Controller
 
 
         $query->orderBy('created_at', 'desc');
+
         return $this->success(BookingResource::collection($data)
             ->additional([
                 'meta' => [
@@ -392,6 +392,7 @@ class BookingController extends Controller
 
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 
@@ -399,11 +400,11 @@ class BookingController extends Controller
     {
         if ($request->query('paid') && $request->query('paid') === 1) {
             $booking = Booking::where('id', $id)->with(['customer', 'items' => function ($q) {
-                $q->where('payment_status', 'fully_paid')->where('is_inclusive','0');
+                $q->where('payment_status', 'fully_paid')->where('is_inclusive', '0');
             }, 'createdBy'])->first();
         } else {
             $booking = Booking::where('id', $id)->with(['customer', 'items' => function ($q) {
-                $q->where('is_inclusive','0');
+                $q->where('is_inclusive', '0');
             }, 'createdBy'])->first();
         }
 
@@ -424,6 +425,7 @@ class BookingController extends Controller
 
         Storage::delete('public/images/' . $find->image);
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
 
     }
