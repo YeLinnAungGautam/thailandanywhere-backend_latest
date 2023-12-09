@@ -22,8 +22,17 @@ class RoomController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $order_by_price = $request->query('order_by_price');
 
         $query = Room::query();
+
+        if($order_by_price) {
+            if($order_by_price == 'low_to_high') {
+                $query->orderBy('room_price');
+            } elseif($order_by_price == 'high_to_low') {
+                $query->orderByDesc('room_price');
+            }
+        }
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
@@ -135,5 +144,18 @@ class RoomController extends Controller
         $room->delete();
 
         return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function deleteImage(Room $room, RoomImage $room_image)
+    {
+        if ($room->id !== $room_image->room_id) {
+            return $this->error(null, 'This image is not belongs to the room', 404);
+        }
+
+        Storage::delete('public/images/' . $room_image->image);
+
+        $room_image->delete();
+
+        return $this->success(null, 'Room image is successfully deleted');
     }
 }

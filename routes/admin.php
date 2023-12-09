@@ -83,8 +83,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::put('reservations/info/{id}', [ReservationController::class, 'updateInfo']);
     Route::apiResource('reservations', ReservationController::class);
 
+    # Hotel
     Route::apiResource('hotels', HotelController::class);
+    Route::delete('hotels/{hotel}/images/{hotel_image}', [HotelController::class, 'deleteImage']);
+
+    # Room
     Route::apiResource('rooms', RoomController::class);
+    Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
+
     Route::apiResource('airlines', AirlineController::class);
     Route::apiResource('airline-tickets', AirlineTicketController::class);
 

@@ -181,4 +181,17 @@ class HotelController extends Controller
 
         return $this->success(null, 'Successfully deleted', 200);
     }
+
+    public function deleteImage(Hotel $hotel, HotelImage $hotel_image)
+    {
+        if ($hotel->id !== $hotel_image->hotel_id) {
+            return $this->error(null, 'This image is not belongs to the hotel', 404);
+        }
+
+        Storage::delete('public/images/' . $hotel_image->image);
+
+        $hotel_image->delete();
+
+        return $this->success(null, 'Hotel image is successfully deleted');
+    }
 }

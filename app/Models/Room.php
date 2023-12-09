@@ -21,6 +21,10 @@ class Room extends Model
         'is_extra'
     ];
 
+    protected $casts = [
+        'room_price' => 'integer',
+    ];
+
     public function hotel(): BelongsTo
     {
         return $this->belongsTo(Hotel::class, 'hotel_id');

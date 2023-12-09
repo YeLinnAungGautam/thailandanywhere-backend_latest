@@ -5,7 +5,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class() extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,8 +15,8 @@ return new class () extends Migration {
             $table->id();
             $table->foreignIdFor(Hotel::class, 'hotel_id');
             $table->string('name');
-            $table->string('extra_price')->nullable();
-            $table->string('room_price')->nullable();
+            $table->bigInteger('extra_price')->nullable();
+            $table->bigInteger('room_price')->nullable();
             $table->text("description")->nullable();
             $table->softDeletes();
             $table->timestamps();
