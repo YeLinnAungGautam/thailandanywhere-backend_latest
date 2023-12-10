@@ -144,15 +144,6 @@ class HotelController extends Controller
         }
 
         if ($request->file('images')) {
-
-            if($hotel->images) {
-                foreach ($hotel->images as $image) {
-                    Storage::delete('public/images/' . $image->image);
-                    $image->delete();
-                }
-
-            }
-
             foreach ($request->file('images') as $image) {
                 $fileData = $this->uploads($image, 'images/');
                 HotelImage::create(['hotel_id' => $hotel->id, 'image' => $fileData['fileName']]);
