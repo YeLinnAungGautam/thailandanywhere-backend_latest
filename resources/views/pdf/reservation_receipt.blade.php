@@ -125,7 +125,7 @@
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Passport No:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->customer_passports ? $data->customer_passports : '-'}}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->booking->customer->nrc_number ? $data->booking->customer->nrc_number : '-' }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
