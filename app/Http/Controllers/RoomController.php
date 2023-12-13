@@ -23,8 +23,17 @@ class RoomController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $order_by_price = $request->query('order_by_price');
+        $period = $request->query('period') ? explode(' , ', $request->query('period')) : null;
 
-        $query = Room::query();
+        $query = Room::query()
+            ->when($period, function ($p_query) use ($period) {
+                $p_query->whereIn('id', function ($q) use ($period) {
+                    $q->select('room_id')
+                        ->from('room_periods')
+                        ->whereDate('start_date', '>=', $period[0])
+                        ->whereDate('end_date', '<=', $period[1]);
+                });
+            });
 
         if($order_by_price) {
             if($order_by_price == 'low_to_high') {
@@ -78,6 +87,12 @@ class RoomController extends Controller
             };
         }
 
+        if($request->periods) {
+            foreach ($request->periods as $period) {
+                $save->periods()->create($period);
+            }
+        }
+
         return $this->success(new RoomResource($save), 'Successfully created', 200);
     }
 
@@ -87,7 +102,6 @@ class RoomController extends Controller
     public function show(Room $room)
     {
         return $this->success(new RoomResource($room), 'Room Detail', 200);
-
     }
 
 
@@ -113,6 +127,14 @@ class RoomController extends Controller
                 $fileData = $this->uploads($image, 'images/');
                 RoomImage::create(['room_id' => $room->id, 'image' => $fileData['fileName']]);
             };
+        }
+
+        $room->periods()->delete();
+
+        if($request->periods) {
+            foreach ($request->periods as $period) {
+                $room->periods()->create($period);
+            }
         }
 
         return $this->success(new RoomResource($room), 'Successfully updated', 200);
