@@ -40,17 +40,7 @@ class ReservationController extends Controller
         $calenderFilter = $request->query('calender_filter');
         $search = $request->input('hotel_name');
         $search_attraction = $request->input('attraction_name');
-        $query = BookingItem::query()->with(
-            'product',
-            'booking',
-            'reservationInfo',
-            'reservationSupplierInfo',
-            'reservationBookingConfirmLetter',
-            'reservationReceiptImage',
-            'reservationCustomerPassport',
-            'reservationPaidSlip',
-            'associatedCustomer'
-        );
+        $query = BookingItem::query();
         if ($serviceDate) {
             $query->whereDate('service_date', $serviceDate);
         };
