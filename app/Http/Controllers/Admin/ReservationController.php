@@ -2,30 +2,27 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Booking;
-use App\Models\BookingItem;
-use App\Models\BookingReceipt;
-use App\Models\ReservationPaidSlip;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingResource;
-use App\Http\Resources\EntranceTicketResource;
-
+use App\Models\Booking;
+use App\Models\BookingItem;
+use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationBookingConfirmLetter;
 use App\Models\ReservationCarInfo;
 use App\Models\ReservationCustomerPassport;
 use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
+
+use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
-use App\Models\ReservationAssociatedCustomer;
-
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Support\Facades\Storage;
 
 class ReservationController extends Controller
 {
@@ -43,17 +40,27 @@ class ReservationController extends Controller
         $calenderFilter = $request->query('calender_filter');
         $search = $request->input('hotel_name');
         $search_attraction = $request->input('attraction_name');
-        $query = BookingItem::query();
+        $query = BookingItem::query()->with(
+            'product',
+            'booking',
+            'reservationInfo',
+            'reservationSupplierInfo',
+            'reservationBookingConfirmLetter',
+            'reservationReceiptImage',
+            'reservationCustomerPassport',
+            'reservationPaidSlip',
+            'associatedCustomer'
+        );
         if ($serviceDate) {
             $query->whereDate('service_date', $serviceDate);
         };
 
-//        if ($request->user_id && $request->user_id !== 'undefined') {
-//            $userId = $request->user_id;
-//            $query->whereHas('booking', function ($q) use ($userId) {
-//                $q->where('created_by', $userId)->orWhere('past_user_id', $userId);
-//            });
-//        }
+        //        if ($request->user_id && $request->user_id !== 'undefined') {
+        //            $userId = $request->user_id;
+        //            $query->whereHas('booking', function ($q) use ($userId) {
+        //                $q->where('created_by', $userId)->orWhere('past_user_id', $userId);
+        //            });
+        //        }
 
         $productType = $request->query('product_type');
         $crmId = $request->query('crm_id');
@@ -77,7 +84,7 @@ class ReservationController extends Controller
                 $q->where('created_by', $userId)->orWhere('past_user_id', $userId);
             });
         }
-       
+
         if ($productType) {
             $query->where('product_type', $productType);
         }
@@ -97,16 +104,16 @@ class ReservationController extends Controller
         if ($request->expense_status) {
             $query->where('payment_status', $request->expense_status);
         }
-        
+
         if ($calenderFilter == true) {
             $query->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
         }
-        if($search){
+        if($search) {
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%");
             });
         }
-        if($search_attraction){
+        if($search_attraction) {
             $query->whereHas('variation', function ($q) use ($search_attraction) {
                 $q->where('name', 'LIKE', "%{$search_attraction}%");
             });
@@ -153,113 +160,112 @@ class ReservationController extends Controller
             ])
             ->response()
             ->getData(), 'Reservation List');
-        
 
-//        $limit = $request->query('limit', 10);
-//        $search = $request->query('search');
-//        $filter = $request->query('filter');
-//        $serviceDate = $request->query('service_date');
-//        $calenderFilter = $request->query('calender_filter');
-//
-//        $query = Booking::query();
-//
-//        if ($serviceDate) {
-//            $query->whereHas('items', function ($q) use ($serviceDate) {
-//                $q->whereDate('service_date', $serviceDate);
-//            })->with(['items' => function ($query) use ($serviceDate) {
-//                $query->whereDate('service_date', $serviceDate);
-//            }]);
-//        }
-//
-//
-//        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
-//            if ($filter) {
-//                if ($filter === 'all') {
-//                } elseif ($filter === 'past') {
-//                    $query->where('is_past_info', true)->whereNotNull('past_user_id');
-//                } elseif ($filter === 'current') {
-//                    $query->whereNull('past_user_id');
-//                }
-//            }
-//        } else {
-//            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
-//
-//            if ($filter) {
-//                if ($filter === 'all') {
-//                    $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
-//                } elseif ($filter === 'past') {
-//                    $query->where('is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
-//                } elseif ($filter === 'current') {
-//                    $query->where('created_by', Auth::id())->whereNull('past_user_id');
-//                }
-//            }
-//        }
-//
-//        if ($search) {
-//            $query->where('name', 'LIKE', "%{$search}%");
-//        }
-//
-//
-//        if ($request->user_id) {
-//            $query->where('created_by', $request->user_id)->orWhere('past_user_id', $request->user_id);
-//        }
-//
-//
-//        $query->orderBy('created_at', 'desc');
-//
-//        $productType = $request->query('product_type');
-//        $crmId = $request->query('crm_id');
-//
-//        if ($productType) {
-//            $query->whereHas('items', function ($q) use ($productType, $crmId) {
-//                if ($crmId) {
-//                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
-//                }
-//                $q->where('product_type', $productType);
-//            })->with(['items' => function ($query) use ($productType, $crmId) {
-//                if ($crmId) {
-//                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
-//                }
-//                $query->where('product_type', $productType);
-//            }]);
-//        } else {
-//            $query->whereHas('items', function ($q) use ($crmId) {
-//                if ($crmId) {
-//                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
-//                }
-//            })->with(['items' => function ($query) use ($crmId) {
-//                if ($crmId) {
-//                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
-//                }
-//            }]);
-//        }
-//
-//        if ($calenderFilter == true) {
-//            $query->whereHas('items', function ($q) {
-//                $q->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
-//            })->with(['items' => function ($query) {
-//                $query->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
-//            }]);
-//        }
-//
-//        $data = $query->paginate($limit);
-//
-//        return $this->success(BookingResource::collection($data)
-//            ->additional([
-//                'meta' => [
-//                    'total_page' => (int)ceil($data->total() / $data->perPage()),
-//                ],
-//            ])
-//            ->response()
-//            ->getData(), 'Reservation List');
+
+        //        $limit = $request->query('limit', 10);
+        //        $search = $request->query('search');
+        //        $filter = $request->query('filter');
+        //        $serviceDate = $request->query('service_date');
+        //        $calenderFilter = $request->query('calender_filter');
+        //
+        //        $query = Booking::query();
+        //
+        //        if ($serviceDate) {
+        //            $query->whereHas('items', function ($q) use ($serviceDate) {
+        //                $q->whereDate('service_date', $serviceDate);
+        //            })->with(['items' => function ($query) use ($serviceDate) {
+        //                $query->whereDate('service_date', $serviceDate);
+        //            }]);
+        //        }
+        //
+        //
+        //        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
+        //            if ($filter) {
+        //                if ($filter === 'all') {
+        //                } elseif ($filter === 'past') {
+        //                    $query->where('is_past_info', true)->whereNotNull('past_user_id');
+        //                } elseif ($filter === 'current') {
+        //                    $query->whereNull('past_user_id');
+        //                }
+        //            }
+        //        } else {
+        //            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+        //
+        //            if ($filter) {
+        //                if ($filter === 'all') {
+        //                    $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+        //                } elseif ($filter === 'past') {
+        //                    $query->where('is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
+        //                } elseif ($filter === 'current') {
+        //                    $query->where('created_by', Auth::id())->whereNull('past_user_id');
+        //                }
+        //            }
+        //        }
+        //
+        //        if ($search) {
+        //            $query->where('name', 'LIKE', "%{$search}%");
+        //        }
+        //
+        //
+        //        if ($request->user_id) {
+        //            $query->where('created_by', $request->user_id)->orWhere('past_user_id', $request->user_id);
+        //        }
+        //
+        //
+        //        $query->orderBy('created_at', 'desc');
+        //
+        //        $productType = $request->query('product_type');
+        //        $crmId = $request->query('crm_id');
+        //
+        //        if ($productType) {
+        //            $query->whereHas('items', function ($q) use ($productType, $crmId) {
+        //                if ($crmId) {
+        //                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
+        //                }
+        //                $q->where('product_type', $productType);
+        //            })->with(['items' => function ($query) use ($productType, $crmId) {
+        //                if ($crmId) {
+        //                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
+        //                }
+        //                $query->where('product_type', $productType);
+        //            }]);
+        //        } else {
+        //            $query->whereHas('items', function ($q) use ($crmId) {
+        //                if ($crmId) {
+        //                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
+        //                }
+        //            })->with(['items' => function ($query) use ($crmId) {
+        //                if ($crmId) {
+        //                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
+        //                }
+        //            }]);
+        //        }
+        //
+        //        if ($calenderFilter == true) {
+        //            $query->whereHas('items', function ($q) {
+        //                $q->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
+        //            })->with(['items' => function ($query) {
+        //                $query->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
+        //            }]);
+        //        }
+        //
+        //        $data = $query->paginate($limit);
+        //
+        //        return $this->success(BookingResource::collection($data)
+        //            ->additional([
+        //                'meta' => [
+        //                    'total_page' => (int)ceil($data->total() / $data->perPage()),
+        //                ],
+        //            ])
+        //            ->response()
+        //            ->getData(), 'Reservation List');
     }
 
 
     /**
      * Display the specified resource.
      */
-    public
-    function show(string $id)
+    public function show(string $id)
     {
         $find = BookingItem::find($id);
         if (!$find) {
@@ -269,17 +275,15 @@ class ReservationController extends Controller
         return $this->success(new BookingItemResource($find), 'Booking Item Detail');
     }
 
-     /**
-     * Print Invoice for the reservation entrance category.
-     */
-    public
-    function printReservation(Request $request, string $id)
+    /**
+    * Print Invoice for the reservation entrance category.
+    */
+    public function printReservation(Request $request, string $id)
     {
 
         $booking = BookingItem::find($id);
 
-        if($booking == '')
-        {
+        if($booking == '') {
             abort(404);
         }
 
@@ -289,20 +293,18 @@ class ReservationController extends Controller
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView('pdf.reservation_receipt', compact('data','customers'));
+        ])->loadView('pdf.reservation_receipt', compact('data', 'customers'));
 
         return $pdf->stream();
 
     }
 
-    public
-    function printReservationHotel(Request $request, string $id)
+    public function printReservationHotel(Request $request, string $id)
     {
 
         $booking = BookingItem::find($id);
 
-        if($booking == '')
-        {
+        if($booking == '') {
             abort(404);
         }
         $data = new BookingItemResource($booking);
@@ -311,16 +313,16 @@ class ReservationController extends Controller
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView('pdf.reservation_hotel_receipt', compact('data','hotel'));
+        ])->loadView('pdf.reservation_hotel_receipt', compact('data', 'hotel'));
 
         return $pdf->stream();
 
     }
-    public function printReservationVantour(Request $request, string $id){
+    public function printReservationVantour(Request $request, string $id)
+    {
         $booking = BookingItem::find($id);
 
-        if($booking == '')
-        {
+        if($booking == '') {
             abort(404);
         }
 
@@ -330,7 +332,7 @@ class ReservationController extends Controller
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView('pdf.reservation_vantour', compact('data','hotels'));
+        ])->loadView('pdf.reservation_vantour', compact('data', 'hotels'));
 
         return $pdf->stream();
     }
@@ -339,8 +341,7 @@ class ReservationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public
-    function update(Request $request, string $id)
+    public function update(Request $request, string $id)
     {
 
         $find = BookingItem::find($id);
@@ -399,8 +400,7 @@ class ReservationController extends Controller
         return $this->success(new BookingItemResource($find), 'Successfully updated');
     }
 
-    public
-    function updateInfo(Request $request, $id)
+    public function updateInfo(Request $request, $id)
     {
         $bookingItem = BookingItem::find($id);
 
@@ -453,7 +453,7 @@ class ReservationController extends Controller
                 }
             }
 
-          
+
 
         } else {
             $findInfo->customer_feedback = $request->customer_feedback ?? $findInfo->customer_feedback;
@@ -597,17 +597,15 @@ class ReservationController extends Controller
             }
         }
 
-        if($request->is_associated == 1)
-        {
-            if(ReservationAssociatedCustomer::where('booking_item_id','=',$findInfo->booking_item_id)->count() > 0)
-            {
-                ReservationAssociatedCustomer::where('booking_item_id','=',$findInfo->booking_item_id)->update([
+        if($request->is_associated == 1) {
+            if(ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
+                ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
                     'name' => $request->customer_name,
                     'phone' => $request->customer_phone,
                     'passport' => $request->customer_passport_number,
                 ]);
 
-            }else{
+            } else {
 
                 ReservationAssociatedCustomer::create([
                     'booking_item_id' => $findInfo->booking_item_id,
@@ -616,24 +614,22 @@ class ReservationController extends Controller
                     'passport' => $request->customer_passport_number,
                 ]);
 
-                BookingItem::where('id',$findInfo->booking_item_id)->update(['is_associated'=>'1']);
+                BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
             }
 
-            
 
-        }else if($request->is_associated == 0)
-        {
-            ReservationAssociatedCustomer::where('booking_item_id',$findInfo->booking_item_id)->delete();
 
-            BookingItem::where('id',$findInfo->booking_item_id)->update(['is_associated'=>'0']);
+        } elseif($request->is_associated == 0) {
+            ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
+
+            BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
 
         }
 
         return $this->success(new BookingItemResource($bookingItem), 'Successfully updated');
     }
 
-    public
-    function deleteReceipt($id)
+    public function deleteReceipt($id)
     {
         $find = ReservationExpenseReceipt::find($id);
         if (!$find) {
@@ -642,12 +638,12 @@ class ReservationController extends Controller
 
         Storage::delete('public/images/' . $find->file);
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
 
     }
 
-    public
-    function deleteConfirmationReceipt($id)
+    public function deleteConfirmationReceipt($id)
     {
         $find = ReservationPaidSlip::find($id);
         if (!$find) {
@@ -656,13 +652,13 @@ class ReservationController extends Controller
 
         Storage::delete('public/images/' . $find->file);
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
 
 
     }
 
-    public
-    function deleteCustomerPassport($id)
+    public function deleteCustomerPassport($id)
     {
         $find = ReservationCustomerPassport::find($id);
         if (!$find) {
@@ -671,6 +667,7 @@ class ReservationController extends Controller
 
         Storage::delete('public/files/' . $find->file);
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
 
 
