@@ -142,9 +142,10 @@
                            {{$data->pickup_location ? $data->pickup_location : '-'}}
                         </td>
                     </tr>
+
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Vendor Name:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important"></td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->product->name ?? '-' }}</td>
                     </tr>
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Expense to Driver:</td>
@@ -157,7 +158,7 @@
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important;color:green">fully_paid
                         </td>
                         <td colspan="2" rowspan="3" style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
-                           {{$data->route_plan ? $data->route_plan : '-'}}
+                           {{ $data->reservationInfo->route_plan ?? '-' }}
                         </td>
                     </tr>
                     <tr>
