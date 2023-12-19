@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
@@ -12,16 +13,16 @@ use App\Models\ReservationBookingConfirmLetter;
 use App\Models\ReservationCarInfo;
 use App\Models\ReservationCustomerPassport;
 use App\Models\ReservationExpenseReceipt;
-use App\Models\ReservationInfo;
 
+use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class ReservationController extends Controller
@@ -263,6 +264,22 @@ class ReservationController extends Controller
         }
 
         return $this->success(new BookingItemResource($find), 'Booking Item Detail');
+    }
+
+    public function copyDetail(string $id)
+    {
+        $booking_item = BookingItem::find($id);
+
+        if (!$booking_item) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $booking_item->load(
+            'booking:id,crm_id,grand_total',
+            'product'
+        );
+
+        return $this->success(new BookingItemDetailResource($booking_item), 'Booking Item Detail Copy');
     }
 
     /**

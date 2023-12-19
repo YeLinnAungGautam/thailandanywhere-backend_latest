@@ -3,10 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use App\Models\AirportPickup;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\BookingReceiptResource;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class BookingItemResource extends JsonResource
 {
@@ -21,26 +19,34 @@ class BookingItemResource extends JsonResource
         switch ($this->product_type) {
             case 'App\Models\PrivateVanTour':
                 $product = new PrivateVanTourResource($this->product);
+
                 break;
             case 'App\Models\GroupTour':
                 $product = new GroupTourResource($this->product);
+
                 break;
             case 'App\Models\EntranceTicket':
                 $product = new EntranceTicketResource($this->product);
+
                 break;
             case 'App\Models\AirportPickup':
                 $product = new AirportPickupResource($this->product);
+
                 break;
             case 'App\Models\Hotel':
                 $product = new HotelResource($this->product);
+
                 break;
             case 'App\Models\Airline':
                 $product = new AirlineResource($this->product);
+
                 break;
             default:
                 $product = null;
+
                 break;
         }
+
         return [
             'id' => $this->id,
             'crm_id' => $this->crm_id,
@@ -95,7 +101,7 @@ class BookingItemResource extends JsonResource
             'slip_code' => $this->slip_code,
             'is_inclusive' => $this->is_inclusive,
             'is_associated' => $this->is_associated,
-//            'paid_slip' => $this->paid_slip ? config('app.url') . Storage::url('images/' . $this->paid_slip) : null,
+            //            'paid_slip' => $this->paid_slip ? config('app.url') . Storage::url('images/' . $this->paid_slip) : null,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

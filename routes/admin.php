@@ -82,6 +82,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::put('reservations/info/{id}', [ReservationController::class, 'updateInfo']);
     Route::apiResource('reservations', ReservationController::class);
+    Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);

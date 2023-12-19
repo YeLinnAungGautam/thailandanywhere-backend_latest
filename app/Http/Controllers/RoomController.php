@@ -9,7 +9,10 @@ use App\Models\Room;
 use App\Models\RoomImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
@@ -23,17 +26,8 @@ class RoomController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $order_by_price = $request->query('order_by_price');
-        $period = $request->query('period') ? explode(' , ', $request->query('period')) : null;
 
-        $query = Room::query()
-            ->when($period, function ($p_query) use ($period) {
-                $p_query->whereIn('id', function ($q) use ($period) {
-                    $q->select('room_id')
-                        ->from('room_periods')
-                        ->whereDate('start_date', '>=', $period[0])
-                        ->whereDate('end_date', '<=', $period[1]);
-                });
-            });
+        $query = Room::query()->with('periods', 'images', 'hotel');
 
         if($order_by_price) {
             if($order_by_price == 'low_to_high') {
@@ -62,7 +56,6 @@ class RoomController extends Controller
             ->response()
             ->getData(), 'Room List');
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -110,34 +103,56 @@ class RoomController extends Controller
      */
     public function update(UpdateRoomRequest $request, Room $room)
     {
+        DB::beginTransaction();
 
-        $room->update([
-            'name' => $request->name ?? $room->name,
-            'hotel_id' => $request->hotel_id ?? $room->hotel_id,
-            'cost' => $request->cost ?? $room->cost,
-            'description' => $request->description ?? $room->description,
-            'extra_price' => $request->extra_price ?? $room->extra_price,
-            'room_price' => $request->room_price ?? $room->room_price,
-            'max_person' => $request->max_person,
-            'is_extra' => $request->is_extra ?? 0
-        ]);
+        try {
+            $room->update([
+                'name' => $request->name ?? $room->name,
+                'hotel_id' => $request->hotel_id ?? $room->hotel_id,
+                'cost' => $request->cost ?? $room->cost,
+                'description' => $request->description ?? $room->description,
+                'extra_price' => $request->extra_price ?? $room->extra_price,
+                'room_price' => $request->room_price ?? $room->room_price,
+                'max_person' => $request->max_person,
+                'is_extra' => $request->is_extra ?? 0
+            ]);
 
-        if ($request->file('images')) {
-            foreach ($request->file('images') as $image) {
-                $fileData = $this->uploads($image, 'images/');
-                RoomImage::create(['room_id' => $room->id, 'image' => $fileData['fileName']]);
-            };
-        }
-
-        $room->periods()->delete();
-
-        if($request->periods) {
-            foreach ($request->periods as $period) {
-                $room->periods()->create($period);
+            if ($request->file('images')) {
+                foreach ($request->file('images') as $image) {
+                    $fileData = $this->uploads($image, 'images/');
+                    RoomImage::create(['room_id' => $room->id, 'image' => $fileData['fileName']]);
+                };
             }
-        }
 
-        return $this->success(new RoomResource($room), 'Successfully updated', 200);
+            if($request->periods) {
+                $dates = collect($request->periods)->map(function ($period) {
+                    return collect($period)->only(['start_date', 'end_date'])->all();
+                });
+
+                $overlap_dates = $this->checkIfOverlapped($dates);
+
+                $room_periods = [];
+                foreach($request->periods as $period) {
+                    $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
+                    $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
+
+                    if(!$sd_exists && !$ed_exists) {
+                        $room_periods[] = $period;
+                    }
+                }
+
+                $this->syncPeriods($room, $room_periods);
+            }
+
+            DB::commit();
+
+            return $this->success(new RoomResource($room), 'Successfully updated', 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e);
+
+            return $this->error(null, $e->getMessage(), 401);
+        }
     }
 
     /**
@@ -148,9 +163,7 @@ class RoomController extends Controller
         $room_images = RoomImage::where('room_id', '=', $room->id)->get();
 
         foreach($room_images as $room_image) {
-
             Storage::delete('public/images/' . $room_image->image);
-
         }
 
         RoomImage::where('room_id', $room->id)->delete();
@@ -171,5 +184,52 @@ class RoomController extends Controller
         $room_image->delete();
 
         return $this->success(null, 'Room image is successfully deleted');
+    }
+
+    private function syncPeriods(Room $room, array $periods)
+    {
+        $array_of_ids = [];
+
+        foreach ($periods as $period) {
+            $job = $room->periods()->updateOrCreate([
+                'period_name' => $period['period_name'],
+                'start_date' => $period['start_date'],
+                'end_date' => $period['end_date'],
+                'sale_price' => $period['sale_price'],
+                'cost_price' => $period['cost_price'],
+            ]);
+
+            $array_of_ids[] = $job->id;
+        }
+
+        $room->periods->whereNotIn('id', $array_of_ids)->each->delete();
+    }
+
+    private function checkIfOverlapped($ranges)
+    {
+        $overlaps = [];
+        for($i = 0; $i < count($ranges); $i++) {
+            for($j = ($i + 1); $j < count($ranges); $j++) {
+
+                $start = \Carbon\Carbon::parse($ranges[$j]['start_date']);
+                $end = \Carbon\Carbon::parse($ranges[$j]['end_date']);
+
+                $start_first = \Carbon\Carbon::parse($ranges[$i]['start_date']);
+                $end_first = \Carbon\Carbon::parse($ranges[$i]['end_date']);
+
+                if(\Carbon\Carbon::parse($ranges[$i]['start_date'])->between($start, $end) || \Carbon\Carbon::parse($ranges[$i]['end_date'])->between($start, $end)) {
+                    $overlaps[] = $ranges[$j];
+
+                    break;
+                }
+                if(\Carbon\Carbon::parse($ranges[$j]['start_date'])->between($start_first, $end_first) || \Carbon\Carbon::parse($ranges[$j]['end_date'])->between($start_first, $end_first)) {
+                    $overlaps[] = $ranges[$j];
+
+                    break;
+                }
+            }
+        }
+
+        return $overlaps;
     }
 }
