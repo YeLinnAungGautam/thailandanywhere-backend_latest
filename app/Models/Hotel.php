@@ -11,7 +11,17 @@ class Hotel extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['legal_name', 'contract_due', 'name', 'city_id', 'place', 'payment_method', 'bank_name', 'bank_account_number', 'account_name'];
+    protected $fillable = [
+        'legal_name',
+        'contract_due',
+        'name',
+        'city_id',
+        'place',
+        'payment_method',
+        'bank_name',
+        'bank_account_number',
+        'account_name'
+    ];
 
     public function city(): BelongsTo
     {
@@ -32,5 +42,4 @@ class Hotel extends Model
     {
         return $this->hasMany(HotelImage::class, 'hotel_id');
     }
-
 }

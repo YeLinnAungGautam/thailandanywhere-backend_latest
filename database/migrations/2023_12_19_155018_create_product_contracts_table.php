@@ -10,10 +10,13 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('hotels', function (Blueprint $table) {
-            $table->string('payment_method')->nullable();
-            $table->string('bank_name')->nullable();
-            $table->string('bank_account_number')->nullable();
+        Schema::create('product_contracts', function (Blueprint $table) {
+            $table->id();
+            $table->bigInteger('ownerable_id');
+            $table->string('ownerable_type');
+            $table->string('file');
+            $table->softDeletes();
+            $table->timestamps();
         });
     }
 
@@ -22,8 +25,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('hotels', function (Blueprint $table) {
-            //
-        });
+        Schema::dropIfExists('product_contracts');
     }
 };
