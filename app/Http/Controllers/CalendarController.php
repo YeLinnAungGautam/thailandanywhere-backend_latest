@@ -22,9 +22,6 @@ class CalendarController extends Controller
         $search = $request->input('hotel_name');
         $search_attraction = $request->input('attraction_name');
 
-        $start_date = Carbon::parse($request->date)->startOfMonth()->format('Y-m-d');
-        $end_date = Carbon::parse($request->date)->endOfMonth()->format('Y-m-d');
-
         $query = BookingItem::query()
             ->with(
                 'booking:id,past_crm_id',
@@ -33,7 +30,6 @@ class CalendarController extends Controller
                 'variation:id,name',
                 'room:id,name',
             )
-            ->whereBetween('service_date', [$start_date, $end_date])
             ->select(
                 'id',
                 'booking_id',
@@ -46,6 +42,13 @@ class CalendarController extends Controller
                 'reservation_status',
                 'car_id'
             );
+
+        if($request->date) {
+            $start_date = Carbon::parse($request->date)->startOfMonth()->format('Y-m-d');
+            $end_date = Carbon::parse($request->date)->endOfMonth()->format('Y-m-d');
+
+            $query->whereBetween('service_date', [$start_date, $end_date]);
+        }
 
         if ($serviceDate) {
             $query->whereDate('service_date', $serviceDate);
