@@ -30,18 +30,15 @@ class BookingItem extends Model
         return $this->belongsTo(EntranceTicketVariation::class);
     }
 
-
     public function hotel()
     {
         return $this->belongsTo(Hotel::class);
     }
 
-
     public function room()
     {
         return $this->belongsTo(Room::class);
     }
-
 
     public function booking()
     {

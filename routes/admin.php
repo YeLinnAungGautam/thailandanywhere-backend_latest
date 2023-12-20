@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\RestaurantController;
@@ -84,6 +85,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::put('reservations/info/{id}', [ReservationController::class, 'updateInfo']);
     Route::apiResource('reservations', ReservationController::class);
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
+    Route::get('calendar/reservations', [CalendarController::class, 'index']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
