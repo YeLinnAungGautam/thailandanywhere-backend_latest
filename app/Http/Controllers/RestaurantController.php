@@ -31,7 +31,7 @@ class RestaurantController extends Controller
             ->with('meals', 'contracts', 'images', 'city')
             ->when($max_price, function ($q) use ($max_price) {
                 $q->whereIn('id', function ($q1) use ($max_price) {
-                    $q1->select('restaurant')
+                    $q1->select('restaurant_id')
                         ->from('meals')
                         ->where('is_extra', 0)
                         ->where('meal_price', '<=', $max_price);
