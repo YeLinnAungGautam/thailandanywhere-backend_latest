@@ -24,7 +24,7 @@ class CalendarController extends Controller
 
         $query = BookingItem::query()
             ->with(
-                'booking:id,past_crm_id',
+                'booking:id,past_crm_id,payment_status',
                 'product:id,name',
                 'car:id,name',
                 'variation:id,name',
@@ -90,7 +90,11 @@ class CalendarController extends Controller
         }
 
         if ($request->customer_payment_status) {
-            $query->where('payment_status', $request->customer_payment_status);
+            $query->whereIn('booking_id', function ($q) use ($request) {
+                $q->select('id')
+                    ->from('bookings')
+                    ->where('payment_status', $request->customer_payment_status);
+            });
         }
 
         if ($request->expense_status) {
