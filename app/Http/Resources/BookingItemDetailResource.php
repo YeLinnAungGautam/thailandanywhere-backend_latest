@@ -24,7 +24,7 @@ class BookingItemDetailResource extends JsonResource
             'reservation_code' => $this->crm_id,
             'hotel_name' => $this->product->name,
             'total_rooms' => $this->quantity,
-            'total_nights' => count($this->getDaysOfMonth($this->checkin_date, $this->checkout_date)),
+            'total_nights' => $this->getNights($this->checkin_date, $this->checkout_date),
             'sale_price' => $this->selling_price * $this->getQuantity()
         ];
 
@@ -59,21 +59,17 @@ class BookingItemDetailResource extends JsonResource
         return $cost_price;
     }
 
+    private function getNights($checkin_date, $checkout_date)
+    {
+        return (int) Carbon::parse($checkin_date)->diff(Carbon::parse($checkout_date))->format("%a");
+    }
+
     private function getQuantity()
     {
         if($this->product_type == 'App\Models\Hotel') {
-            return count($this->getDaysOfMonth($this->checkin_date, $this->checkout_date));
+            return $this->quantity * $this->getNights($this->checkin_date, $this->checkout_date);
         }
 
         return $this->quantity;
-    }
-
-    private function getDaysOfMonth($checkin_date, $checkout_date): array
-    {
-        $dates = Carbon::parse($checkin_date)
-            ->daysUntil(Carbon::parse($checkout_date))
-            ->map(fn ($date) => $date->format('Y-m-d'));
-
-        return iterator_to_array($dates);
     }
 }
