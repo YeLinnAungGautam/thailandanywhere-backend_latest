@@ -16,7 +16,7 @@ class BookingItemDetailResource extends JsonResource
     public function toArray(Request $request): array
     {
         $data = [
-            'total_coast' => $this->getCostPrice() * $this->getQuantity(),
+            'total_cost' => $this->getCostPrice() * $this->getQuantity(),
             'bank_name' => $this->product->bank_name,
             'bank_account_number' => $this->product->bank_account_number,
             'account_name' => $this->product->account_name ?? '-',
