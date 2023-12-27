@@ -24,7 +24,7 @@ class CalendarController extends Controller
 
         $query = BookingItem::query()
             ->with(
-                'booking:id,past_crm_id,payment_status',
+                'booking:id,past_crm_id,payment_status,booking_date',
                 'product:id,name',
                 'car:id,name',
                 'variation:id,name',
@@ -48,6 +48,15 @@ class CalendarController extends Controller
             $end_date = Carbon::parse($request->date)->endOfMonth()->format('Y-m-d');
 
             $query->whereBetween('service_date', [$start_date, $end_date]);
+        }
+
+        if($request->sale_date) {
+            $sale_start_date = Carbon::parse($request->sale_date)->startOfMonth()->format('Y-m-d');
+            $sale_end_date = Carbon::parse($request->sale_date)->endOfMonth()->format('Y-m-d');
+
+            $query->whereIn('booking_id', function ($q) use ($sale_start_date, $sale_end_date) {
+                $q->select('id')->from('bookings')->whereBetween('booking_date', [$sale_start_date, $sale_end_date]);
+            });
         }
 
         if ($serviceDate) {

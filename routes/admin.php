@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\HotelController;
+use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\RoomController;
@@ -51,6 +52,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/reservations-count', [ReportController::class, 'reservationsCount']);
 
     Route::get('/reports', [ReportController::class, 'index']);
+    Route::get('reports/hotels', HotelReportController::class);
 
     Route::get('/get-reports/{id}', [ReportController::class, 'getSelectData']);
     Route::get('/get-each-user-report', [ReportController::class, 'getEachUserSaleCount']);
@@ -65,7 +67,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('tags-list', [TagController::class, 'getTagList']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('posts', PostController::class);
-
 
     Route::apiResource('product-categories', ProductCategoryController::class);
     Route::apiResource('product-sub-categories', ProductSubCategoryController::class);
