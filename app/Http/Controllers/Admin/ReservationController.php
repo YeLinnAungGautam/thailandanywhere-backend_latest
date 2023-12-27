@@ -89,7 +89,11 @@ class ReservationController extends Controller
         }
 
         if ($request->customer_payment_status) {
-            $query->where('payment_status', $request->customer_payment_status);
+            $query->whereIn('booking_id', function ($q) use ($request) {
+                $q->select('id')
+                    ->from('bookings')
+                    ->where('payment_status', $request->customer_payment_status);
+            });
         }
 
         if ($request->expense_status) {
