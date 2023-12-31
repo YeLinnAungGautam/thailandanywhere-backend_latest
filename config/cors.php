@@ -19,14 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'https://sales-admin.thanywhere.com',
-        'http://staging-admin.thanywhere.com',
-        'https://staging-admin.thanywhere.com',
-        'http://mm.thanywhere.com',
-        'http://localhost:5173',
-        'http://localhost:5174'
-    ],
+    // 'allowed_origins' => [
+    //     'https://sales-admin.thanywhere.com',
+    //     'http://staging-admin.thanywhere.com',
+    //     'https://staging-admin.thanywhere.com',
+    //     'http://mm.thanywhere.com',
+    //     'http://localhost:5173',
+    //     'http://localhost:5174'
+    // ],
+
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patCterns' => [],
 
