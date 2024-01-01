@@ -17,11 +17,12 @@ use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
+use App\Services\BookingItemDataService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -340,10 +341,12 @@ class ReservationController extends Controller
         $data = new BookingItemResource($booking);
 
         $hotels[] = $booking->booking->vantour;
+        $total_cost = (new BookingItemDataService($booking))->getTotalCost();
+        $sale_price = (new BookingItemDataService($booking))->getSalePrice();
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView('pdf.reservation_vantour', compact('data', 'hotels'));
+        ])->loadView('pdf.reservation_vantour', compact('data', 'hotels', 'total_cost', 'sale_price'));
 
         return $pdf->stream();
     }
