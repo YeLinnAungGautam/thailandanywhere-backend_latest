@@ -87,6 +87,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations', ReservationController::class);
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
+    Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);

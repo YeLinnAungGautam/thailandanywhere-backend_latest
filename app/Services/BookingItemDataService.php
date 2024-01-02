@@ -23,6 +23,11 @@ class BookingItemDataService
         return $this->booking_item->selling_price * $this->getQuantity();
     }
 
+    public function getNights($checkin_date, $checkout_date)
+    {
+        return (int) Carbon::parse($checkin_date)->diff(Carbon::parse($checkout_date))->format("%a");
+    }
+
     private function getCostPrice()
     {
         $cost_price = null;
@@ -55,10 +60,5 @@ class BookingItemDataService
         }
 
         return $this->booking_item->quantity;
-    }
-
-    private function getNights($checkin_date, $checkout_date)
-    {
-        return (int) Carbon::parse($checkin_date)->diff(Carbon::parse($checkout_date))->format("%a");
     }
 }

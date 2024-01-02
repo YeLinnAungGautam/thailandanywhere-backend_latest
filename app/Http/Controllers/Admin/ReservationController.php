@@ -6,24 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingResource;
+use App\Jobs\SendReservationNotifyEmailJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationBookingConfirmLetter;
 use App\Models\ReservationCarInfo;
 use App\Models\ReservationCustomerPassport;
-use App\Models\ReservationExpenseReceipt;
 
+use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
 use App\Services\BookingItemDataService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
-use Barryvdh\DomPDF\Facade\Pdf;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ReservationController extends Controller
@@ -669,8 +672,6 @@ class ReservationController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
-
-
     }
 
     public function deleteCustomerPassport($id)
@@ -684,7 +685,20 @@ class ReservationController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
 
+    public function sendNotifyEmail(BookingItem $booking_item, Request $request)
+    {
+        $request->validate(['mail_subject' => 'required']);
 
+        try {
+            dispatch(new SendReservationNotifyEmailJob($request->mail_to, $request->mail_subject, $request->sent_to_default, $booking_item));
+
+            return $this->success(null, 'Reservation notify email is successfully sent.', 200);
+        } catch (Exception $e) {
+            Log::error($e);
+
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 }
