@@ -357,7 +357,6 @@ class ReservationController extends Controller
      */
     public function update(Request $request, string $id)
     {
-
         $find = BookingItem::find($id);
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
@@ -376,6 +375,8 @@ class ReservationController extends Controller
             'slip_code' => $request->slip_code ?? $find->slip_code,
             'expense_amount' => $request->expense_amount ?? $find->expense_amount,
             'comment' => $request->comment ?? $find->comment,
+            'dropoff_location' => $request->dropoff_location ?? $find->dropoff_location,
+            'pickup_time' => $request->pickup_time ?? $find->pickup_time,
         ];
 
 
