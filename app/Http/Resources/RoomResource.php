@@ -27,10 +27,27 @@ class RoomResource extends JsonResource
             'images' => RoomImageResource::collection($this->images),
             'room_periods' => RoomPeriodResource::collection($this->periods),
             'max_person' => $this->max_person,
+            'total_night' => count($this->getTotalDates($request->period)) <= 0 ? 1 : count($this->getTotalDates($request->period)),
             'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    private function getTotalDates($period = null)
+    {
+        $dates = [];
+
+        if(!is_null($period)) {
+            $periods = explode(' , ', $period);
+            $dates = $this->getDaysOfMonth($periods[0], $periods[1]);
+
+            array_pop($dates);
+
+            return $dates;
+        }
+
+        return $dates;
     }
 
     private function getRoomPrice($period = null)
@@ -39,8 +56,10 @@ class RoomResource extends JsonResource
             return $this->room_price;
         }
 
-        $periods = $period ? explode(' , ', $period) : null;
-        $dates = $this->getDaysOfMonth($periods[0], $periods[1]);
+        // $periods = $period ? explode(' , ', $period) : null;
+        // $dates = $this->getDaysOfMonth($periods[0], $periods[1]);
+
+        $dates = $this->getTotalDates($period);
 
         $room_prices = [];
         foreach($dates as $date) {
