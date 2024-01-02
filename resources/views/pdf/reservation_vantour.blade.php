@@ -150,15 +150,18 @@
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Expense to Driver:</td>
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $total_cost }}</td>
-                        <td style="width:50%;font-size:16px;padding-bottom:12px!important">Route Plan:</td>
                     </tr>
+
                     <tr>
                         <th style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">Payment Method:</th>
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important;color:green">{{ $data->payment_method }}</td>
-                        <td colspan="2" rowspan="3" style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
+
+                        <td style="width:50%;font-size:16px;padding-bottom:12px!important">Route Plan:</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
                            {{ $data->reservationInfo->route_plan ?? '-' }}
                         </td>
                     </tr>
+
                     @if($data->payment_method == 'Cash')
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">To Collect:
@@ -166,6 +169,7 @@
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important;color:green">{{ $sale_price }}</td>
                     </tr>
                     @endif
+
                     {{--  --}}
                     <tr></tr>
                     <tr>
