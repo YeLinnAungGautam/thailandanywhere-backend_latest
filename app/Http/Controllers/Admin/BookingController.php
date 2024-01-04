@@ -383,13 +383,13 @@ class BookingController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach ($find->items as $key => $item) {
+        foreach ($find->items as $item) {
             if ($item->receipt_image) {
                 Storage::delete('public/images/' . $item->receipt_image);
             }
-            BookingItem::where('id', $item->id)->delete();
         }
 
+        $find->items()->delete();
 
         $find->delete();
 
