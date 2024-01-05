@@ -19,6 +19,7 @@ use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
 use App\Services\BookingItemDataService;
+use App\Services\ReservationEmailNotifyService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 
@@ -689,10 +690,30 @@ class ReservationController extends Controller
 
     public function sendNotifyEmail(BookingItem $booking_item, Request $request)
     {
-        $request->validate(['mail_subject' => 'required']);
+        $request->validate([
+            'mail_subject' => 'required',
+            'mail_body' => 'required'
+        ]);
 
         try {
-            dispatch(new SendReservationNotifyEmailJob($request->mail_to, $request->mail_subject, $request->sent_to_default, $booking_item));
+            // dispatch(new SendReservationNotifyEmailJob(
+            // $request->mail_to,
+            // $request->mail_subject,
+            // $request->sent_to_default,
+            // $request->mail_body,
+            // $booking_item,
+            // $request->attachments
+            // ));
+            $service = new ReservationEmailNotifyService(
+                $request->mail_to,
+                $request->mail_subject,
+                $request->sent_to_default,
+                $request->mail_body,
+                $booking_item,
+                $request->attachments
+            );
+
+            $service->send();
 
             return $this->success(null, 'Reservation notify email is successfully sent.', 200);
         } catch (Exception $e) {

@@ -1,20 +1,12 @@
 <?php
-
-namespace App\Jobs;
+namespace App\Services;
 
 use App\Mail\ReservationNotifyEmail;
 use App\Models\BookingItem;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 
-class SendReservationNotifyEmailJob implements ShouldQueue
+class ReservationEmailNotifyService
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
     protected $default_email = 'negyi.partnership@thanywhere.com';
     protected $mail_to;
     protected $mail_subject;
@@ -23,9 +15,6 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     protected $booking_item;
     public $attachments;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null)
     {
         $this->mail_to = $mail_to;
@@ -36,13 +25,8 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         $this->attachments = $attachments;
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    public function send()
     {
-        // dd($this->attachments);
-
         Mail::to($this->getMails())
             ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
     }
