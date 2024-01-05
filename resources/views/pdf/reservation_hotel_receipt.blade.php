@@ -99,109 +99,130 @@
             <table class="header-table">
                 <tbody>
                     <tr>
-                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Booking Detail</th>
+                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Booking
+                            Detail</th>
                         <th></th>
                         <th></th>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Booking ID:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->crm_id }}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ $data->crm_id }}</td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation ID:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}</td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Reservation Code:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->slip_code ?? '-' }}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ $data->slip_code ?? '-' }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
-                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Customer Detail</th>
+                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Customer
+                            Detail</th>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Customer Name:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->booking->customer->name}}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ $data->booking->customer->name ?? '-' }}</td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Passport No:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->booking->customer->nrc_number ? $data->booking->customer->nrc_number : '-'}}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ $data->booking->customer->nrc_number ? $data->booking->customer->nrc_number : '-' }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
-                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Ticket Detail</th>
+                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Ticket
+                            Detail</th>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Hotel Name:</td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        {{$data->product->name ? $data->product->name : '-'}}
-                    </td>
+                            {{ $data->product->name ?? '-' }}
+                        </td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Room Type:</td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        {{$data->room->name}}
+                            {{ $data->room->name ?? '-' }}
                         </td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Quantity Of Rooms:</td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                         {{$data->quantity}}
+                            {{ $data->quantity }}
                         </td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Check-In:
                         </td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        {{ Carbon\Carbon::parse($data->checkin_date)->format('d F Y') }}
+                            {{ Carbon\Carbon::parse($data->checkin_date)->format('d F Y') }}
                         </td>
                     </tr>
                     <td style="width:30%;font-size:13px;padding-bottom:12px!important">Check-Out:
-                        </td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                    </td>
+                    <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
                         {{ Carbon\Carbon::parse($data->checkout_date)->format('d F Y') }}
 
-                        </td>
+                    </td>
                     </tr>
-                    <tr>
+                    {{-- Service Date --}}
+                    {{-- <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Service Date:
                         </td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{Carbon\Carbon::parse($data->service_date)->format('d F Y')}}
                         </td>
+                    </tr> --}}
+
+                    <tr>
+                        <td style="width:30%;font-size:13px;padding-bottom:12px!important">No. of Guests:
+                        </td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
+                            {{ $data->total_guest }}
+                        </td>
                     </tr>
+
                     {{--  --}}
                     <tr>
-                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Agent Detail</th>
+                        <th style="width:30%;font-size:14px;font-weight:bold;padding-bottom:12px!important">Agent Detail
+                        </th>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Agent Name:
                         </td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        @if (Str::startsWith($data->crm_id, 'CK'))
-                            ChawKalayar
-                        @elseif (Str::startsWith($data->crm_id, 'SH'))
-                            Sunshine
-                        @elseif (Str::startsWith($data->crm_id, 'HN'))
-                            Hinn
-                        @elseif (Str::startsWith($data->crm_id, 'CS'))
-                            Chit Su
-                        @elseif (Str::startsWith($data->crm_id, 'KN'))
-                            Ko Nay Myo
-                        @elseif (Str::startsWith($data->crm_id, 'EM'))
-                            Ei Myat
-                        @elseif (Str::startsWith($data->crm_id, 'SA'))
-                            Admin
-                        @endif
+                            @if (Str::startsWith($data->crm_id, 'CK'))
+                                ChawKalayar
+                            @elseif (Str::startsWith($data->crm_id, 'SH'))
+                                Sunshine
+                            @elseif (Str::startsWith($data->crm_id, 'HN'))
+                                Hinn
+                            @elseif (Str::startsWith($data->crm_id, 'CS'))
+                                Chit Su
+                            @elseif (Str::startsWith($data->crm_id, 'KN'))
+                                Ko Nay Myo
+                            @elseif (Str::startsWith($data->crm_id, 'EM'))
+                                Ei Myat
+                            @elseif (Str::startsWith($data->crm_id, 'SA'))
+                                Admin
+                            @endif
                         </td>
                     </tr>
                     <tr>
-                        <th style="width:30%;font-size:13px;font-weight:bold;padding-bottom:12px!important">Payment Status:</th>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important;
+                        <th style="width:30%;font-size:13px;font-weight:bold;padding-bottom:12px!important">Payment
+                            Status:</th>
+                        <td
+                            style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important;
     @if ($data->payment_status === 'fully_paid') color: green; @endif
     @if ($data->payment_status === 'partially_paid') color:#ff5733; @endif
     @if ($data->payment_status === 'not_paid') color:red; @endif">
-    {{ ucwords(str_replace('_', ' ', $data->payment_status)) }}
-</td>
+                            {{ ucwords(str_replace('_', ' ', $data->payment_status)) }}
+                        </td>
 
                     </tr>
                 </tbody>

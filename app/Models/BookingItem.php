@@ -44,7 +44,8 @@ class BookingItem extends Model
         'amount',
         'is_inclusive',
         'slip_code',
-        'is_associated'
+        'is_associated',
+        'total_guest'
     ];
 
     protected $hidden = [

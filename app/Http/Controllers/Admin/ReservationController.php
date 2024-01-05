@@ -369,6 +369,7 @@ class ReservationController extends Controller
         $data = [
             'service_date' => $request->service_date ?? $find->service_date,
             'quantity' => $request->quantity ?? $find->quantity,
+            'total_guest' => $request->total_guest ?? $find->total_guest,
             'selling_price' => $request->selling_price ?? $find->selling_price,
             'duration' => $request->duration ?? $find->duration,
             'cost_price' => $request->cost_price ?? $find->cost_price,
