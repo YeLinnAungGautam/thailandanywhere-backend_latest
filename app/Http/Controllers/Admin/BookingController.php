@@ -265,7 +265,6 @@ class BookingController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-
         $data = [
             'customer_id' => $request->customer_id ?? $find->customer_id,
             'is_past_info' => $request->is_past_info ?? $find->is_past_info,
@@ -299,7 +298,6 @@ class BookingController extends Controller
         }
 
         if ($request->items) {
-
             foreach ($find->items as $key => $item) {
                 if ($item->receipt_image) {
                     Storage::delete('public/images/' . $item->receipt_image);
@@ -323,7 +321,7 @@ class BookingController extends Controller
                     'variation_id' => isset($item['variation_id']) ? $item['variation_id'] : null,
                     'service_date' => $item['service_date'],
                     'quantity' => $item['quantity'],
-                    'total_guest' => $item['total_guest'],
+                    'total_guest' => $item['total_guest'] ?? null,
                     'days' => isset($item['days']) ? $item['days'] : null,
                     'special_request' => isset($item['special_request']) ? $item['special_request'] : null,
                     'route_plan' => isset($item['route_plan']) ? $item['route_plan'] : null,
@@ -411,6 +409,7 @@ class BookingController extends Controller
         }
 
         $data = new BookingResource($booking);
+
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
         ])->loadView('pdf.booking_receipt', compact('data'));
