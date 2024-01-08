@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class ReservationNotifyEmail extends Mailable
 {
@@ -66,22 +67,23 @@ class ReservationNotifyEmail extends Mailable
         $files = [];
         if($passports->count()) {
             foreach($passports as $passport) {
-                $path = public_path('/storage/passport/' . $passport->file);
-                $files[] = Attachment::fromPath($path);
+                if(Storage::disk('public')->exists('/passport/' . $passport->file)) {
+                    $files[] = Attachment::fromPath(public_path('/storage/passport/' . $passport->file));
+                }
             }
         }
 
         if($paid_slips->count()) {
             foreach($paid_slips as $paid_slip) {
-                $path = public_path('/storage/images/' . $paid_slip->file);
-                $files[] = Attachment::fromPath($path);
+                if(Storage::disk('public')->exists('/images/' . $paid_slip->file)) {
+                    $files[] = Attachment::fromPath(public_path('/storage/images/' . $paid_slip->file));
+                }
             }
         }
 
         if(isset($this->attach_files) && count($this->attach_files) > 0) {
             foreach($this->attach_files as $attach_file) {
-                $path = public_path('/storage/temp_files/attachments/' . $attach_file);
-                $files[] = Attachment::fromPath($path);
+                $files[] = Attachment::fromPath(public_path('/storage/temp_files/attachments/' . $attach_file));
             }
         }
 
