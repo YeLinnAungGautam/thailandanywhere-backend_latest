@@ -27,7 +27,7 @@ class HotelResource extends JsonResource
             'bank_account_number' => $this->bank_account_number,
             'city' => new CityResource($this->city),
             'place' => $this->place,
-            'rooms' => $this->rooms,
+            'rooms' => HotelRoomResource::collection($this->rooms),
             'contacts' => HotelContractResource::collection($this->contracts),
             'images' => HotelImageResource::collection($this->images),
             'lowest_room_price' => $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0,

@@ -108,6 +108,14 @@ class HotelController extends Controller
      */
     public function show(Hotel $hotel)
     {
+        $hotel->load(
+            'rooms',
+            'city',
+            'contracts',
+            'images',
+            'rooms.images'
+        );
+
         return $this->success(new HotelResource($hotel), 'Hotel Detail', 200);
     }
 
