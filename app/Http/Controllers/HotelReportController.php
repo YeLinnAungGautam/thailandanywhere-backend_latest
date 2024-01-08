@@ -16,6 +16,9 @@ class HotelReportController extends Controller
     public function __invoke(Request $request)
     {
         $data = BookingItem::query()
+            ->when($request->service_date, function ($q) use ($request) {
+                $q->where('service_date', $request->service_date);
+            })
             ->with('product:id,name')
             ->where('product_type', Hotel::class)
             ->select('product_id', 'product_type', DB::raw('count(*) as total_bookings'))
