@@ -17,17 +17,17 @@ class ReservationNotifyEmail extends Mailable
     protected $mail_subject;
     protected $mail_body;
     protected $booking_item;
-    public $attachments;
+    public $attach_files;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $mail_subject, string $mail_body, BookingItem $booking_item, $attachments = null)
+    public function __construct(string $mail_subject, string $mail_body, BookingItem $booking_item, $attach_files = null)
     {
         $this->mail_subject = $mail_subject;
         $this->mail_body = $mail_body;
         $this->booking_item = $booking_item;
-        $this->attachments = $attachments;
+        $this->attach_files = $attach_files;
     }
 
     /**
@@ -60,25 +60,31 @@ class ReservationNotifyEmail extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        $passports = $this->booking_item->reservationCustomerPassport;
+        $paid_slips = $this->booking_item->reservationPaidSlip;
 
-        // $passports = $this->booking_item->reservationCustomerPassport;
-        // $paid_slips = $this->booking_item->reservationPaidSlip;
+        $files = [];
+        if($passports->count()) {
+            foreach($passports as $passport) {
+                $path = public_path('/storage/passport/' . $passport->file);
+                $files[] = Attachment::fromPath($path);
+            }
+        }
 
-        // $attachment_lists = [];
+        if($paid_slips->count()) {
+            foreach($paid_slips as $paid_slip) {
+                $path = public_path('/storage/images/' . $paid_slip->file);
+                $files[] = Attachment::fromPath($path);
+            }
+        }
 
-        // if(isset($this->attachments)) {
-        //     foreach($this->attachments as $attachment) {
-        //         $attachment_lists[] = Attachment::fromData(fn () => $attachment, $attachment->getClientOriginalName())->withMime($attachment->getMimeType());
-        //     }
-        // }
+        if(isset($this->attach_files) && count($this->attach_files) > 0) {
+            foreach($this->attach_files as $attach_file) {
+                $path = public_path('/storage/temp_files/attachments/' . $attach_file);
+                $files[] = Attachment::fromPath($path);
+            }
+        }
 
-        // // dd($attachment_lists);
-
-        // return $attachment_lists;
-
-        // return [
-        //     // Attachment::fromData(fn () => $this->pdf, 'Report.pdf'),
-        // ];
+        return $files;
     }
 }

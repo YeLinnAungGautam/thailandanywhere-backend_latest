@@ -261,7 +261,6 @@ class ReservationController extends Controller
         //            ->getData(), 'Reservation List');
     }
 
-
     /**
      * Display the specified resource.
      */
@@ -334,6 +333,7 @@ class ReservationController extends Controller
         return $pdf->stream();
 
     }
+
     public function printReservationVantour(Request $request, string $id)
     {
         $booking = BookingItem::find($id);
@@ -354,7 +354,6 @@ class ReservationController extends Controller
 
         return $pdf->stream();
     }
-
 
     /**
      * Update the specified resource in storage.

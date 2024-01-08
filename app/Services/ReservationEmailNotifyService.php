@@ -28,7 +28,20 @@ class ReservationEmailNotifyService
     public function send()
     {
         Mail::to($this->getMails())
-            ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
+            ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->saveAttachToTemp()));
+    }
+
+    private function saveAttachToTemp()
+    {
+        $attach_files = [];
+
+        if(isset($this->attachments)) {
+            foreach ($this->attachments as $attachment) {
+                $attach_files[] = uploadFile($attachment, '/temp_files/attachments/');
+            }
+        }
+
+        return $attach_files;
     }
 
     public function getMails()
