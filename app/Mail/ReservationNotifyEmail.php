@@ -62,7 +62,7 @@ class ReservationNotifyEmail extends Mailable
     public function attachments(): array
     {
         $passports = $this->booking_item->reservationCustomerPassport;
-        $paid_slips = $this->booking_item->reservationPaidSlip;
+        $expense_receipts = $this->booking_item->reservationReceiptImage;
 
         $files = [];
         if($passports->count()) {
@@ -73,8 +73,8 @@ class ReservationNotifyEmail extends Mailable
             }
         }
 
-        if($paid_slips->count()) {
-            foreach($paid_slips as $paid_slip) {
+        if($expense_receipts->count()) {
+            foreach($expense_receipts as $paid_slip) {
                 if(Storage::disk('public')->exists('/images/' . $paid_slip->file)) {
                     $files[] = Attachment::fromPath(public_path('/storage/images/' . $paid_slip->file));
                 }
