@@ -696,25 +696,25 @@ class ReservationController extends Controller
         ]);
 
         try {
-            // dispatch(new SendReservationNotifyEmailJob(
-            // $request->mail_to,
-            // $request->mail_subject,
-            // $request->sent_to_default,
-            // $request->mail_body,
-            // $booking_item,
-            // $request->attachments
-            // ));
-
-            $service = new ReservationEmailNotifyService(
+            dispatch(new SendReservationNotifyEmailJob(
                 $request->mail_to,
                 $request->mail_subject,
                 $request->sent_to_default,
                 $request->mail_body,
                 $booking_item,
                 $request->attachments
-            );
+            ));
 
-            $service->send();
+            // $service = new ReservationEmailNotifyService(
+            //     $request->mail_to,
+            //     $request->mail_subject,
+            //     $request->sent_to_default,
+            //     $request->mail_body,
+            //     $booking_item,
+            //     $request->attachments
+            // );
+
+            // $service->send();
 
             return $this->success(null, 'Reservation notify email is successfully sent.', 200);
         } catch (Exception $e) {
