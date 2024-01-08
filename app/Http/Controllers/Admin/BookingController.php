@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -116,32 +117,15 @@ class BookingController extends Controller
             ->getData(), 'Booking List');
     }
 
-
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(BookingRequest $request)
     {
         DB::beginTransaction();
 
         try {
-            $request->validate([
-                'customer_id' => 'required',
-                'sold_from' => 'required|string',
-                'payment_method' => 'required|string',
-                'bank_name' => 'required|string',
-                'payment_status' => 'required|string',
-                'booking_date' => 'required|string',
-                'items' => 'required',
-                'sub_total' => 'required',
-                'grand_total' => 'required',
-                'balance_due' => 'required',
-                'balance_due_date' => 'required'
-            ]);
-
-
             $data = [
-                // 'crm_id' => $request->crm_id,
                 'customer_id' => $request->customer_id,
                 'sold_from' => $request->sold_from,
                 'payment_method' => $request->payment_method,
@@ -205,8 +189,17 @@ class BookingController extends Controller
                     'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
-                    'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
+                    // 'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
                 ];
+
+                if($request->is_inclusive == 1) {
+                    $data['is_inclusive'] = $request->is_inclusive ? $request->is_inclusive : 0;
+                    $data['inclusive_name'] = $request->inclusive_name ?? null;
+                    $data['inclusive_quantity'] = $request->inclusive_quantity ?? null;
+                    $data['inclusive_rate'] = $request->inclusive_rate ?? null;
+                    $data['inclusive_start_date'] = $request->inclusive_start_date ?? null;
+                    $data['inclusive_end_date'] = $request->inclusive_end_date ?? null;
+                }
 
                 if (isset($request->items[$key]['customer_attachment'])) {
                     $attachment = $request->items[$key]['customer_attachment'];
@@ -229,7 +222,6 @@ class BookingController extends Controller
                         $data['confirmation_letter'] = $fileData['fileName'];
                     }
                 }
-
 
                 BookingItem::create($data);
             }
@@ -347,8 +339,17 @@ class BookingController extends Controller
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'slip_code' => $request->slip_code,
-                        'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
+                        // 'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
                     ];
+
+                    if($request->is_inclusive == 1) {
+                        $data['is_inclusive'] = $request->is_inclusive ? $request->is_inclusive : 0;
+                        $data['inclusive_name'] = $request->inclusive_name ?? null;
+                        $data['inclusive_quantity'] = $request->inclusive_quantity ?? null;
+                        $data['inclusive_rate'] = $request->inclusive_rate ?? null;
+                        $data['inclusive_start_date'] = $request->inclusive_start_date ?? null;
+                        $data['inclusive_end_date'] = $request->inclusive_end_date ?? null;
+                    }
 
                     if (isset($request->items[$key]['receipt_image'])) {
                         $receiptImage = $request->items[$key]['receipt_image'];
