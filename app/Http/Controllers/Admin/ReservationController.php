@@ -705,6 +705,7 @@ class ReservationController extends Controller
             // $booking_item,
             // $request->attachments
             // ));
+
             $service = new ReservationEmailNotifyService(
                 $request->mail_to,
                 $request->mail_subject,
