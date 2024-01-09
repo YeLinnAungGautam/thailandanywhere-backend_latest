@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,5 +21,6 @@ Route::get('/', function () {
 
 
 Route::get('slack-test', function () {
-    info('Slack notification: ' . now()->format('Y-m-d H:i a'));
+    $message = 'Slack notification: ' . now()->format('Y-m-d H:i a');
+    Log::debug($message);
 });
