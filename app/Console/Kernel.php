@@ -13,8 +13,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('db:backup')->daily();
-
-        $schedule->command('test:cron-job')->everyMinute();
     }
 
     /**
