@@ -14,8 +14,6 @@ class RestaurantResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
-
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -26,7 +24,7 @@ class RestaurantResource extends JsonResource
             'bank_account_number' => $this->bank_account_number,
             'city' => new CityResource($this->city),
             'place' => $this->place,
-            'meals' => $this->meals,
+            'meals' => RestaurantMealResource::collection($this->meals),
             'contacts' => ProductContractResource::collection($this->contracts),
             'images' => ProductImageResource::collection($this->images),
             'lowest_meal_price' => $this->meals->where('is_extra', 0)->sortBy('meal_price')->first()->meal_price ?? 0,
