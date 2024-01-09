@@ -16,14 +16,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     // phpinfo();
-    abort(503);
-});
-
-
-Route::get('slack-test', function () {
     $message = 'Slack notification: ' . now()->format('Y-m-d H:i a');
 
     Log::critical($message);
 
-    return 'Logged successfully';
+    abort(503);
 });
