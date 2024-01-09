@@ -23,7 +23,7 @@ Route::get('/', function () {
 Route::get('slack-test', function () {
     $message = 'Slack notification: ' . now()->format('Y-m-d H:i a');
 
-    Log::info($message);
+    Log::critical($message);
 
     return 'Logged successfully';
 });
