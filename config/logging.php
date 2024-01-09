@@ -75,7 +75,7 @@ return [
 
         'slack' => [
             'driver' => 'slack',
-            'url' => env('LOG_SLACK_WEBHOOK_URL', 'https://hooks.slack.com/services/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'),
+            'url' => env('LOG_SLACK_WEBHOOK_URL', 'https://hooks.slack.com/services/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'),
             'username' => env('SLACK_APP_NAME', 'TH Anywhere API'),
             'emoji' => ':boom:',
             'level' => env('LOG_LEVEL', 'critical'),
