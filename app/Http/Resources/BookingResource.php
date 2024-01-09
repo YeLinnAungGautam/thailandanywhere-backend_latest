@@ -48,6 +48,15 @@ class BookingResource extends JsonResource
             'bill_to' => $this->customer ? $this->customer->name : "-",
             'receipts' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
             'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
+
+            // Inclusive
+            'is_inclusive' => $this->is_inclusive,
+            'inclusive_name' => $this->inclusive_name,
+            'inclusive_quantity' => $this->inclusive_quantity,
+            'inclusive_rate' => $this->inclusive_rate,
+            'inclusive_start_date' => $this->inclusive_start_date,
+            'inclusive_end_date' => $this->inclusive_end_date,
+
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
