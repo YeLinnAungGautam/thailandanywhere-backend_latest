@@ -420,10 +420,15 @@ class BookingController extends Controller
         }
 
         $data = new BookingResource($booking);
+        $pdf_view = 'pdf.booking_receipt';
+
+        if($booking->is_inclusive) {
+            $pdf_view = 'pdf.inclusive_booking_receipt';
+        }
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView('pdf.booking_receipt', compact('data'));
+        ])->loadView($pdf_view, compact('data'));
 
         return $pdf->stream();
     }
