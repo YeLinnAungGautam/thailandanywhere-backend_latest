@@ -317,6 +317,7 @@ class ReportController extends Controller
         $results = BookingResource::collection($data);
 
         $items = [];
+        $one = [];
 
         foreach($results as $key => $res) {
             foreach($res->items as $res1) {
@@ -330,11 +331,8 @@ class ReportController extends Controller
                     $days = $interval->format('%a');
 
                     $price = $res1->quantity * $res1->selling_price * $days;
-
                 } else {
-
                     $price = $res1->quantity * $res1->selling_price;
-
                 }
 
                 $one[] = [
