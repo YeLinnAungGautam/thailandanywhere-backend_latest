@@ -17,3 +17,8 @@ Route::get('/', function () {
     // phpinfo();
     abort(503);
 });
+
+
+Route::get('slack-test', function () {
+    info('Slack notification: ' . now()->format('Y-m-d H:i a'));
+});
