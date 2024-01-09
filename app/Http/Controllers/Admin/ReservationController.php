@@ -635,14 +635,13 @@ class ReservationController extends Controller
 
                 BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
             }
-
-
-
         } elseif($request->is_associated == 0) {
-            ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
 
-            BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
+            if(isset($findInfo->booking_item_id)) {
+                ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
 
+                BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
+            }
         }
 
         return $this->success(new BookingItemResource($bookingItem), 'Successfully updated');
