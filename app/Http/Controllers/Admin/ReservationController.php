@@ -429,7 +429,6 @@ class ReservationController extends Controller
 
         $findInfo = ReservationInfo::where('booking_item_id', $bookingItem->id)->first();
         if (!$findInfo) {
-
             $saveData = [
                 'booking_item_id' => $bookingItem->id,
                 'customer_feedback' => $request->customer_feedback,
@@ -549,8 +548,14 @@ class ReservationController extends Controller
 
             if ($request->receipt_image) {
                 foreach ($request->receipt_image as $image) {
-                    $fileData = $this->uploads($image, 'images/');
-                    ReservationExpenseReceipt::create(['booking_item_id' => $findInfo->booking_item_id, 'file' => $fileData['fileName']]);
+                    if(isset($findInfo->booking_item_id)) {
+                        $fileData = $this->uploads($image, 'images/');
+
+                        ReservationExpenseReceipt::create([
+                            'booking_item_id' => $findInfo->booking_item_id,
+                            'file' => $fileData['fileName']
+                        ]);
+                    }
                 }
             }
 

@@ -257,6 +257,7 @@ class BookingController extends Controller
 
         try {
             $find = Booking::find($id);
+
             if (!$find) {
                 return $this->error(null, 'Data not found', 404);
             }
@@ -301,16 +302,19 @@ class BookingController extends Controller
             }
 
             if ($request->items) {
-                foreach ($find->items as $key => $item) {
-                    if ($item->receipt_image) {
-                        Storage::delete('public/images/' . $item->receipt_image);
-                    }
-                    if ($item->confirmation_letter) {
-                        Storage::delete('public/files/' . $item->confirmation_letter);
-                    }
+                // foreach ($find->items as $key => $item) {
+                //     if ($item->receipt_image) {
+                //         Storage::delete('public/images/' . $item->receipt_image);
+                //     }
 
-                    BookingItem::where('id', $item->id)->delete();
-                }
+                //     if ($item->confirmation_letter) {
+                //         Storage::delete('public/files/' . $item->confirmation_letter);
+                //     }
+
+                //     $deleted_reservation_ids[] = $item->id;
+
+                //     BookingItem::where('id', $item->id)->delete();
+                // }
 
                 foreach ($request->items as $key => $item) {
                     $data = [
@@ -342,7 +346,6 @@ class BookingController extends Controller
                         'checkin_date' => isset($item['checkin_date']) ? $item['checkin_date'] : null,
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
-                        'slip_code' => $request->slip_code,
                         'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
                     ];
 
@@ -360,7 +363,6 @@ class BookingController extends Controller
                         $data['customer_attachment'] = $fileData['fileName'];
                     }
 
-
                     if (isset($request->items[$key]['confirmation_letter'])) {
                         $file = $request->items[$key]['confirmation_letter'];
                         if ($file) {
@@ -369,7 +371,13 @@ class BookingController extends Controller
                         }
                     }
 
-                    BookingItem::create($data);
+                    if(is_null($item['reservation_id'])) {
+                        BookingItem::create($data);
+                    } else {
+                        $booking_item = BookingItem::find($item['reservation_id']);
+
+                        $booking_item->update($data);
+                    }
                 }
             }
 
