@@ -303,18 +303,42 @@ class BookingController extends Controller
 
             if ($request->items) {
                 // foreach ($find->items as $key => $item) {
-                //     if ($item->receipt_image) {
-                //         Storage::delete('public/images/' . $item->receipt_image);
-                //     }
-
-                //     if ($item->confirmation_letter) {
-                //         Storage::delete('public/files/' . $item->confirmation_letter);
-                //     }
-
-                //     $deleted_reservation_ids[] = $item->id;
-
-                //     BookingItem::where('id', $item->id)->delete();
+                // if ($item->receipt_image) {
+                //     Storage::delete('public/images/' . $item->receipt_image);
                 // }
+
+                // if ($item->confirmation_letter) {
+                //     Storage::delete('public/files/' . $item->confirmation_letter);
+                // }
+
+                // $deleted_reservation_ids[] = $item->id;
+
+                // BookingItem::where('id', $item->id)->delete();
+                // }
+
+                $booking_item_ids = $find->items()->pluck('id')->toArray();
+                $request_item_ids = collect($request->items)->pluck('reservation_id')->toArray();
+                $delete_item_ids = [];
+
+                foreach($booking_item_ids as $booking_item_id) {
+                    if(!in_array($booking_item_id, $request_item_ids)) {
+                        $delete_item_ids[] = $booking_item_id;
+                    }
+                }
+
+                foreach($delete_item_ids as $delete_item) {
+                    $d_item = BookingItem::find($delete_item);
+
+                    if ($d_item->receipt_image) {
+                        Storage::delete('public/images/' . $d_item->receipt_image);
+                    }
+
+                    if ($d_item->confirmation_letter) {
+                        Storage::delete('public/files/' . $d_item->confirmation_letter);
+                    }
+
+                    $d_item->delete();
+                }
 
                 foreach ($request->items as $key => $item) {
                     $data = [
