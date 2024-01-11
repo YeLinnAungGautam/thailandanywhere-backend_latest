@@ -7,15 +7,20 @@ use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
 use App\Traits\HttpResponses;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class SupplierController extends Controller
 {
     use HttpResponses;
 
-    public function index()
+    public function index(Request $request)
     {
-        $suppliers = Supplier::with('driver')->paginate($limit ?? 20);
+        $suppliers = Supplier::with('driver')
+            ->when($request->search, function ($query) use ($request) {
+                $query->where('name', 'LIKE', "%{$request->search}%");
+            })
+            ->paginate($limit ?? 20);
 
         return $this->success(SupplierResource::collection($suppliers)
             ->additional([

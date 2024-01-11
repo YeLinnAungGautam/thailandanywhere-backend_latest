@@ -7,15 +7,20 @@ use App\Http\Resources\DriverResource;
 use App\Models\Driver;
 use App\Traits\HttpResponses;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class DriverController extends Controller
 {
     use HttpResponses;
 
-    public function index()
+    public function index(Request $request)
     {
-        $drivers = Driver::with('suppliers')->paginate($limit ?? 20);
+        $drivers = Driver::with('suppliers')
+            ->when($request->search, function ($query) use ($request) {
+                $query->where('name', 'LIKE', "%{$request->search}%");
+            })
+            ->paginate($limit ?? 20);
 
         return $this->success(DriverResource::collection($drivers)
             ->additional([
