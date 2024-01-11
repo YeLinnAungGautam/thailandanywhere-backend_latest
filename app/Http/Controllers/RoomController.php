@@ -18,9 +18,8 @@ use Illuminate\Support\Facades\Storage;
 class RoomController extends Controller
 {
     use ImageManager;
-    use HttpResponses;    /**
-     * Display a listing of the resource.
-     */
+    use HttpResponses;
+
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);

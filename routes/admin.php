@@ -24,11 +24,13 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -104,6 +106,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Meal
     Route::apiResource('meals', MealController::class);
     Route::delete('meals/{meal}/images/{product_image}', [MealController::class, 'deleteImage']);
+
+    # Driver
+    Route::apiResource('drivers', DriverController::class);
+
+    # Supplier
+    Route::apiResource('suppliers', SupplierController::class);
 
     Route::apiResource('airlines', AirlineController::class);
     Route::apiResource('airline-tickets', AirlineTicketController::class);
