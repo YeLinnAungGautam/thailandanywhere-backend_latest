@@ -395,7 +395,11 @@ class BookingController extends Controller
                         }
                     }
 
-                    if(is_null($item['reservation_id']) || $item['reservation_id'] === 'undefined' || $item['reservation_id'] == 'null') {
+                    if(
+                        !isset($item['reservation_id']) ||
+                        $item['reservation_id'] === 'undefined' ||
+                        $item['reservation_id'] == 'null'
+                    ) {
                         BookingItem::create($data);
                     } else {
                         $booking_item = BookingItem::find($item['reservation_id']);
