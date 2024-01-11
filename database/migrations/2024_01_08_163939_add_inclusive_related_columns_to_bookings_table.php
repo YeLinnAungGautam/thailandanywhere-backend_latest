@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::table('bookings', function (Blueprint $table) {
             $table->boolean('is_inclusive')->default(0);
             $table->string('inclusive_name')->nullable();
-            $table->tinyInteger('inclusive_quantity')->nullable();
+            $table->bigInteger('inclusive_quantity')->nullable();
             $table->bigInteger('inclusive_rate')->nullable();
             $table->date('inclusive_start_date')->nullable();
             $table->date('inclusive_end_date')->nullable();
