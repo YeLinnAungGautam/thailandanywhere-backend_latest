@@ -21,14 +21,20 @@ class SupplierRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'driver_id' => 'required',
             'name' => 'required',
             'contact' => 'required',
-            'logo' => 'required',
+            // 'logo' => 'required',
             'bank_name' => 'required',
             'bank_account_no' => 'required',
             'bank_account_name' => 'required',
         ];
+
+        if($this->method() == 'POST') {
+            $rules['logo'] = 'required';
+        }
+
+        return $rules;
     }
 }

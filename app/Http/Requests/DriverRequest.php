@@ -21,12 +21,19 @@ class DriverRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => 'required',
             'contact' => 'required',
-            'profile' => 'required',
-            'car_photo' => 'required',
+            // 'profile' => 'required',
+            // 'car_photo' => 'required',
             'vendor_name' => 'required',
         ];
+
+        if($this->method() == 'POST') {
+            $rules['profile'] = 'required';
+            $rules['car_photo'] = 'required';
+        }
+
+        return $rules;
     }
 }
