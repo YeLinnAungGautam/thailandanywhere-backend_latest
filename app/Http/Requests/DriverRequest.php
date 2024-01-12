@@ -24,8 +24,6 @@ class DriverRequest extends FormRequest
         $rules = [
             'name' => 'required',
             'contact' => 'required',
-            // 'profile' => 'required',
-            // 'car_photo' => 'required',
             'vendor_name' => 'required',
         ];
 

@@ -14,6 +14,13 @@ class SupplierResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $new_drivers = $this->drivers->map(function ($driver) {
+            $driver->profile = asset('storage/images/driver/' . $driver->profile);
+            $driver->car_photo = asset('storage/images/driver/' . $driver->car_photo);
+
+            return $driver;
+        });
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -22,14 +29,7 @@ class SupplierResource extends JsonResource
             'bank_name' => $this->bank_name,
             'bank_account_no' => $this->bank_account_no,
             'bank_account_name' => $this->bank_account_name,
-            'driver' => [
-                'id' => $this->driver->id,
-                'name' => $this->driver->name,
-                'contact' => $this->driver->contact,
-                'vendor_name' => $this->driver->vendor_name,
-                'profile' => asset('storage/images/driver/' . $this->driver->profile),
-                'car_photo' => asset('storage/images/driver/' . $this->driver->car_photo),
-            ],
+            'drivers' => $new_drivers,
         ];
     }
 }
