@@ -23,6 +23,7 @@ class DriverResource extends JsonResource
             'car_photo' => asset('storage/images/driver/' . $this->car_photo),
             'supplier' => [
                 'id' => $this->supplier->id,
+                'name' => $this->supplier->name,
                 'contact' => $this->supplier->contact,
                 'logo' => asset('storage/images/supplier/' . $this->supplier->logo),
                 'bank_name' => $this->supplier->bank_name,
