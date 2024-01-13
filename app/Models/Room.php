@@ -10,15 +10,10 @@ class Room extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'hotel_id',
-        'extra_price',
-        'room_price',
-        'description',
-        'cost',
-        'max_person',
-        'is_extra'
+    protected $guarded = [];
+
+    protected $casts = [
+        'cost' => 'integer',
     ];
 
     public function hotel(): BelongsTo

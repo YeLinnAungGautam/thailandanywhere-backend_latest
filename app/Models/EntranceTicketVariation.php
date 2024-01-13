@@ -10,7 +10,11 @@ class EntranceTicketVariation extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'entrance_ticket_id','cost_price','price_name', 'price','description'];
+    protected $guarded = [];
+
+    protected $casts = [
+        'cost_price' => 'integer',
+    ];
 
     public function entranceTicket(): BelongsTo
     {
