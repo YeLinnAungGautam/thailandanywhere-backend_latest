@@ -10,6 +10,6 @@ class Supplier extends Model
 
     public function drivers()
     {
-        return $this->belongsToMany(Driver::class);
+        return $this->hasMany(Driver::class);
     }
 }

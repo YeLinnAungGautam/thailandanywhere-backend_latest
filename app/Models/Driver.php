@@ -8,8 +8,8 @@ class Driver extends Model
 {
     protected $guarded = [];
 
-    public function suppliers()
+    public function supplier()
     {
-        return $this->belongsToMany(Supplier::class);
+        return $this->belongsTo(Supplier::class);
     }
 }

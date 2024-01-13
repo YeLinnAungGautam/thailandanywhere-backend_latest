@@ -22,7 +22,6 @@ class SupplierRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'driver_id' => 'required|string',
             'name' => 'required',
             'contact' => 'required',
             'bank_name' => 'required',

@@ -35,15 +35,13 @@ class SupplierController extends Controller
     public function store(SupplierRequest $request)
     {
         try {
-            $input = $request->except('driver_id');
+            $input = $request->validated();
 
             if ($request->file('logo')) {
                 $input['logo'] = uploadFile($request->file('logo'), 'images/supplier/');
             }
 
             $supplier = Supplier::create($input);
-
-            $supplier->drivers()->attach(explode(',', $request->driver_id));
 
             return $this->success(new SupplierResource($supplier), 'Successfully created', 200);
         } catch (Exception $e) {
@@ -73,15 +71,13 @@ class SupplierController extends Controller
                 throw new Exception('Supplier not found');
             }
 
-            $input = $request->except('driver_id');
+            $input = $request->validated();
 
             if ($request->file('logo')) {
                 $input['logo'] = uploadFile($request->file('logo'), 'images/supplier/');
             }
 
             $supplier->update($input);
-
-            $supplier->drivers()->sync(explode(',', $request->driver_id));
 
             return $this->success(new SupplierResource($supplier), 'Successfully updated', 200);
         } catch (Exception $e) {
@@ -99,8 +95,6 @@ class SupplierController extends Controller
             if(is_null($supplier)) {
                 throw new Exception('Supplier not found');
             }
-
-            $supplier->drivers()->detach();
 
             $supplier->delete();
 

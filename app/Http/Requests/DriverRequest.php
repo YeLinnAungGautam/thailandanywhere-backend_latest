@@ -25,6 +25,7 @@ class DriverRequest extends FormRequest
             'name' => 'required',
             'contact' => 'required',
             'vendor_name' => 'required',
+            'supplier_id' => 'required'
         ];
 
         if($this->method() == 'POST') {
