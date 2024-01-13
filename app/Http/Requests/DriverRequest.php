@@ -24,7 +24,7 @@ class DriverRequest extends FormRequest
         $rules = [
             'name' => 'required',
             'contact' => 'required',
-            'vendor_name' => 'required',
+            'vendor_name' => 'nullable',
             'supplier_id' => 'required'
         ];
 

@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('contact');
             $table->string('profile');
             $table->string('car_photo');
-            $table->string('vendor_name');
+            $table->string('vendor_name')->nullable();
             $table->timestamps();
 
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
