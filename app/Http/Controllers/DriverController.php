@@ -16,7 +16,7 @@ class DriverController extends Controller
 
     public function index(Request $request)
     {
-        $drivers = Driver::with('suppliers')
+        $drivers = Driver::with('supplier')
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->search}%");
             })
