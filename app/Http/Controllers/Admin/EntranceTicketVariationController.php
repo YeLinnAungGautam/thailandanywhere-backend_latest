@@ -54,6 +54,7 @@ class EntranceTicketVariationController extends Controller
             'price_name' => $request->price_name,
             'price' => $request->price,
             'cost_price' => $request->cost_price,
+            'agent_price' => $request->agent_price,
             'entrance_ticket_id' => $request->entrance_ticket_id,
             'description' => $request->description,
         ]);
@@ -81,6 +82,7 @@ class EntranceTicketVariationController extends Controller
             'price_name' => $request->price_name ?? $entrance_tickets_variation->price_name,
             'price' => $request->price ?? $entrance_tickets_variation->price,
             'cost_price' => $request->cost_price ?? $entrance_tickets_variation->cost_price,
+            'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
             'description' => $request->description ?? $entrance_tickets_variation->description,
         ]);
 

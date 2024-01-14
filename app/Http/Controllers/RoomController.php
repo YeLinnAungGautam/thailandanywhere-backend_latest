@@ -69,7 +69,8 @@ class RoomController extends Controller
             'room_price' => $request->room_price,
             'description' => $request->description,
             'max_person' => $request->max_person,
-            'is_extra' => $request->is_extra ?? 0
+            'is_extra' => $request->is_extra ?? 0,
+            'agent_price' => $request->agent_price,
         ]);
 
         if ($request->file('images')) {
@@ -113,7 +114,8 @@ class RoomController extends Controller
                 'extra_price' => $request->extra_price ?? $room->extra_price,
                 'room_price' => $request->room_price ?? $room->room_price,
                 'max_person' => $request->max_person,
-                'is_extra' => $request->is_extra ?? 0
+                'is_extra' => $request->is_extra ?? 0,
+                'agent_price' => $request->agent_price ?? $room->agent_price
             ]);
 
             if ($request->file('images')) {
@@ -196,6 +198,7 @@ class RoomController extends Controller
                 'end_date' => $period['end_date'],
                 'sale_price' => $period['sale_price'],
                 'cost_price' => $period['cost_price'],
+                'agent_price' => $period['agent_price'],
             ]);
 
             $array_of_ids[] = $job->id;

@@ -23,6 +23,7 @@ class RoomResource extends JsonResource
             'room_price' => $this->getRoomPrice($request->period),
             'is_extra' => $this->is_extra,
             'cost' => $this->cost,
+            'agent_price' => $this->agent_price,
             'description' => $this->description,
             'images' => RoomImageResource::collection($this->images),
             'room_periods' => RoomPeriodResource::collection($this->periods),
