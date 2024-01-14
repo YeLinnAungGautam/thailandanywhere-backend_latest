@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
+use App\Jobs\SendSaleDepositUpdateEmailJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
@@ -176,6 +177,7 @@ class BookingController extends Controller
                     'product_id' => $item['product_id'],
                     'car_id' => isset($item['car_id']) ? $item['car_id'] : null,
                     'room_id' => isset($item['room_id']) ? $item['room_id'] : null,
+                    'ticket_id' => isset($item['ticket_id']) ? $item['ticket_id'] : null,
                     'variation_id' => isset($item['variation_id']) ? $item['variation_id'] : null,
                     'service_date' => $item['service_date'] ?? null,
                     'quantity' => $item['quantity'] ?? null,
@@ -305,20 +307,6 @@ class BookingController extends Controller
             }
 
             if ($request->items) {
-                // foreach ($find->items as $key => $item) {
-                // if ($item->receipt_image) {
-                //     Storage::delete('public/images/' . $item->receipt_image);
-                // }
-
-                // if ($item->confirmation_letter) {
-                //     Storage::delete('public/files/' . $item->confirmation_letter);
-                // }
-
-                // $deleted_reservation_ids[] = $item->id;
-
-                // BookingItem::where('id', $item->id)->delete();
-                // }
-
                 $booking_item_ids = $find->items()->pluck('id')->toArray();
                 $request_item_ids = collect($request->items)->pluck('reservation_id')->toArray();
                 $delete_item_ids = [];
@@ -352,6 +340,7 @@ class BookingController extends Controller
                         'product_id' => $item['product_id'],
                         'car_id' => isset($item['car_id']) ? $item['car_id'] : null,
                         'room_id' => isset($item['room_id']) ? $item['room_id'] : null,
+                        'ticket_id' => isset($item['ticket_id']) ? $item['ticket_id'] : null,
                         'variation_id' => isset($item['variation_id']) ? $item['variation_id'] : null,
                         'service_date' => $item['service_date'],
                         'quantity' => $item['quantity'],
@@ -410,6 +399,10 @@ class BookingController extends Controller
                         $booking_item->update($data);
                     }
                 }
+            }
+
+            if($find->wasChanged('deposit')) {
+                dispatch(new SendSaleDepositUpdateEmailJob($find));
             }
 
             DB::commit();
