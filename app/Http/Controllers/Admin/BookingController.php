@@ -37,8 +37,11 @@ class BookingController extends Controller
         $paymentStatus = $request->query('status');
 
 
-        $query = Booking::query();
-
+        $query = Booking::query()
+            ->when($request->sale_date_order_by, function ($q) use ($request) {
+                $order_by = $request->sale_date_order_by == 'desc' ? 'desc' : 'asc';
+                $q->orderBy('booking_date', $order_by);
+            });
 
         //        if (!Auth::user()->is_super) {
         //            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
