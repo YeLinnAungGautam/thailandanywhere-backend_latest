@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\BookingItemDataService;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -84,6 +86,11 @@ class BookingItem extends Model
         return $this->belongsTo(Booking::class);
     }
 
+    public function ticket()
+    {
+        return $this->belongsTo(AirlineTicket::class, 'ticket_id', 'id');
+    }
+
     public function reservationInfo()
     {
         return $this->hasOne(ReservationInfo::class, 'booking_item_id');
@@ -122,5 +129,10 @@ class BookingItem extends Model
     public function associatedCustomer()
     {
         return $this->hasMany(ReservationAssociatedCustomer::class, 'booking_item_id');
+    }
+
+    protected function calcSalePrice(): Attribute
+    {
+        return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());
     }
 }

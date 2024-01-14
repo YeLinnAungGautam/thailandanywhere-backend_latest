@@ -56,6 +56,7 @@ return [
     */
 
     'url' => env('APP_URL', 'https://api-blog.thanywhere.com'),
+    'sale_url' => env('SALE_URL', 'https://sales-admin.thanywhere.com'),
 
     'asset_url' => env('ASSET_URL'),
 
