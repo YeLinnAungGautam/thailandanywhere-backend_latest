@@ -447,14 +447,14 @@ class ReportController extends Controller
 
     }
 
-    public function generalSaleReport(string $date)
+    public function generalSaleReport(string $date, Request $request)
     {
         $report_service = new SaleReportService($date);
 
         $data = [
-            'sales' => $report_service->getSaleData(),
-            'sales_count' => $report_service->getSaleCountData(),
-            'bookings' => $report_service->getBookingData(),
+            'sales' => $report_service->getSaleData($request->created_by),
+            'sales_count' => $report_service->getSaleCountData($request->created_by),
+            'bookings' => $report_service->getBookingData($request->created_by),
         ];
 
         return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));

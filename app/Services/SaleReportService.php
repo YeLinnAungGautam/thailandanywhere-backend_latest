@@ -22,9 +22,12 @@ class SaleReportService
         $this->end_date = Carbon::parse($date)->endOfMonth()->format('Y-m-d');
     }
 
-    public function getSaleData(): array
+    public function getSaleData($created_by = null): array
     {
         $sales = Booking::query()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->where('created_by', $created_by);
+            })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
                 'created_by',
@@ -34,12 +37,15 @@ class SaleReportService
             ->groupBy('created_by', 'created_at')
             ->get();
 
-        return $this->generateSaleResponse($sales);
+        return $this->generateSaleResponse($sales, $created_by);
     }
 
-    public function getSaleCountData(): array
+    public function getSaleCountData($created_by = null): array
     {
         $sales = Booking::query()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->where('created_by', $created_by);
+            })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
                 'created_by',
@@ -49,12 +55,15 @@ class SaleReportService
             ->groupBy('created_by', 'created_at')
             ->get();
 
-        return $this->generateSaleResponse($sales);
+        return $this->generateSaleResponse($sales, $created_by);
     }
 
-    public function getBookingData(): array
+    public function getBookingData($created_by = null): array
     {
         $sales = Booking::query()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->where('created_by', $created_by);
+            })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
                 'created_by',
@@ -64,7 +73,7 @@ class SaleReportService
             ->groupBy('created_by', 'created_at')
             ->get();
 
-        return $this->generateSaleResponse($sales);
+        return $this->generateSaleResponse($sales, $created_by);
     }
 
     public function getReservationsData(): array
@@ -169,10 +178,15 @@ class SaleReportService
         return iterator_to_array($dates);
     }
 
-    private function generateSaleResponse($sales): array
+    private function generateSaleResponse($sales, $created_by = null): array
     {
         $result = [];
-        $agents = Admin::agentOnly()->pluck('name', 'id')->toArray();
+        $agents = Admin::agentOnly()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->where('id', $created_by);
+            })
+            ->pluck('name', 'id')
+            ->toArray();
 
         foreach ($this->getDaysOfMonth() as $date) {
             $agent_result = [];
