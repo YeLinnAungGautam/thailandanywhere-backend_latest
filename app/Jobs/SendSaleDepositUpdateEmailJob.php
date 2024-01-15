@@ -30,8 +30,8 @@ class SendSaleDepositUpdateEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // $mail_to = ['ceo@thanywhere.com', 'negyi.partnership@thanywhere.com'];
-        $mail_to = ['taryarlin0088@gmail.com', 'kaungmyatkyaw18199@gmail.com'];
+        $mail_to = ['ceo@thanywhere.com', 'negyi.partnership@thanywhere.com'];
+        // $mail_to = ['taryarlin0088@gmail.com', 'kaungmyatkyaw18199@gmail.com'];
 
         Mail::to($mail_to)->send(new SendDepositUpdateEmail($this->booking));
     }
