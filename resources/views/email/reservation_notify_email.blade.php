@@ -24,17 +24,15 @@
 </head>
 
 <body>
-    <div id="watermark">
+    {{-- <div id="watermark">
         <img src="{{ asset('assets/print.png') }}" height="100%" width="100%" />
-    </div>
+    </div> --}}
 
-    <div style="padding: 0px 50px">
-        {!! $mail_body !!}
-    </div>
+    {!! $mail_body !!}
 
-    <div id="watermark">
+    {{-- <div id="watermark">
         <img src="{{ asset('assets/printf.png') }}" height="100%" width="100%" />
-    </div>
+    </div> --}}
 </body>
 
 </html>

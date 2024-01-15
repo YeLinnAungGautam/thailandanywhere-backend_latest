@@ -29,57 +29,55 @@
 </head>
 
 <body>
-    <div id="watermark">
+    {{-- <div id="watermark">
         <img src="{{ asset('assets/print.png') }}" height="100%" width="100%" />
-    </div>
+    </div> --}}
 
-    <div style="padding: 0px 50px">
-        <p>Dear Reservation Team,</p>
+    <p>Dear Reservation Team,</p>
 
-        <p>The following CRM ID has been {{ $booking->payment_status }}. Please see the reservation items of the sales below.</p>
+    <p>The following CRM ID has been {{ $booking->payment_status }}. Please see the reservation items of the sales below.</p>
 
-        @foreach ($booking->items as $item)
-            @php
-                $booking_item = (new App\Http\Resources\BookingResource($item));
+    @foreach ($booking->items as $item)
+        @php
+            $booking_item = (new App\Http\Resources\BookingResource($item));
 
-                switch ($booking_item->product_type) {
-                    case 'App\Models\Hotel':
-                        $variation_name = optional($booking_item->room)->name;
-                        break;
+            switch ($booking_item->product_type) {
+                case 'App\Models\Hotel':
+                    $variation_name = optional($booking_item->room)->name;
+                    break;
 
-                    case 'App\Models\PrivateVanTour':
-                        $variation_name = optional($booking_item->car)->name;
-                        break;
+                case 'App\Models\PrivateVanTour':
+                    $variation_name = optional($booking_item->car)->name;
+                    break;
 
-                    case 'App\Models\EntranceTicket':
-                        $variation_name = optional($booking_item->variation)->name;
-                        break;
+                case 'App\Models\EntranceTicket':
+                    $variation_name = optional($booking_item->variation)->name;
+                    break;
 
-                    case 'App\Models\Airline':
-                        $variation_name = optional($booking_item->ticket)->price;
-                        break;
+                case 'App\Models\Airline':
+                    $variation_name = optional($booking_item->ticket)->price;
+                    break;
 
-                    default:
-                        $variation_name = null;
-                        break;
-                }
+                default:
+                    $variation_name = null;
+                    break;
+            }
 
-                $link = config('app.sale_url') . '/reservation/update/' . $booking_item->id . '/' . $booking_item->crm_id;
-            @endphp
+            $link = 'https://sales-admin.thanywhere.com/reservation/update/' . $booking_item->id . '/' . $booking_item->crm_id;
+        @endphp
 
-            <div class="hr-line">
+        <div class="hr-line">
 
-            <p>
-                {{ $item->crm_id }}: {{ $product_type[$item->product_type] }} > {{ $item->product->name }} > {{ $variation_name ?? '-' }} > {{ number_format($booking_item->calc_sale_price) }} THB
-            </p>
+        <p>
+            {{ $item->crm_id }}: {{ $product_type[$item->product_type] }} > {{ $item->product->name }} > {{ $variation_name ?? '-' }} > {{ number_format($booking_item->calc_sale_price) }} THB
+        </p>
 
-            <a href="{{ $link }}" target="_blank">{{ $link }}</a>
-        @endforeach
-    </div>
+        <a href="{{ $link }}" target="_blank">{{ $link }}</a>
+    @endforeach
 
-    <div id="watermark">
+    {{-- <div id="watermark">
         <img src="{{ asset('assets/printf.png') }}" height="100%" width="100%" />
-    </div>
+    </div> --}}
 </body>
 
 </html>
