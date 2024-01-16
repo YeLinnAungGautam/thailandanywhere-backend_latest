@@ -6,6 +6,7 @@ use App\Http\Resources\HotelReportResource;
 use App\Models\BookingItem;
 use App\Models\Hotel;
 use App\Traits\HttpResponses;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +18,13 @@ class HotelReportController extends Controller
     {
         $data = BookingItem::query()
             ->when($request->service_date, function ($q) use ($request) {
-                $q->where('service_date', $request->service_date);
+                if($this->isValidDate($request->service_date)) {
+                    $q->where('service_date', $request->service_date);
+                } else {
+                    $dates = explode('-', $request->service_date);
+
+                    $q->whereMonth('service_date', $dates[1])->whereYear('service_date', $dates[0]);
+                }
             })
             ->with('product:id,name')
             ->where('product_type', Hotel::class)
@@ -28,5 +35,12 @@ class HotelReportController extends Controller
             ->get();
 
         return $this->success(HotelReportResource::collection($data));
+    }
+
+    private function isValidDate($date, $format = 'Y-m-d')
+    {
+        $dateTime = DateTime::createFromFormat($format, $date);
+
+        return $dateTime && $dateTime->format($format) === $date;
     }
 }
