@@ -54,6 +54,7 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:225'],
             'email' => ['required', 'email', 'max:225', Rule::unique('admins', 'email')],
             'password' => ['required', 'string', 'confirmed', 'max:225'],
+            'target_amount' => ['nullable', 'integer']
         ]);
 
 
@@ -62,6 +63,7 @@ class AdminController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
+            'target_amount' => $request->target_amount
         ]);
 
         return $this->success($admin, 'Successfully created', 200);
@@ -85,12 +87,14 @@ class AdminController extends Controller
             'name' => ['string', 'max:225'],
             'email' => ['email', 'max:225', Rule::unique('admins', 'email')->ignore($admin)],
             'password' => ['string', 'confirmed', 'max:225'],
+            'target_amount' => ['nullable', 'integer']
         ]);
 
         $admin->name = $request->name ?? $admin->name;
         $admin->email = $request->email ?? $admin->email;
         $admin->password = $request->password ? Hash::make($request->password) : $admin->password;
         $admin->role = $request->role ?? $admin->role;
+        $admin->target_amount = $request->target_amount ?? $admin->target_amount;
         $admin->update();
 
         return $this->success($admin, 'Successfully updated', 200);

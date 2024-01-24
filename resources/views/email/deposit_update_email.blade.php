@@ -63,7 +63,9 @@
                     break;
             }
 
-            $link = 'https://sales-admin.thanywhere.com/reservation/update/' . $booking_item->id . '/' . $booking_item->crm_id;
+            $sale_reservation_link = 'https://sales-admin.thanywhere.com/reservation/update/' . $booking_item->id . '/' . $booking_item->crm_id;
+
+            $mm_reservation_link = 'https://mm.thanywhere.com/reservation/update/' . $booking_item->id;
         @endphp
 
         <div class="hr-line">
@@ -72,7 +74,13 @@
             {{ $item->crm_id }}: {{ $product_type[$item->product_type] }} > {{ $item->product->name }} > {{ $variation_name ?? '-' }} > {{ number_format($booking_item->calc_sale_price) }} THB
         </p>
 
-        <a href="{{ $link }}" target="_blank">{{ $link }}</a>
+        <p>
+            <a href="{{ $sale_reservation_link }}" target="_blank">{{ $sale_reservation_link }}</a>
+        </p>
+
+        <p>
+            <a href="{{ $mm_reservation_link }}" target="_blank">{{ $mm_reservation_link }}</a>
+        </p>
     @endforeach
 
     {{-- <div id="watermark">

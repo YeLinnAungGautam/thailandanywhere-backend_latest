@@ -66,6 +66,7 @@ class RestaurantController extends Controller
         try {
             $save = Restaurant::create([
                 'name' => $request->name,
+                'description' => $request->description,
                 'payment_method' => $request->payment_method,
                 'bank_name' => $request->bank_name,
                 'bank_account_number' => $request->bank_account_number,
@@ -124,6 +125,7 @@ class RestaurantController extends Controller
         try {
             $restaurant->update([
                 'name' => $request->name ?? $restaurant->name,
+                'description' => $request->description ?? $restaurant->description,
                 'city_id' => $request->city_id ?? $restaurant->city_id,
                 'place' => $request->place ?? $restaurant->place,
                 'bank_name' => $request->bank_name ?? $restaurant->bank_name,

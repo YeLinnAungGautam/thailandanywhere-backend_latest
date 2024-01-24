@@ -52,6 +52,7 @@ class BookingResource extends JsonResource
             // Inclusive
             'is_inclusive' => $this->is_inclusive,
             'inclusive_name' => $this->inclusive_name,
+            'inclusive_description' => $this->inclusive_description,
             'inclusive_quantity' => $this->inclusive_quantity,
             'inclusive_rate' => $this->inclusive_rate,
             'inclusive_start_date' => $this->inclusive_start_date,

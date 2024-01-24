@@ -42,11 +42,12 @@ class BookingController extends Controller
             ->when($request->sale_date_order_by, function ($q) use ($request) {
                 $order_by = $request->sale_date_order_by == 'desc' ? 'desc' : 'asc';
                 $q->orderBy('booking_date', $order_by);
+            })
+            ->when($request->inclusive_only, function ($q) use ($request) {
+                $is_inclusive = $request->inclusive_only ? 1 : 0;
+                $q->where('is_inclusive', $is_inclusive);
             });
 
-        //        if (!Auth::user()->is_super) {
-        //            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
-        //        }
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
@@ -153,6 +154,7 @@ class BookingController extends Controller
                 'payment_notes' => $request->payment_notes,
                 'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
                 'inclusive_name' => $request->inclusive_name ?? null,
+                'inclusive_description' => $request->inclusive_description ?? null,
                 'inclusive_quantity' => $request->inclusive_quantity ?? null,
                 'inclusive_rate' => $request->inclusive_rate ?? null,
                 'inclusive_start_date' => $request->inclusive_start_date ?? null,
@@ -291,6 +293,7 @@ class BookingController extends Controller
 
                 'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : $find->is_inclusive,
                 'inclusive_name' => $request->inclusive_name ?? $find->inclusive_name,
+                'inclusive_description' => $request->inclusive_description ?? $find->inclusive_description,
                 'inclusive_quantity' => $request->inclusive_quantity ?? $find->inclusive_quantity,
                 'inclusive_rate' => $request->inclusive_rate ?? $find->inclusive_rate,
                 'inclusive_start_date' => $request->inclusive_start_date ?? $find->inclusive_start_date,
