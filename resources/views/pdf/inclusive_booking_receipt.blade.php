@@ -132,7 +132,7 @@
         <img src="{{ public_path() . '/assets/template.jpg' }}" height="100%" width="100%" />
     </div>
     <div>
-        <div style="margin-top: 300px; padding: 10px 40px">
+        <div style="margin-top: 200px; padding: 10px 40px">
             <h3 class="header-heading">Invoice</h3>
 
             <table class="header-table">
@@ -166,25 +166,49 @@
                 </tbody>
             </table>
 
+            <table class="body-table" style="max-height: 100px !important; margin-bottom: 20px;">
+                <thead>
+                    <tr>
+                        <th>INCLUSIVE SERVICE DATE</th>
+                        <th>All Inclusive Name</th>
+                        <th style="max-width:140px">DESCRIPTION</th>
+                        <th>QTY</th>
+                        <th>RATE</th>
+                        <th>AMOUNT</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>{{ $data->inclusive_start_date }} - {{ $data->inclusive_end_date }}</td>
+
+                        <td>{{ $data->inclusive_name }}</td>
+
+                        <td>{{ $data->inclusive_description }}</td>
+
+                        <td>{{ $data->inclusive_quantity }}</td>
+
+                        <td>{{ number_format($data->inclusive_rate) }}</td>
+
+                        <td>{{ number_format($data->inclusive_quantity * $data->inclusive_rate) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
             @foreach ($data->items->chunk(4) as $items)
                 <table class="body-table" style="max-height: 100px !important;">
                     <thead>
                         <tr>
-                            <th>INCLUSIVE SERVICE DATE</th>
                             <th>SERVICE DATE</th>
                             <th>SERVICE</th>
                             <th style="max-width:140px">DESCRIPTION</th>
                             <th>QTY</th>
-                            <th>RATE</th>
-                            <th>AMOUNT</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         @foreach ($items as $row)
                             <tr>
-                                <td>{{ $data->inclusive_start_date }} - {{ $data->inclusive_end_date }}</td>
-
                                 <td>{{ $row->service_date }}</td>
 
                                 <td style="max-width: 100px;">{{ $row->product->name ?? '-' }} </br>
@@ -223,11 +247,7 @@
 
                                 <td style="max-width: 120px">{{ $row->comment }}</td>
 
-                                <td>{{ $loop->first ? $data->inclusive_quantity : '-' }}</td>
-
-                                <td>{{ $loop->first ? number_format($data->inclusive_rate) : '-' }}</td>
-
-                                <td>{{ $loop->first ? number_format($data->inclusive_quantity * $data->inclusive_rate) : '-' }}</td>
+                                <td>{{ $row->quantity }}</td>
                             </tr>
                         @endforeach
                     </tbody>
