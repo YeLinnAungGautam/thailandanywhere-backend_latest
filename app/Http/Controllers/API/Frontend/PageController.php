@@ -30,6 +30,7 @@ class PageController extends Controller
     private function getPrivateVanTourCities(Request $request)
     {
         $van_tour_ids = PrivateVanTour::withCount('bookingItems')
+            ->ownProduct()
             ->orderBy('booking_items_count', 'desc')
             ->pluck('id')
             ->toArray();
@@ -51,6 +52,7 @@ class PageController extends Controller
     private function getHotelCities(Request $request)
     {
         $city_ids = Hotel::withCount('bookingItems')
+            ->ownProduct()
             ->orderBy('booking_items_count', 'desc')
             ->pluck('city_id')
             ->toArray();

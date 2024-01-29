@@ -49,4 +49,9 @@ class PrivateVanTour extends Model
     {
         return $this->morphMany(BookingItem::class, 'product');
     }
+
+    public function scopeOwnProduct($query)
+    {
+        return $query->where('type', self::TYPES['van_tour']);
+    }
 }
