@@ -15,7 +15,7 @@ return new class extends Migration {
         });
 
         Schema::table('private_van_tours', function (Blueprint $table) {
-            $table->enum('type', ['van_tour', 'car_rental'])->default('van_tour')->after('description');
+            $table->enum('type', ['van_tour', 'car_rental'])->default('car_rental')->after('description');
         });
     }
 

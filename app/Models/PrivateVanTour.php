@@ -52,6 +52,6 @@ class PrivateVanTour extends Model
 
     public function scopeOwnProduct($query)
     {
-        return $query->where('type', self::TYPES['van_tour']);
+        return $query->where('type', self::TYPES['car_rental']);
     }
 }
