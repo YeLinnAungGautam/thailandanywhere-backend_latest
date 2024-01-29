@@ -47,6 +47,9 @@ class HotelController extends Controller
             })
             ->when($search, function ($s_query) use ($search) {
                 $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($request->type, function ($q) use ($request) {
+                $q->where('type', $request->type);
             });
 
         $data = $query->paginate($limit);
