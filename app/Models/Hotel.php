@@ -13,6 +13,11 @@ class Hotel extends Model
 
     protected $guarded = [];
 
+    const TYPES = [
+        'direct_booking' => 'direct_booking',
+        'other_booking' => 'other_booking'
+    ];
+
     public function city(): BelongsTo
     {
         return $this->belongsTo(City::class, 'city_id');

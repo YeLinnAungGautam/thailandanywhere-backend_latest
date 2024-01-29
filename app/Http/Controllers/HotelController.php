@@ -69,6 +69,7 @@ class HotelController extends Controller
         $save = Hotel::create([
             'name' => $request->name,
             'description' => $request->description,
+            'type' => $request->type ?? Hotel::TYPES['direct_booking'],
             'payment_method' => $request->payment_method,
             'bank_name' => $request->bank_name,
             'bank_account_number' => $request->bank_account_number,
@@ -129,6 +130,7 @@ class HotelController extends Controller
         $hotel->update([
             'name' => $request->name ?? $hotel->name,
             'description' => $request->description ?? $hotel->description,
+            'type' => $request->type ?? $hotel->type,
             'city_id' => $request->city_id ?? $hotel->city_id,
             'place' => $request->place ?? $hotel->place,
             'bank_name' => $request->bank_name ?? $hotel->bank_name,

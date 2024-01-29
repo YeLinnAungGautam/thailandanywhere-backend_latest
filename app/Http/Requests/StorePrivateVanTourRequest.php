@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePrivateVanTourRequest extends FormRequest
 {
@@ -23,8 +23,9 @@ class StorePrivateVanTourRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'  => 'required',
+            'name' => 'required',
             'car_ids' => 'required|array',
+            'type' => 'nullable|in:van_tour,car_rental',
             'prices' => ['required', 'array', function ($attribute, $value, $fail) {
                 if (count($value) !== count($this->input('car_ids'))) {
                     $fail($attribute . ' and cars must have the same number of elements.');

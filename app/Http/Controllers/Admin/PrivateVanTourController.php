@@ -72,6 +72,7 @@ class PrivateVanTourController extends Controller
         $data = [
             'name' => $request->name,
             'description' => $request->description,
+            'type' => $request->type ?? PrivateVanTour::TYPES['van_tour'],
             'sku_code' => $request->sku_code,
             'long_description' => $request->long_description,
         ];
@@ -145,6 +146,7 @@ class PrivateVanTourController extends Controller
         $data = [
             'name' => $request->name ?? $find->name,
             'description' => $request->description ?? $find->description,
+            'type' => $request->type ?? $find->type,
             'sku_code' => $request->sku_code ?? $find->sku_code,
             'long_description' => $request->long_description ?? $find->long_description,
         ];

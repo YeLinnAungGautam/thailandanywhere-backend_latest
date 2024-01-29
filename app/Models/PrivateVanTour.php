@@ -11,7 +11,12 @@ class PrivateVanTour extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['name', 'description', 'long_description', 'cover_image', 'sku_code'];
+    const TYPES = [
+        'van_tour' => 'van_tour',
+        'car_rental' => 'car_rental'
+    ];
+
+    protected $guarded = [];
 
     public function tags()
     {
