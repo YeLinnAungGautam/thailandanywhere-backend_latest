@@ -44,4 +44,9 @@ class PrivateVanTour extends Model
     {
         return $this->belongsToMany(Destination::class, 'private_van_tour_destinations', 'private_van_tour_id', 'destination_id');
     }
+
+    public function bookingItems()
+    {
+        return $this->morphMany(BookingItem::class, 'product');
+    }
 }

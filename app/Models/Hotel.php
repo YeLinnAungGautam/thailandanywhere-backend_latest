@@ -37,4 +37,9 @@ class Hotel extends Model
     {
         return $this->hasMany(HotelImage::class, 'hotel_id');
     }
+
+    public function bookingItems()
+    {
+        return $this->morphMany(BookingItem::class, 'product');
+    }
 }

@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\API\Frontend\HotelController;
+use App\Http\Controllers\API\Frontend\PageController;
+use App\Http\Controllers\API\Frontend\PrivateVantourController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PostController;
-use App\Http\Controllers\CommentController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ProfileController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -31,4 +34,15 @@ Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+
+# Frontend URI
+Route::group([
+    'prefix' => 'v1/customer-portal',
+], function () {
+    Route::get('/', PageController::class);
+
+    Route::apiResource('private-van-tours', PrivateVantourController::class)->only('show');
+    Route::apiResource('hotels', HotelController::class)->only('show');
 });

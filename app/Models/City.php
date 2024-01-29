@@ -11,5 +11,15 @@ class City extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['name','image'];
+    protected $fillable = ['name', 'image'];
+
+    public function privateVanTours()
+    {
+        return $this->belongsToMany(PrivateVanTour::class, 'private_van_tour_cities', 'city_id', 'private_van_tour_id');
+    }
+
+    public function hotels()
+    {
+        return $this->hasMany(Hotel::class);
+    }
 }

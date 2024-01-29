@@ -21,5 +21,4 @@ trait HttpResponses
             'result' => $data
         ], $code);
     }
-
 }
