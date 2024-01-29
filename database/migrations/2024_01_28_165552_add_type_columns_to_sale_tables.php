@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('hotels', function (Blueprint $table) {
-            $table->enum('type', ['direct_booking', 'other_booking'])->default('direct_booking')->after('description');
+            $table->enum('type', ['direct_booking', 'other_booking'])->default('other_booking')->after('description');
         });
 
         Schema::table('private_van_tours', function (Blueprint $table) {
