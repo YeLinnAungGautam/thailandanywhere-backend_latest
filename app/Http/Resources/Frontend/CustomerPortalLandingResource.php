@@ -17,9 +17,9 @@ class CustomerPortalLandingResource extends JsonResource
         ];
 
         if($request->product_type === 'private_van_tour') {
-            $response['private_van_tours'] = PrivateVanTourResource::collection($this->privateVanTours);
+            $response['private_van_tours'] = PrivateVanTourResource::collection($this->privateVanTours->where('type', 'van_tour'));
         } elseif($request->product_type === 'hotel') {
-            $response['hotels'] = HotelResource::collection($this->hotels);
+            $response['hotels'] = HotelResource::collection($this->hotels->where('type', 'direct_booking'));
         }
 
         return $response;
