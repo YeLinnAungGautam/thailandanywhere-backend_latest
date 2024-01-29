@@ -39,7 +39,7 @@ class PageController extends Controller
         if(count($van_tour_ids) > 0) {
             $city_ids = PrivateVanTourCity::whereIn('private_van_tour_id', $van_tour_ids)
                 ->groupBy('city_id')
-                ->orderByRaw("FIELD(private_van_tour_id , " . implode(',', $van_tour_ids) .") ASC")
+                // ->orderByRaw("FIELD(private_van_tour_id , " . implode(',', $van_tour_ids) .") ASC")
                 ->pluck('city_id')
                 ->toArray();
         }
