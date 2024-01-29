@@ -29,17 +29,20 @@ class PageController extends Controller
 
     private function getPrivateVanTourCities(Request $request)
     {
+        $city_ids = [];
         $van_tour_ids = PrivateVanTour::withCount('bookingItems')
             ->ownProduct()
             ->orderBy('booking_items_count', 'desc')
             ->pluck('id')
             ->toArray();
 
-        $city_ids = PrivateVanTourCity::whereIn('private_van_tour_id', $van_tour_ids)
-            ->groupBy('city_id')
-            ->orderByRaw("FIELD(private_van_tour_id , " . implode(',', $van_tour_ids) .") ASC")
-            ->pluck('city_id')
-            ->toArray();
+        if(count($van_tour_ids)) {
+            $city_ids = PrivateVanTourCity::whereIn('private_van_tour_id', $van_tour_ids)
+                ->groupBy('city_id')
+                ->orderByRaw("FIELD(private_van_tour_id , " . implode(',', $van_tour_ids) .") ASC")
+                ->pluck('city_id')
+                ->toArray();
+        }
 
         $cities = City::with('privateVanTours')
             ->whereIn('id', $city_ids)
