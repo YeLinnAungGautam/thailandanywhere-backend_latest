@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ReservationReportExport;
-use Excel;
+use Illuminate\Http\Request;
 
 class ReservationExportController extends Controller
 {
-    public function exportReservationReport()
+    public function exportReservationReport(Request $request)
     {
-        return (new ReservationReportExport)->download('invoices.csv', Excel::CSV, ['Content-Type' => 'text/csv']);
+        return new ReservationReportExport($request->sale_daterange);
     }
 }
