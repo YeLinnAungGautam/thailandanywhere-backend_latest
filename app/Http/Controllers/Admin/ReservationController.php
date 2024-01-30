@@ -13,7 +13,6 @@ use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationBookingConfirmLetter;
 use App\Models\ReservationCarInfo;
 use App\Models\ReservationCustomerPassport;
-
 use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
@@ -22,7 +21,6 @@ use App\Services\BookingItemDataService;
 use App\Services\ReservationEmailNotifyService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
-
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
@@ -46,17 +44,17 @@ class ReservationController extends Controller
         $calenderFilter = $request->query('calender_filter');
         $search = $request->input('hotel_name');
         $search_attraction = $request->input('attraction_name');
-        $query = BookingItem::query();
+
+        $query = BookingItem::query()
+            ->when($request->sale_daterange, function ($q) use ($request) {
+                $dates = explode(',', $request->sale_daterange);
+
+                $q->whereBetween('service_date', [$dates[0], $dates[1]]);
+            });
+
         if ($serviceDate) {
             $query->whereDate('service_date', $serviceDate);
         };
-
-        //        if ($request->user_id && $request->user_id !== 'undefined') {
-        //            $userId = $request->user_id;
-        //            $query->whereHas('booking', function ($q) use ($userId) {
-        //                $q->where('created_by', $userId)->orWhere('past_user_id', $userId);
-        //            });
-        //        }
 
         $productType = $request->query('product_type');
         $crmId = $request->query('crm_id');

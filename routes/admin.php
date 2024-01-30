@@ -28,6 +28,7 @@ use App\Http\Controllers\DriverController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\MealController;
+use App\Http\Controllers\ReservationExportController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SupplierController;
@@ -82,14 +83,21 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
     Route::apiResource('airport-pickups', AirportPickupController::class);
     Route::apiResource('inclusive', InclusiveController::class);
+
+    # Customer
     Route::apiResource('customers', CustomerController::class);
+    Route::get('customers/{id}/sales', [CustomerController::class, 'getSales']);
+
     Route::apiResource('bookings', BookingController::class);
 
+    # Reservation
     Route::put('reservations/info/{id}', [ReservationController::class, 'updateInfo']);
     Route::apiResource('reservations', ReservationController::class);
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
+
+    Route::get('reservations/report/export', [ReservationExportController::class, 'exportReservationReport']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);

@@ -9,21 +9,20 @@ class Customer extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'email', 'phone_number', 'dob', 'nrc_number', 'line_id', 'company_name', 'comment', 'photo','is_corporate_customer'];
+    protected $guarded = [];
 
     protected $casts = [
         'is_corporate_customer' => 'boolean'
     ];
 
-
     public function bookings()
     {
-        return $this->hasMany(Booking::class,'id','customer_id');
+        return $this->hasMany(Booking::class);
     }
 
     public function items()
     {
-        return $this->hasManyThrough(BookingItem::class,Booking::class,'customer_id','id','id');
+        return $this->hasManyThrough(BookingItem::class, Booking::class, 'customer_id', 'id', 'id');
     }
 
 }

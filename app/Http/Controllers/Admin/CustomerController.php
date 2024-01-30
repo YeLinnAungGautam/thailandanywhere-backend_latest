@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingResource;
+use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\CustomerResource;
 
 class CustomerController extends Controller
 {
@@ -23,13 +24,14 @@ class CustomerController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Customer::query();
+        $query = Customer::query()->with('bookings');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(CustomerResource::collection($data)
             ->additional([
                 'meta' => [
@@ -47,8 +49,8 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'  => 'required|string|max:225',
-            'phone_number'  => 'required|string|max:225',
+            'name' => 'required|string|max:225',
+            'phone_number' => 'required|string|max:225',
         ]);
 
         $data = [
@@ -69,6 +71,7 @@ class CustomerController extends Controller
         }
 
         $save = Customer::create($data);
+
         return $this->success(new CustomerResource($save), 'Successfully created');
     }
 
@@ -138,6 +141,27 @@ class CustomerController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function getSales(string $customer_id)
+    {
+        $customer = Customer::find($customer_id);
+
+        if(is_null($customer)) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $bookings = $customer->bookings()->paginate(request('limit') ?? 10);
+
+        return $this->success(BookingResource::collection($bookings)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int)ceil($bookings->total() / $bookings->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Customer Booking List');
     }
 }

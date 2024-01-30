@@ -2,9 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Booking;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class CustomerResource extends JsonResource
 {
@@ -15,7 +16,7 @@ class CustomerResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'company_name' => $this->company_name,
@@ -30,5 +31,11 @@ class CustomerResource extends JsonResource
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
+
+        if($request->with_sale_record) {
+            $data['sales'] = $this->bookings;
+        }
+
+        return $data;
     }
 }
