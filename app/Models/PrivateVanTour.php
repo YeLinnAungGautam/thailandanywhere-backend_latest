@@ -11,12 +11,14 @@ class PrivateVanTour extends Model
     use HasFactory;
     use SoftDeletes;
 
+    protected $guarded = [];
+
+    protected $table = 'private_van_tours';
+
     const TYPES = [
         'van_tour' => 'van_tour',
         'car_rental' => 'car_rental'
     ];
-
-    protected $guarded = [];
 
     public function tags()
     {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Frontend\DestinationController;
 use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
 use App\Http\Controllers\API\Frontend\PrivateVantourController;
@@ -43,6 +44,12 @@ Route::group([
 ], function () {
     Route::get('/', PageController::class);
 
+    # Destination
+    Route::apiResource('destinations', DestinationController::class)->only('index');
+
+    # Private Van Tour
     Route::apiResource('private-van-tours', PrivateVantourController::class)->only('show');
+
+    # Hotel
     Route::apiResource('hotels', HotelController::class)->only('show');
 });

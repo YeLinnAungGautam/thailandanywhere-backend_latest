@@ -17,11 +17,28 @@ class CustomerPortalLandingResource extends JsonResource
         ];
 
         if($request->product_type === 'private_van_tour') {
-            $response['private_van_tours'] = PrivateVanTourResource::collection($this->privateVanTours->where('type', 'van_tour'));
+            $response['private_van_tours'] = $this->getPrivateVanTourResource($request);
         } elseif($request->product_type === 'hotel') {
-            $response['hotels'] = HotelResource::collection($this->hotels->where('type', 'direct_booking'));
+            $response['hotels'] = $this->getHotelResource($request);
         }
 
         return $response;
+    }
+
+    private function getPrivateVanTourResource(Request $request)
+    {
+        $query = $this->privateVanTours()->ownProduct()
+            ->when($request->destination_id, function ($q) use ($request) {
+                $q->whereHas('destinations', function ($qq) use ($request) {
+                    $qq->where('destination_id', $request->destination_id);
+                });
+            });
+
+        return PrivateVanTourResource::collection($query->paginate($request->product_limit ?? 10));
+    }
+
+    private function getHotelResource(Request $request)
+    {
+        return HotelResource::collection($this->hotels()->ownProduct()->paginate($request->product_limit ?? 10));
     }
 }

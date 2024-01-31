@@ -17,6 +17,7 @@ class PrivateVanTourDestinationResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'description' => $this->description,
             'category' => new ProductCategoryResource($this->category),
             'entry_fee' => $this->entry_fee,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
