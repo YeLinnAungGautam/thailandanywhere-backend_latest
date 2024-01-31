@@ -10,7 +10,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Excel;
 
-class ReservationReportExport implements FromCollection, Responsable, WithHeadings, WithMapping
+class ReservationReportExport implements FromCollection, WithHeadings, WithMapping
 {
     use Exportable;
 

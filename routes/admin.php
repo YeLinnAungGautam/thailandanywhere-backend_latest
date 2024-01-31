@@ -40,6 +40,9 @@ Route::get('/reservations/{id}/receipt', [ReservationController::class, 'printRe
 Route::get('/hotel-reservation/{id}/receipt', [ReservationController::class, 'printReservationHotel']);
 Route::get('/vantour-reservation/{id}/receipt', [ReservationController::class, 'printReservationVantour']);
 
+# Reservation Export
+Route::get('reservations/report/export', [ReservationExportController::class, 'exportReservationReport']);
+
 Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 
 Route::get('/super', function () {
@@ -96,8 +99,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
-
-    Route::get('reservations/report/export', [ReservationExportController::class, 'exportReservationReport']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
