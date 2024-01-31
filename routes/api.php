@@ -42,7 +42,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::group([
     'prefix' => 'v1/customer-portal',
 ], function () {
-    Route::get('/', PageController::class);
+    Route::get('/', [PageController::class, 'index']);
+    Route::get('cities/{id}', [PageController::class, 'show']);
 
     # Destination
     Route::apiResource('destinations', DestinationController::class)->only('index');
