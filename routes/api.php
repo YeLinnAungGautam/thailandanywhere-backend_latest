@@ -49,6 +49,7 @@ Route::group([
 
     # Private Van Tour
     Route::apiResource('private-van-tours', PrivateVantourController::class)->only('show');
+    Route::get('private-van-tours/{id}/related-tours', [PrivateVantourController::class, 'getRelatedTours']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class)->only('show');
