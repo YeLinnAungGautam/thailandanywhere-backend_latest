@@ -9,6 +9,7 @@ use App\Http\Resources\PrivateVanTourResource;
 use App\Models\City;
 use App\Services\Frontend\PageDataService;
 use App\Traits\HttpResponses;
+use Exception;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -17,9 +18,13 @@ class PageController extends Controller
 
     public function index(Request $request)
     {
-        $cities = PageDataService::getCities($request);
+        try {
+            $cities = PageDataService::getCities($request);
 
-        return CustomerPortalLandingResource::collection($cities)->additional(['result' => 1, 'message' => 'success']);
+            return CustomerPortalLandingResource::collection($cities)->additional(['result' => 1, 'message' => 'success']);
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 404);
+        }
     }
 
     public function show(string $id, Request $request)

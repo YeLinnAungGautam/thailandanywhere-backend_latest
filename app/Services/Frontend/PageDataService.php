@@ -32,9 +32,8 @@ class PageDataService
 
         if(count($van_tour_ids) > 0) {
             $city_ids = PrivateVanTourCity::whereIn('private_van_tour_id', $van_tour_ids)
-                ->groupBy('city_id')
-                ->orderByRaw("FIELD(private_van_tour_id , " . implode(',', $van_tour_ids) .") DESC")
                 ->pluck('city_id')
+                ->unique()
                 ->toArray();
         }
 
