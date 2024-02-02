@@ -49,6 +49,7 @@ class PageController extends Controller
     private function vanTourListResponse(City $city, Request $request)
     {
         $products = $city->privateVanTours()
+            ->ownProduct()
             ->when($request->destination_id, function ($q) use ($request) {
                 $q->whereHas('destinations', function ($qq) use ($request) {
                     $qq->where('destination_id', $request->destination_id);
@@ -68,7 +69,7 @@ class PageController extends Controller
 
     private function hotelListResponse(City $city, Request $request)
     {
-        $products = $city->hotels()->paginate($request->limit ?? 10);
+        $products = $city->hotels()->ownProduct()->paginate($request->limit ?? 10);
 
         return HotelResource::collection($products)->additional([
             'result' => 1,
