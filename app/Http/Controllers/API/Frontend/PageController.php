@@ -41,7 +41,7 @@ class PageController extends Controller
             return $this->hotelListResponse($city, $request);
         }
 
-        return $this->error(null, 'Data not found', 404);
+        return $this->error(null, 'Invalid Product Type', 500);
     }
 
     private function vanTourListResponse(City $city, Request $request)
@@ -67,7 +67,12 @@ class PageController extends Controller
 
     private function hotelListResponse(City $city, Request $request)
     {
-        $products = $city->hotels()->ownProduct()->paginate($request->limit ?? 10);
+        $products = $city->hotels()
+            ->ownProduct()
+            ->when($request->place, function ($q) use ($request) {
+                $q->where('place', 'like', '%' . $request->place . '%');
+            })
+            ->paginate($request->limit ?? 10);
 
         return HotelResource::collection($products)->additional([
             'result' => 1,
