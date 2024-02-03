@@ -32,9 +32,7 @@ class PageController extends Controller
         $city = City::find($id);
 
         if(is_null($city)) {
-            if(is_null($city)) {
-                return $this->error(null, 'Data not found', 404);
-            }
+            return $this->error(null, 'Data not found', 404);
         }
 
         if($request->product_type == 'private_van_tour') {
