@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Frontend\CityController;
 use App\Http\Controllers\API\Frontend\DestinationController;
 use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
@@ -45,6 +46,9 @@ Route::group([
     Route::get('/', [PageController::class, 'index']);
     Route::get('cities/{id}', [PageController::class, 'show']);
 
+    # City
+    Route::get('cities', [CityController::class, 'index']);
+
     # Destination
     Route::apiResource('destinations', DestinationController::class)->only('index');
 
@@ -54,4 +58,5 @@ Route::group([
 
     # Hotel
     Route::apiResource('hotels', HotelController::class)->only('show');
+    Route::get('hotels/{id}/related-hotels', [HotelController::class, 'getRelatedHotels']);
 });

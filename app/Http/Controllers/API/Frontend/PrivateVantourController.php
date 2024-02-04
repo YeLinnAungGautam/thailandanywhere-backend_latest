@@ -31,6 +31,8 @@ class PrivateVantourController
         $destination_ids = $private_van_tour->destinations->pluck('id')->toArray();
 
         $related_tours = PrivateVanTour::with('tags', 'cities', 'cars', 'images', 'destinations')
+            ->ownProduct()
+            ->where('id', '<>', $private_van_tour->id)
             ->whereHas('destinations', function ($query) use ($destination_ids) {
                 $query->whereIn('destination_id', $destination_ids);
             })
