@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\BookingItem;
+use App\Services\BookingItemDataService;
 use Illuminate\Contracts\Support\Responsable;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -48,7 +49,15 @@ class ReservationReportExport implements FromCollection, WithHeadings, WithMappi
                 '#',
                 'CRM ID',
                 'Customer Name',
+
+                'Product Type',
+                'Product Name',
+                'Product Variation Name',
+                'Sale Amount',
+                'Expense Amount',
+
                 'Payment Status',
+                'Expense Status',
                 'Sales Date',
                 'Payment Method',
                 'Link'
@@ -67,6 +76,14 @@ class ReservationReportExport implements FromCollection, WithHeadings, WithMappi
             ++$this->index,
             $booking_item->crm_id,
             $booking_item->booking->customer->name,
+
+            $booking_item->acsr_product_type_name,
+            $booking_item->product->name,
+            $booking_item->acsr_variation_name,
+            (new BookingItemDataService($booking_item))->getSalePrice(),
+            (new BookingItemDataService($booking_item))->getTotalCost(),
+
+            $booking_item->booking->payment_status,
             $booking_item->payment_status,
             $booking_item->booking->booking_date,
             $booking_item->booking->payment_method,
@@ -79,10 +96,13 @@ class ReservationReportExport implements FromCollection, WithHeadings, WithMappi
         $dates = explode(',', $this->sale_daterange);
 
         $records = BookingItem::query()
+            ->with(
+                'booking:id,customer_id,booking_date,payment_method,payment_status',
+                'booking.customer:id,name',
+                'product'
+            )
             ->whereIn('payment_status', ['not_paid', 'partially_paid'])
-            ->with('booking:id,customer_id,booking_date,payment_method', 'booking.customer:id,name')
             ->whereBetween('service_date', [$dates[0], $dates[1]])
-            ->select('id', 'booking_id', 'crm_id', 'payment_status')
             ->get();
 
         return $records;

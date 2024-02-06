@@ -96,4 +96,70 @@ class BookingItem extends Model
     {
         return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());
     }
+
+    public function getAcsrProductTypeNameAttribute()
+    {
+        switch ($this->product_type) {
+            case 'App\Models\Hotel':
+                return 'Hotel & Room';
+
+                break;
+
+            case 'App\Models\PrivateVanTour':
+                return 'Private Van Tour';
+
+                break;
+
+            case 'App\Models\Airline':
+                return 'Airline';
+
+                break;
+
+            case 'App\Models\AirportPickup':
+                return 'Airport Pickup';
+
+                break;
+
+            case 'App\Models\EntranceTicket':
+                return 'Entrance Ticket';
+
+                break;
+
+            case 'App\Models\GroupTour':
+                return 'Group Tour';
+
+                break;
+
+            case 'App\Models\Inclusive':
+                return 'Inclusive';
+
+                break;
+
+            default:
+                return 'Unknown';
+
+                break;
+        }
+    }
+
+    public function getAcsrVariationNameAttribute()
+    {
+        if($this->product_type === 'App\Models\PrivateVanTour') {
+            return $this->car->name ?? '-';
+        }
+
+        if($this->product_type === 'App\Models\EntranceTicket') {
+            return $this->variation->name ?? '-';
+        }
+
+        if($this->product_type === 'App\Models\Hotel') {
+            return $this->room->name ?? '-';
+        }
+
+        if($this->product_type === 'App\Models\Airline') {
+            return $this->ticket->price ?? '-';
+        }
+
+        return '-';
+    }
 }

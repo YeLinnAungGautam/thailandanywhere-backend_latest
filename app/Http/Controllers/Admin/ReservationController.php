@@ -61,9 +61,10 @@ class ReservationController extends Controller
         $oldCrmId = $request->query('old_crm_id');
 
         if ($crmId) {
-            $query->whereHas('booking', function ($q) use ($crmId) {
-                $q->where('crm_id', 'LIKE', "%{$crmId}%");
-            });
+            // $query->whereHas('booking', function ($q) use ($crmId) {
+            //     $q->where('crm_id', 'LIKE', "%{$crmId}%");
+            // });
+            $query->where('crm_id', 'LIKE', "%{$crmId}%");
         }
 
         if ($oldCrmId) {
