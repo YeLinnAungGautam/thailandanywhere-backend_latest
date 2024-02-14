@@ -2,9 +2,11 @@
 
 namespace App\Mail;
 
+use App\Exports\ReservationReportExport;
+use Excel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -13,12 +15,14 @@ class SendSaleReportMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public $daterange;
+
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct($daterange)
     {
-        //
+        $this->daterange = $daterange;
     }
 
     /**
@@ -37,7 +41,7 @@ class SendSaleReportMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'email.daily_sale_report_email',
         );
     }
 
@@ -48,6 +52,12 @@ class SendSaleReportMail extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        $file_name = "reservation_report_" . date('Y-m-d-H-i-s') . ".csv";
+
+        Excel::store(new ReservationReportExport($this->daterange), "public/attachments/" . $file_name);
+
+        return [
+            Attachment::fromPath(public_path('/storage/attachments/' . $file_name))
+        ];
     }
 }

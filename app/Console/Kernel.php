@@ -13,6 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('db:backup')->daily();
+
+        $schedule->command('send:daily-reservation-report')->dailyAt('9:00');
+        $schedule->command('send:weekly-reservation-report')->weeklyOn(1, '9:00');
     }
 
     /**

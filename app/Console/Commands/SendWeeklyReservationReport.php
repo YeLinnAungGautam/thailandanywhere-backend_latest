@@ -5,14 +5,14 @@ namespace App\Console\Commands;
 use App\Jobs\SendReservationReportJob;
 use Illuminate\Console\Command;
 
-class SendDailySaleReportCommand extends Command
+class SendWeeklyReservationReport extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'send:daily-reservation-report';
+    protected $signature = 'send:weekly-reservation-report';
 
     /**
      * The console command description.
@@ -26,6 +26,6 @@ class SendDailySaleReportCommand extends Command
      */
     public function handle()
     {
-        SendReservationReportJob::dispatch('daily');
+        SendReservationReportJob::dispatch('weekly');
     }
 }
