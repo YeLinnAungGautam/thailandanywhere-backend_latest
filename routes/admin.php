@@ -77,7 +77,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::apiResource('product-categories', ProductCategoryController::class);
     Route::apiResource('product-sub-categories', ProductSubCategoryController::class);
-    Route::apiResource('destinations', DestinationController::class);
     Route::apiResource('cities', CityController::class);
     Route::apiResource('cars', CarController::class);
     Route::apiResource('product-tags', ProductTagController::class);
@@ -87,6 +86,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
     Route::apiResource('airport-pickups', AirportPickupController::class);
     Route::apiResource('inclusive', InclusiveController::class);
+
+    # Destination
+    Route::apiResource('destinations', DestinationController::class);
+    Route::delete('destinations/{destination_id}/images/{product_image_id}', [DestinationController::class, 'deleteImage']);
+    Route::post('destinations/{destination_id}/images', [DestinationController::class, 'uploadImage']);
 
     # Facility
     Route::apiResource('facilities', FacilityController::class);

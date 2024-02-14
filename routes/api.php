@@ -5,6 +5,7 @@ use App\Http\Controllers\API\Frontend\DestinationController;
 use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
 use App\Http\Controllers\API\Frontend\PrivateVantourController;
+use App\Http\Controllers\API\Frontend\ProductCategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
@@ -51,6 +52,9 @@ Route::group([
 
     # Destination
     Route::apiResource('destinations', DestinationController::class)->only('index');
+
+    # Category
+    Route::get('product-categories', [ProductCategoryController::class, 'index']);
 
     # Private Van Tour
     Route::apiResource('private-van-tours', PrivateVantourController::class)->only('show');

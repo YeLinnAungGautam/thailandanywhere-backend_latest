@@ -53,6 +53,11 @@ class PageController extends Controller
                     $qq->where('destination_id', $request->destination_id);
                 });
             })
+            ->when($request->product_category_id, function ($q) use ($request) {
+                $q->whereHas('destinations', function ($qq) use ($request) {
+                    $qq->where('category_id', $request->product_category_id);
+                });
+            })
             ->paginate($request->limit ?? 10);
 
         return PrivateVanTourResource::collection($products)->additional([

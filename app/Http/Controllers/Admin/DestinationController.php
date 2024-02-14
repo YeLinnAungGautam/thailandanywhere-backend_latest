@@ -147,4 +147,49 @@ class DestinationController extends Controller
 
         return $this->success(null, 'Successfully deleted');
     }
+
+    public function deleteImage($destination_id, $product_image_id)
+    {
+        $destination = Destination::find($destination_id);
+        if (!$destination) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $product_image = $destination->images()->find($product_image_id);
+        if (!$product_image) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        if ($destination->images()->where('id', $product_image->id)->exists() == false) {
+            return $this->error(null, 'Invalid destination image', 404);
+        }
+
+        Storage::delete('public/images/destination' . $product_image->image);
+
+        $product_image->delete();
+
+        return $this->success(null, 'Destination image is successfully deleted');
+    }
+
+    public function uploadImage($destination_id, Request $request)
+    {
+        $destination = Destination::find($destination_id);
+        if (!$destination) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        if ($request->file('images')) {
+            foreach ($request->file('images') as $image) {
+                $file_name = uploadFile($image, 'images/destination/');
+
+                ProductImage::create([
+                    'ownerable_id' => $destination->id,
+                    'ownerable_type' => Destination::class,
+                    'image' => $file_name
+                ]);
+            };
+        }
+
+        return $this->success(new DestinationResource($destination), 'Successfully created');
+    }
 }
