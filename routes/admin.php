@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
+use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\InclusiveController;
 use App\Http\Controllers\Admin\PostController;
@@ -88,7 +89,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('inclusive', InclusiveController::class);
 
     # Facility
-    Route::apiResource('facilities', CityController::class);
+    Route::apiResource('facilities', FacilityController::class);
 
     # Customer
     Route::apiResource('customers', CustomerController::class);
