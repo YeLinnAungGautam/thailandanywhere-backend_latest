@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DestinationStoreRequest;
 use App\Http\Resources\DestinationResource;
 use App\Models\Destination;
+use App\Models\ProductImage;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class DestinationController extends Controller
 {
@@ -29,6 +32,7 @@ class DestinationController extends Controller
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(DestinationResource::collection($data)
             ->additional([
                 'meta' => [
@@ -39,25 +43,32 @@ class DestinationController extends Controller
             ->getData(), 'Destination List');
     }
 
-
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(DestinationStoreRequest $request)
     {
-        $request->validate([
-            'name'  => 'required'
-        ]);
+        $input = $request->validated();
 
-        $data = [
-            'name' => $request->name,
-            'description' => $request->description,
-            'category_id' => $request->category_id,
-            'entry_fee' => $request->entry_fee,
-        ];
+        if ($request->file('feature_img')) {
+            $input['feature_img'] = uploadFile($request->file('feature_img'), 'images/destination/');
+        }
 
-        $save = Destination::create($data);
-        return $this->success(new DestinationResource($save), 'Successfully created');
+        $destination = Destination::create($input);
+
+        if ($request->file('images')) {
+            foreach ($request->file('images') as $image) {
+                $file_name = uploadFile($image, 'images/destination/');
+
+                ProductImage::create([
+                    'ownerable_id' => $destination->id,
+                    'ownerable_type' => Destination::class,
+                    'image' => $file_name
+                ]);
+            };
+        }
+
+        return $this->success(new DestinationResource($destination), 'Successfully created');
     }
 
     /**
@@ -77,22 +88,46 @@ class DestinationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(DestinationStoreRequest $request, string $id)
     {
         $find = Destination::find($id);
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
 
-        $data = [
-            'name' => $request->name ?? $find->name,
-            'category_id' => $request->category_id ?? $find->category_id,
-            'description' => $request->description ?? $find->description,
-            'entry_fee' => $request->entry_fee ?? $find->entry_fee,
-        ];
+        $input = $request->validated();
 
+        if ($request->file('feature_img')) {
+            $input['feature_img'] = uploadFile($request->file('feature_img'), 'images/destination/');
 
-        $find->update($data);
+            if ($find->feature_img) {
+                Storage::delete('public/images/destination/' . $find->feature_img);
+            }
+        }
+
+        $find->update($input);
+
+        if ($request->file('images')) {
+            foreach ($request->file('images') as $image) {
+                // Delete existing images
+                if (count($find->images) > 0) {
+                    foreach ($find->images as $exImage) {
+                        // Delete the file from storage
+                        Storage::delete('public/images/destination/' . $exImage->image);
+                        // Delete the image from the database
+                        $exImage->delete();
+                    }
+                }
+
+                $file_name = uploadFile($image, 'images/destination/');
+
+                ProductImage::create([
+                    'ownerable_id' => $find->id,
+                    'ownerable_type' => Destination::class,
+                    'image' => $file_name
+                ]);
+            };
+        }
 
         return $this->success(new DestinationResource($find), 'Successfully updated');
     }
@@ -107,7 +142,9 @@ class DestinationController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
+        $find->images()->delete();
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }

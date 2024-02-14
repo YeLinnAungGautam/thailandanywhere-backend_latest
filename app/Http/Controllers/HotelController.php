@@ -104,6 +104,10 @@ class HotelController extends Controller
             };
         }
 
+        if($request->facilities) {
+            $save->facilities()->attach($request->facilities);
+        }
+
         return $this->success(new HotelResource($save), 'Successfully created', 200);
 
     }
@@ -165,6 +169,8 @@ class HotelController extends Controller
             };
         }
 
+        $hotel->facilities()->sync($request->facilities);
+
         return $this->success(new HotelResource($hotel), 'Successfully updated', 200);
     }
 
@@ -176,10 +182,10 @@ class HotelController extends Controller
         $hotel_images = HotelImage::where('hotel_id', '=', $hotel->id)->get();
 
         foreach($hotel_images as $hotel_image) {
-
             Storage::delete('public/images/' . $hotel_image->image);
-
         }
+
+        $hotel->facilities()->detach();
 
         HotelImage::where('hotel_id', $hotel->id)->delete();
 

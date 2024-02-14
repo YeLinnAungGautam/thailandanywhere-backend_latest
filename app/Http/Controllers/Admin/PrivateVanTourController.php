@@ -145,7 +145,6 @@ class PrivateVanTourController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-
         $data = [
             'name' => $request->name ?? $find->name,
             'description' => $request->description ?? $find->description,
@@ -194,8 +193,6 @@ class PrivateVanTourController extends Controller
                 PrivateVanTourImage::create(['private_van_tour_id' => $find->id, 'image' => $fileData['fileName']]);
             };
         }
-
-
 
         $prices = $request->prices;
         $agent_prices = $request->agent_prices;

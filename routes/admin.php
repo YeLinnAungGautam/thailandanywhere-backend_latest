@@ -87,6 +87,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('airport-pickups', AirportPickupController::class);
     Route::apiResource('inclusive', InclusiveController::class);
 
+    # Facility
+    Route::apiResource('facilities', CityController::class);
+
     # Customer
     Route::apiResource('customers', CustomerController::class);
     Route::get('customers/{id}/sales', [CustomerController::class, 'getSales']);
