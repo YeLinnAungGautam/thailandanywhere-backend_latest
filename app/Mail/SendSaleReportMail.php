@@ -16,13 +16,15 @@ class SendSaleReportMail extends Mailable
     use Queueable, SerializesModels;
 
     public $daterange;
+    public $type;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($daterange)
+    public function __construct($daterange, $type)
     {
         $this->daterange = $daterange;
+        $this->type = $type;
     }
 
     /**
@@ -31,7 +33,7 @@ class SendSaleReportMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Send Sale Report Mail',
+            subject: 'Send Sale Report Mail'
         );
     }
 
@@ -42,6 +44,9 @@ class SendSaleReportMail extends Mailable
     {
         return new Content(
             view: 'email.daily_sale_report_email',
+            with: [
+                'type' => $this->type
+            ],
         );
     }
 

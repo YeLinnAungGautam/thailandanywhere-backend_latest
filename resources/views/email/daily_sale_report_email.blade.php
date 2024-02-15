@@ -35,7 +35,7 @@
 
     <p>Dear Reservation Team,</p>
 
-    <p>Your daily sale reports are ready. Kindly see the attachment.</p>
+    <p>Your {{ $type }} sale reports are ready. Kindly see the attachment.</p>
 
     {{-- <div id="watermark">
         <img src="{{ asset('assets/printf.png') }}" height="100%" width="100%" />

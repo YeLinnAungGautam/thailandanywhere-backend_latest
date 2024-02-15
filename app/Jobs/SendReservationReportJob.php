@@ -41,6 +41,6 @@ class SendReservationReportJob implements ShouldQueue
             $daterange = $start_week . ',' . $end_week;
         }
 
-        Mail::to('taryarlin0088@gmail.com')->send(new SendSaleReportMail($daterange));
+        Mail::to('ceo@thanywhere.com')->send(new SendSaleReportMail($daterange, $this->type));
     }
 }
