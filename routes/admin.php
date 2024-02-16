@@ -81,9 +81,18 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('cars', CarController::class);
     Route::apiResource('product-tags', ProductTagController::class);
 
+    # Group Tour
     Route::apiResource('group-tours', GroupTourController::class);
-    Route::apiResource('entrance-tickets-variations', EntranceTicketVariationController::class);
+    Route::get('group-tours/export/csv', [GroupTourController::class, 'exportCSV']);
+
+    # Entrance Ticket
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
+    Route::get('entrance-tickets/export/csv', [EntranceTicketController::class, 'exportCSV']);
+
+    # Entrance Ticket Variation
+    Route::apiResource('entrance-tickets-variations', EntranceTicketVariationController::class);
+    Route::get('entrance-tickets-variations/export/csv', [EntranceTicketVariationController::class, 'exportCSV']);
+
     Route::apiResource('airport-pickups', AirportPickupController::class);
     Route::apiResource('inclusive', InclusiveController::class);
 
@@ -125,10 +134,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Restaurant
     Route::apiResource('restaurants', RestaurantController::class);
     Route::delete('restaurants/{restaurant}/images/{product_image}', [RestaurantController::class, 'deleteImage']);
+    Route::get('restaurants/export/csv', [RestaurantController::class, 'exportCSV']);
 
     # Meal
     Route::apiResource('meals', MealController::class);
     Route::delete('meals/{meal}/images/{product_image}', [MealController::class, 'deleteImage']);
+    Route::get('meals/export/csv', [MealController::class, 'exportCSV']);
 
     # Driver
     Route::apiResource('drivers', DriverController::class);
@@ -136,8 +147,13 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Supplier
     Route::apiResource('suppliers', SupplierController::class);
 
+    # Airline
     Route::apiResource('airlines', AirlineController::class);
+    Route::get('airlines/export/csv', [AirlineController::class, 'exportCSV']);
+
+    # Airline Ticket
     Route::apiResource('airline-tickets', AirlineTicketController::class);
+    Route::get('airline-tickets/export/csv', [AirlineTicketController::class, 'exportCSV']);
 
     Route::delete('booking-receipt/{id}', [BookingController::class, 'deleteReceipt']);
     Route::delete('reservation-receipt/{id}', [ReservationController::class, 'deleteReceipt']);

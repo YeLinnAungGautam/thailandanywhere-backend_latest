@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\RestaurantExport;
 use App\Http\Requests\RestaurantRequest;
 use App\Http\Resources\RestaurantResource;
 use App\Models\ProductContract;
@@ -195,5 +196,14 @@ class RestaurantController extends Controller
         $product_image->delete();
 
         return $this->success(null, 'Restaurant image is successfully deleted');
+    }
+
+    public function exportCSV(Request $request)
+    {
+        $file_name = "restaurant_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+        \Excel::store(new RestaurantExport(), "public/export/" . $file_name);
+
+        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }

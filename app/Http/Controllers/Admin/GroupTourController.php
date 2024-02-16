@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\GroupTourExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreGroupTourRequest;
 use App\Http\Requests\UpdateGroupTourRequest;
@@ -199,5 +200,14 @@ class GroupTourController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function exportCSV(Request $request)
+    {
+        $file_name = "group_tour_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+        \Excel::store(new GroupTourExport(), "public/export/" . $file_name);
+
+        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success group tour export', 200);
     }
 }

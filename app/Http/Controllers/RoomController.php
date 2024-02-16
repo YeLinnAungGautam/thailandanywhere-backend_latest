@@ -243,6 +243,6 @@ class RoomController extends Controller
 
         Excel::store(new RoomExport(), "public/export/" . $file_name);
 
-        return $this->success(['download_link' => get_file_link('export/', $file_name)], 'Success Room Export', 200);
+        return $this->success(['download_link' => get_file_link('export', $file_name)], 'Success Room Export', 200);
     }
 }

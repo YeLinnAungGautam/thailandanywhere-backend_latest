@@ -242,6 +242,6 @@ class PrivateVanTourController extends Controller
 
         \Excel::store(new PrivateVantourExport(), "public/export/" . $file_name);
 
-        return $this->success(['download_link' => get_file_link('export/', $file_name)], 'success private van tour export', 200);
+        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Room;
+use App\Models\PrivateVanTour;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -21,33 +21,27 @@ class PrivateVantourExport implements FromCollection, WithHeadings, WithMapping
             'Type',
             'Long Description',
             'Cover Image',
-            'Cost Price',
-            'Agent Price',
-            'Max Person',
             'Images'
         ];
     }
 
     public function collection()
     {
-        return Room::query()->with('hotel', 'images')->get();
+        return PrivateVanTour::query()->with('images')->get();
     }
 
-    public function map($room): array
+    public function map($private_vantour): array
     {
-        $images = $room->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
+        $images = $private_vantour->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
 
         return [
             ++$this->index,
-            $room->hotel->name,
-            $room->name,
-            $room->description,
-            $room->is_extra ?? '-',
-            $room->extra_price,
-            $room->room_price,
-            $room->cost,
-            $room->agent_price,
-            $room->max_person,
+            $private_vantour->sku_code,
+            $private_vantour->name,
+            $private_vantour->description,
+            PrivateVanTour::TYPES[$private_vantour->type],
+            $private_vantour->long_description,
+            get_file_link('images', $private_vantour->cover_image),
             $images
         ];
     }

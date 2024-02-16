@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\AirlineExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AirlineResource;
 use App\Models\Airline;
@@ -101,5 +102,14 @@ class AirlineController extends Controller
         $airline->delete();
 
         return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function exportCSV(Request $request)
+    {
+        $file_name = "airline_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+        \Excel::store(new AirlineExport(), "public/export/" . $file_name);
+
+        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }
