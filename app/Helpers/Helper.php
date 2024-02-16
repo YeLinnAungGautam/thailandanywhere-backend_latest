@@ -17,3 +17,10 @@ if (!function_exists('uploadFile')) {
         return $file_name;
     }
 }
+
+if (!function_exists('get_file_link')) {
+    function get_file_link($path, $file_name)
+    {
+        return config('app.url') . Storage::url($path . '/' . $file_name);
+    }
+}

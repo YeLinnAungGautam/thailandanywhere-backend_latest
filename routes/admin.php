@@ -80,7 +80,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('cities', CityController::class);
     Route::apiResource('cars', CarController::class);
     Route::apiResource('product-tags', ProductTagController::class);
-    Route::apiResource('private-van-tours', PrivateVanTourController::class);
+
     Route::apiResource('group-tours', GroupTourController::class);
     Route::apiResource('entrance-tickets-variations', EntranceTicketVariationController::class);
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
@@ -108,13 +108,19 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
 
+    # Private Vantour
+    Route::apiResource('private-van-tours', PrivateVanTourController::class);
+    Route::get('private-van-tours/export/csv', [PrivateVanTourController::class, 'exportCSV']);
+
     # Hotel
     Route::apiResource('hotels', HotelController::class);
     Route::delete('hotels/{hotel}/images/{hotel_image}', [HotelController::class, 'deleteImage']);
+    Route::get('hotels/export/csv', [HotelController::class, 'exportCSV']);
 
     # Room
     Route::apiResource('rooms', RoomController::class);
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
+    Route::get('rooms/export/csv', [RoomController::class, 'exportCSV']);
 
     # Restaurant
     Route::apiResource('restaurants', RestaurantController::class);

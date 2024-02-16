@@ -102,7 +102,9 @@ class ReservationReportExport implements FromCollection, WithHeadings, WithMappi
                 'product'
             )
             ->whereIn('payment_status', ['not_paid', 'partially_paid'])
-            ->whereBetween('service_date', [$dates[0], $dates[1]])
+            // ->whereBetween('service_date', [$dates[0], $dates[1]])
+            ->where('service_date', '>=', $dates[0])
+            ->where('service_date', '<=', $dates[1])
             ->get();
 
         return $records;
