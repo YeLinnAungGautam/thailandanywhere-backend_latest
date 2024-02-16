@@ -49,7 +49,12 @@ class ReservationController extends Controller
             ->when($request->sale_daterange, function ($q) use ($request) {
                 $dates = explode(',', $request->sale_daterange);
 
-                $q->whereBetween('service_date', [$dates[0], $dates[1]]);
+                // $q->whereBetween('service_date', [$dates[0], $dates[1]]);
+                $q->whereIn('booking_id', function ($q) use ($dates) {
+                    $q->select('id')
+                        ->from('bookings')
+                        ->whereBetween('booking_date', [$dates[0], $dates[1]]);
+                });
             });
 
         if ($serviceDate) {

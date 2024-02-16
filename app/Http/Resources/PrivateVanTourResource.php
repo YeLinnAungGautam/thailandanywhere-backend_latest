@@ -28,7 +28,7 @@ class PrivateVanTourResource extends JsonResource
             'tags' => PrivateVanTourTagResource::collection($this->tags),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
-            'lowest_car_price' => $this->cars()->orderByPivot('price')->first()->pivot->price ?? 0,
+            'lowest_car_price' => $this->cars()->orderByPivot('price', 'desc')->first()->pivot->price ?? 0,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
