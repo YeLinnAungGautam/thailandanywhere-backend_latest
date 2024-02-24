@@ -49,9 +49,14 @@ class FacilityController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'image' => 'required'
         ]);
 
-        $save = Facility::create(['name' => $request->name]);
+        if ($request->file('image')) {
+            $image = uploadFile($request->file('image'), 'images/facility/');
+        }
+
+        $save = Facility::create(['name' => $request->name, 'image' => $image]);
 
         return $this->success(new FacilityResource($save), 'Successfully created');
     }
@@ -80,8 +85,17 @@ class FacilityController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
+        if ($request->file('image')) {
+            $image = uploadFile($request->file('image'), 'images/facility/');
+
+            if ($find->image) {
+                Storage::delete('public/images/facility/' . $find->image);
+            }
+        }
+
         $data = [
-            'name' => $request->name ?? $find->name
+            'name' => $request->name ?? $find->name,
+            'image' => $image ?? $find->image
         ];
 
         $find->update($data);
@@ -97,6 +111,10 @@ class FacilityController extends Controller
         $find = Facility::find($id);
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
+        }
+
+        if ($find->image) {
+            Storage::delete('public/images/facility/' . $find->image);
         }
 
         $find->delete();
