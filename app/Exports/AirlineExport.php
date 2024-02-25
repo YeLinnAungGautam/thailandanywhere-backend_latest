@@ -9,12 +9,10 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class AirlineExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Name',
             'Legal Name',
             'Starting Balance',
@@ -29,7 +27,7 @@ class AirlineExport implements FromCollection, WithHeadings, WithMapping
     public function map($airline): array
     {
         return [
-            ++$this->index,
+            $airline->id,
             $airline->name,
             $airline->legal_name,
             $airline->starting_balance,

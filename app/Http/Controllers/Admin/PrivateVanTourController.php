@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\PrivateVantourExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePrivateVanTourRequest;
 use App\Http\Requests\UpdatePrivateVanTourRequest;
@@ -76,7 +75,7 @@ class PrivateVanTourController extends Controller
         $data = [
             'name' => $request->name,
             'description' => $request->description,
-            'type' => $request->type ?? PrivateVanTour::TYPES['van_tour'],
+            'type' => $request->type ?? PrivateVanTour::TYPES['car_rental'],
             'sku_code' => $request->sku_code,
             'long_description' => $request->long_description,
         ];
@@ -234,14 +233,5 @@ class PrivateVanTourController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
-    }
-
-    public function exportCSV(Request $request)
-    {
-        $file_name = "private_van_tour_export_" . date('Y-m-d-H-i-s') . ".csv";
-
-        \Excel::store(new PrivateVantourExport(), "public/export/" . $file_name);
-
-        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }

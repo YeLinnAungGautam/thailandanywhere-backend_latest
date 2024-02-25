@@ -9,12 +9,10 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class MealExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Restaurant',
             'Name',
             'Description',
@@ -23,21 +21,19 @@ class MealExport implements FromCollection, WithHeadings, WithMapping
             'Cost',
             'Max Person',
             'Is Extra',
-            'Images'
         ];
     }
 
     public function collection()
     {
-        return Meal::query()->with('restaurant', 'images')->get();
+        return Meal::query()->with('restaurant')->get();
     }
 
     public function map($meal): array
     {
-        $images = $meal->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
 
         return [
-            ++$this->index,
+            $meal->id,
             $meal->restaurant->name,
             $meal->name,
             $meal->description,
@@ -46,7 +42,6 @@ class MealExport implements FromCollection, WithHeadings, WithMapping
             $meal->cost,
             $meal->max_person,
             $meal->is_extra,
-            $images
         ];
     }
 }

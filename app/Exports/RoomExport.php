@@ -9,12 +9,10 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class RoomExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Hotel',
             'Name',
             'Description',
@@ -24,21 +22,18 @@ class RoomExport implements FromCollection, WithHeadings, WithMapping
             'Cost Price',
             'Agent Price',
             'Max Person',
-            'Images'
         ];
     }
 
     public function collection()
     {
-        return Room::query()->with('hotel', 'images')->get();
+        return Room::query()->with('hotel')->get();
     }
 
     public function map($room): array
     {
-        $images = $room->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
-
         return [
-            ++$this->index,
+            $room->id,
             $room->hotel->name,
             $room->name,
             $room->description,
@@ -48,7 +43,6 @@ class RoomExport implements FromCollection, WithHeadings, WithMapping
             $room->cost,
             $room->agent_price,
             $room->max_person,
-            $images
         ];
     }
 }

@@ -9,13 +9,12 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class EntranceTicketExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Name',
+            'Provider',
             'Description',
             'Cover Image',
             'Place',
@@ -24,7 +23,7 @@ class EntranceTicketExport implements FromCollection, WithHeadings, WithMapping
             'Payment Method',
             'Bank Account No',
             'Bank Account Name',
-            'Images'
+            'Cancellation Policy ID'
         ];
     }
 
@@ -35,11 +34,10 @@ class EntranceTicketExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($ticket): array
     {
-        $images = $ticket->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
-
         return [
-            ++$this->index,
+            $ticket->id,
             $ticket->name,
+            $ticket->provider,
             $ticket->description,
             get_file_link('images', $ticket->cover_image),
             $ticket->place,
@@ -48,7 +46,7 @@ class EntranceTicketExport implements FromCollection, WithHeadings, WithMapping
             $ticket->bank_name,
             $ticket->bank_account_number,
             $ticket->account_name,
-            $images
+            $ticket->cancellation_policy_id
         ];
     }
 }

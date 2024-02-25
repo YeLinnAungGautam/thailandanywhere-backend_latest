@@ -9,12 +9,10 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class AirlineTicketExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Airline',
             'Name',
             'Description',
@@ -29,7 +27,7 @@ class AirlineTicketExport implements FromCollection, WithHeadings, WithMapping
     public function map($airline_ticket): array
     {
         return [
-            ++$this->index,
+            $airline_ticket->id,
             $airline_ticket->airline->name,
             $airline_ticket->price,
             $airline_ticket->description,

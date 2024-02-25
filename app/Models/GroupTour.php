@@ -2,18 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\City;
-use App\Models\ProductTag;
-use App\Models\Destination;
-use App\Models\GroupTourImage;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class GroupTour extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'sku_code', 'description', 'price', 'cover_image', 'cancellation_policy_id'];
+    protected $guarded = [];
 
     public function images()
     {

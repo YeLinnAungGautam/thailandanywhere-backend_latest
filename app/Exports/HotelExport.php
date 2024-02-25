@@ -9,12 +9,10 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class HotelExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Name',
             'Description',
             'Type',
@@ -26,21 +24,18 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             'Bank Name',
             'Bank Account Number',
             'Bank Account Name',
-            'Images'
         ];
     }
 
     public function collection()
     {
-        return Hotel::query()->with('city', 'images')->get();
+        return Hotel::query()->with('city')->get();
     }
 
     public function map($hotel): array
     {
-        $images = $hotel->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
-
         return [
-            ++$this->index,
+            $hotel->id,
             $hotel->name,
             $hotel->description,
             Hotel::TYPES[$hotel->type],
@@ -52,7 +47,6 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             $hotel->bank_name,
             $hotel->bank_account_number,
             $hotel->account_name,
-            $images
         ];
     }
 }

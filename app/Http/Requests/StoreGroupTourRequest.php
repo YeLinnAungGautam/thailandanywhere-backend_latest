@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreGroupTourRequest extends FormRequest
 {
@@ -23,7 +23,7 @@ class StoreGroupTourRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'  => 'required',
+            'name' => 'required',
             'price' => 'required',
             'sku_code' => 'required|' . Rule::unique('group_tours'),
         ];

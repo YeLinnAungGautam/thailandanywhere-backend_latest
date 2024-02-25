@@ -9,18 +9,16 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class GroupTourExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'SKU Code',
             'Name',
             'Description',
             'Cover Image',
             'Price',
-            'Images'
+            'Cancellation Policy ID',
         ];
     }
 
@@ -31,16 +29,14 @@ class GroupTourExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($group_tour): array
     {
-        $images = $group_tour->images->map(fn ($image) => get_file_link('images', $image->image))->implode(', ');
-
         return [
-            ++$this->index,
+            $group_tour->id,
             $group_tour->sku_code,
             $group_tour->name,
             $group_tour->description,
             get_file_link('images', $group_tour->cover_image),
             $group_tour->price,
-            $images
+            $group_tour->cancellation_policy_id,
         ];
     }
 }

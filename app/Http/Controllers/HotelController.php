@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\HotelExport;
 use App\Http\Requests\StoreHotelRequest;
 use App\Http\Requests\UpdateHotelRequest;
 use App\Http\Resources\HotelResource;
@@ -11,7 +10,6 @@ use App\Models\HotelContract;
 use App\Models\HotelImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
-use Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -207,14 +205,5 @@ class HotelController extends Controller
         $hotel_image->delete();
 
         return $this->success(null, 'Hotel image is successfully deleted');
-    }
-
-    public function exportCSV()
-    {
-        $file_name = "hotel_export_" . date('Y-m-d-H-i-s') . ".csv";
-
-        Excel::store(new HotelExport(), "public/export/" . $file_name);
-
-        return $this->success(['download_link' => get_file_link('export', $file_name)], 'Success Hotel Export', 200);
     }
 }

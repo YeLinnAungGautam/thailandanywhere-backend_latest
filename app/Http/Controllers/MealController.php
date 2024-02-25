@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\MealExport;
 use App\Http\Requests\MealRequest;
 use App\Http\Resources\MealResource;
 use App\Models\Meal;
@@ -165,14 +164,5 @@ class MealController extends Controller
         $product_image->delete();
 
         return $this->success(null, 'Image is successfully deleted');
-    }
-
-    public function exportCSV(Request $request)
-    {
-        $file_name = "meal_export_" . date('Y-m-d-H-i-s') . ".csv";
-
-        \Excel::store(new MealExport(), "public/export/" . $file_name);
-
-        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }

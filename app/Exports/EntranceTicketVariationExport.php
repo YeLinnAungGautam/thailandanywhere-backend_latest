@@ -9,15 +9,14 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class EntranceTicketVariationExport implements FromCollection, WithHeadings, WithMapping
 {
-    protected $index = 0;
-
     public function headings(): array
     {
         return [
-            '#',
+            'Product ID',
             'Entrance Ticket',
             'Name',
             'Description',
+            'Price Name',
             'Cost Price',
             'Agent Price',
             'Price'
@@ -32,10 +31,11 @@ class EntranceTicketVariationExport implements FromCollection, WithHeadings, Wit
     public function map($ticket_variation): array
     {
         return [
-            ++$this->index,
+            $ticket_variation->id,
             $ticket_variation->entranceTicket->name ?? '-',
             $ticket_variation->name,
             $ticket_variation->description,
+            $ticket_variation->price_name,
             $ticket_variation->cost_price,
             $ticket_variation->agent_price,
             $ticket_variation->price,

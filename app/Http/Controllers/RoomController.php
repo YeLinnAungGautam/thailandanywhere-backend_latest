@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\RoomExport;
 use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\UpdateRoomRequest;
 use App\Http\Resources\RoomResource;
@@ -10,7 +9,6 @@ use App\Models\Room;
 use App\Models\RoomImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
-use Excel;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -235,14 +233,5 @@ class RoomController extends Controller
         }
 
         return $overlaps;
-    }
-
-    public function exportCSV()
-    {
-        $file_name = "room_export_" . date('Y-m-d-H-i-s') . ".csv";
-
-        Excel::store(new RoomExport(), "public/export/" . $file_name);
-
-        return $this->success(['download_link' => get_file_link('export', $file_name)], 'Success Room Export', 200);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\EntranceTicketVariationExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EntranceTicketVariationResource;
 use App\Models\EntranceTicketVariation;
@@ -98,14 +97,5 @@ class EntranceTicketVariationController extends Controller
         $entrance_tickets_variation->delete();
 
         return $this->success(null, 'Successfully deleted', 200);
-    }
-
-    public function exportCSV(Request $request)
-    {
-        $file_name = "entrance_ticket_variation_export_" . date('Y-m-d-H-i-s') . ".csv";
-
-        \Excel::store(new EntranceTicketVariationExport(), "public/export/" . $file_name);
-
-        return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
     }
 }
