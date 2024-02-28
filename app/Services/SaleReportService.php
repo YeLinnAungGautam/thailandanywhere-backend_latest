@@ -32,12 +32,14 @@ class SaleReportService
             ->select(
                 'created_by',
                 DB::raw('SUM(grand_total) as total'),
+                DB::raw('SUM(deposit) as total_deposit'),
+                DB::raw('SUM(balance_due) as total_balance'),
                 DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d") as sale_date')
             )
             ->groupBy('created_by', 'created_at')
             ->get();
 
-        return $this->generateSaleResponse($sales, $created_by);
+        return $this->generateSaleResponse($sales, $created_by, true);
     }
 
     public function getSaleCountData($created_by = null): array
@@ -178,7 +180,7 @@ class SaleReportService
         return iterator_to_array($dates);
     }
 
-    private function generateSaleResponse($sales, $created_by = null): array
+    private function generateSaleResponse($sales, $created_by = null, $with_balance = false): array
     {
         $result = [];
         $agents = Admin::agentOnly()
@@ -194,10 +196,19 @@ class SaleReportService
             foreach($agents as $agent_id => $agent_name) {
                 $sale_records = $sales->where('sale_date', $date)->where('created_by', $agent_id);
 
-                $agent_result[] = [
-                    'name' => $agent_name,
-                    'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
-                ];
+                if($with_balance) {
+                    $agent_result[] = [
+                        'name' => $agent_name,
+                        'total_deposit' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_deposit'),
+                        'total_balance' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_balance'),
+                        'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
+                    ];
+                } else {
+                    $agent_result[] = [
+                        'name' => $agent_name,
+                        'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
+                    ];
+                }
             }
 
             $result[] = [

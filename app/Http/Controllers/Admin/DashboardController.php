@@ -84,4 +84,28 @@ class DashboardController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    public function reportByPaymentAndProduct(Request $request)
+    {
+        try {
+            if(!$request->daterange) {
+                throw new Exception('Report by payment status: Invalid daterange to filter');
+            }
+
+            $dates = explode(',', $request->daterange);
+
+            $results = Booking::query()
+                ->whereBetween('booking_date', [$dates[0], $dates[1]])
+                ->groupBy('payment_status')
+                ->select(
+                    'payment_status',
+                    DB::raw('SUM(grand_total) as total_amount'),
+                )
+                ->get();
+
+            return $this->success($results, 'Method of payments');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }

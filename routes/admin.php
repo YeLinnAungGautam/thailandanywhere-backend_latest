@@ -73,13 +73,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('report-by-channel', [DashboardController::class, 'reportByChannel']);
     Route::get('report-by-payment-method', [DashboardController::class, 'reportByPaymentMethod']);
     Route::get('report-by-payment-status', [DashboardController::class, 'reportByPaymentStatus']);
+    Route::get('report-by-payment-and-product', [DashboardController::class, 'reportByPaymentAndProduct']);
 
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('reports/hotels', HotelReportController::class);
 
-    Route::get('/get-reports/{id}', [ReportController::class, 'getSelectData']);
-    Route::get('/get-each-user-report', [ReportController::class, 'getEachUserSaleCount']);
-    Route::get('/general-reports/{date}', [ReportController::class, 'generalSaleReport']);
+    Route::get('get-reports/{id}', [ReportController::class, 'getSelectData']);
+    Route::get('get-each-user-report', [ReportController::class, 'getEachUserSaleCount']);
+    Route::get('general-reports/{date}', [ReportController::class, 'generalSaleReport']);
 
     Route::apiResource('admins', AdminController::class);
     Route::get('/me', [AuthController::class, 'me']);
