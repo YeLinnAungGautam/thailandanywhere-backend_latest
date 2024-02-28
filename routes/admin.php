@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
@@ -63,10 +64,15 @@ Route::get('/super', function () {
 
 Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
+    # Dashboard
     Route::get('/sales-report', [ReportController::class, 'salesAmount']);
     Route::get('/sales-count', [ReportController::class, 'salesCount']);
     Route::get('/bookings-count', [ReportController::class, 'bookingsCount']);
     Route::get('/reservations-count', [ReportController::class, 'reservationsCount']);
+
+    Route::get('report-by-channel', [DashboardController::class, 'reportByChannel']);
+    Route::get('report-by-payment-method', [DashboardController::class, 'reportByPaymentMethod']);
+    Route::get('report-by-payment-status', [DashboardController::class, 'reportByPaymentStatus']);
 
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('reports/hotels', HotelReportController::class);
