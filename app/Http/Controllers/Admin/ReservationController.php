@@ -45,6 +45,7 @@ class ReservationController extends Controller
         $search_attraction = $request->input('attraction_name');
 
         $query = BookingItem::query()
+            ->with(['booking', 'booking.customer'])
             ->when($request->sale_daterange, function ($q) use ($request) {
                 $dates = explode(',', $request->sale_daterange);
 
@@ -151,7 +152,14 @@ class ReservationController extends Controller
             }
         }
 
-        $query->orderBy('created_at', 'desc');
+        if($request->order_by == 'customer_name') {
+            $query
+                ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+                ->join('customers', 'bookings.customer_id', '=', 'customers.id')
+                ->orderBy('customers.name', $request->order_direction ?? 'asc');
+        } else {
+            $query->orderBy('created_at', $request->order_direction ?? 'desc');
+        }
 
         $data = $query->paginate($limit);
 
