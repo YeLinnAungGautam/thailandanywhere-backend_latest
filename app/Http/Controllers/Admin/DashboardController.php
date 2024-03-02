@@ -95,15 +95,21 @@ class DashboardController extends Controller
             $dates = explode(',', $request->daterange);
 
             $results = Booking::query()
-                ->whereBetween('booking_date', [$dates[0], $dates[1]])
-                ->groupBy('payment_status')
+                ->join('booking_items', 'bookings.id', 'booking_items.booking_id')
+                ->whereBetween('bookings.booking_date', [$dates[0], $dates[1]])
                 ->select(
-                    'payment_status',
-                    DB::raw('SUM(grand_total) as total_amount'),
+                    'bookings.payment_currency',
+                    'booking_items.product_type',
+                    // DB::raw('SUM(bookings.grand_total) as total_amount'),
+                    DB::raw('SUM(booking_items.selling_price) as total_selling_amount'),
+                )
+                ->groupBy(
+                    'bookings.payment_currency',
+                    'booking_items.product_type'
                 )
                 ->get();
 
-            return $this->success($results, 'Method of payments');
+            return $this->success($results, 'Report by payment currency and product type');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }

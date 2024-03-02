@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
-use App\Http\Resources\BookingResource;
 use App\Jobs\SendReservationNotifyEmailJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -164,105 +163,6 @@ class ReservationController extends Controller
             ])
             ->response()
             ->getData(), 'Reservation List');
-
-
-        //        $limit = $request->query('limit', 10);
-        //        $search = $request->query('search');
-        //        $filter = $request->query('filter');
-        //        $serviceDate = $request->query('service_date');
-        //        $calenderFilter = $request->query('calender_filter');
-        //
-        //        $query = Booking::query();
-        //
-        //        if ($serviceDate) {
-        //            $query->whereHas('items', function ($q) use ($serviceDate) {
-        //                $q->whereDate('service_date', $serviceDate);
-        //            })->with(['items' => function ($query) use ($serviceDate) {
-        //                $query->whereDate('service_date', $serviceDate);
-        //            }]);
-        //        }
-        //
-        //
-        //        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
-        //            if ($filter) {
-        //                if ($filter === 'all') {
-        //                } elseif ($filter === 'past') {
-        //                    $query->where('is_past_info', true)->whereNotNull('past_user_id');
-        //                } elseif ($filter === 'current') {
-        //                    $query->whereNull('past_user_id');
-        //                }
-        //            }
-        //        } else {
-        //            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
-        //
-        //            if ($filter) {
-        //                if ($filter === 'all') {
-        //                    $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
-        //                } elseif ($filter === 'past') {
-        //                    $query->where('is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
-        //                } elseif ($filter === 'current') {
-        //                    $query->where('created_by', Auth::id())->whereNull('past_user_id');
-        //                }
-        //            }
-        //        }
-        //
-        //        if ($search) {
-        //            $query->where('name', 'LIKE', "%{$search}%");
-        //        }
-        //
-        //
-        //        if ($request->user_id) {
-        //            $query->where('created_by', $request->user_id)->orWhere('past_user_id', $request->user_id);
-        //        }
-        //
-        //
-        //        $query->orderBy('created_at', 'desc');
-        //
-        //        $productType = $request->query('product_type');
-        //        $crmId = $request->query('crm_id');
-        //
-        //        if ($productType) {
-        //            $query->whereHas('items', function ($q) use ($productType, $crmId) {
-        //                if ($crmId) {
-        //                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
-        //                }
-        //                $q->where('product_type', $productType);
-        //            })->with(['items' => function ($query) use ($productType, $crmId) {
-        //                if ($crmId) {
-        //                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
-        //                }
-        //                $query->where('product_type', $productType);
-        //            }]);
-        //        } else {
-        //            $query->whereHas('items', function ($q) use ($crmId) {
-        //                if ($crmId) {
-        //                    $q->where('crm_id', 'LIKE', "%{$crmId}%");
-        //                }
-        //            })->with(['items' => function ($query) use ($crmId) {
-        //                if ($crmId) {
-        //                    $query->where('crm_id', 'LIKE', "%{$crmId}%");
-        //                }
-        //            }]);
-        //        }
-        //
-        //        if ($calenderFilter == true) {
-        //            $query->whereHas('items', function ($q) {
-        //                $q->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
-        //            })->with(['items' => function ($query) {
-        //                $query->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
-        //            }]);
-        //        }
-        //
-        //        $data = $query->paginate($limit);
-        //
-        //        return $this->success(BookingResource::collection($data)
-        //            ->additional([
-        //                'meta' => [
-        //                    'total_page' => (int)ceil($data->total() / $data->perPage()),
-        //                ],
-        //            ])
-        //            ->response()
-        //            ->getData(), 'Reservation List');
     }
 
     /**
