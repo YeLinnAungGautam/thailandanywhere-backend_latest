@@ -160,6 +160,8 @@ class ReservationController extends Controller
             $query->orderBy('booking_items.created_at', $request->order_direction ?? 'desc');
         }
 
+        $query->select('booking_items.*');
+
         $data = $query->paginate($limit);
 
         return $this->success(BookingItemResource::collection($data)
