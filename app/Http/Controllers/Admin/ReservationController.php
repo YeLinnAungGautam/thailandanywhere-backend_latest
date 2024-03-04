@@ -46,10 +46,12 @@ class ReservationController extends Controller
 
         $query = BookingItem::query()
             ->with(['booking', 'booking.customer'])
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->join('customers', 'bookings.customer_id', '=', 'customers.id')
             ->when($request->sale_daterange, function ($q) use ($request) {
                 $dates = explode(',', $request->sale_daterange);
 
-                $q->whereBetween('service_date', [$dates[0], $dates[1]]);
+                $q->whereBetween('booking_items.service_date', [$dates[0], $dates[1]]);
                 // $q->whereIn('booking_id', function ($q) use ($dates) {
                 //     $q->select('id')
                 //         ->from('bookings')
@@ -58,7 +60,7 @@ class ReservationController extends Controller
             });
 
         if ($serviceDate) {
-            $query->whereDate('service_date', $serviceDate);
+            $query->whereDate('booking_items.service_date', $serviceDate);
         };
 
         $productType = $request->query('product_type');
@@ -69,36 +71,36 @@ class ReservationController extends Controller
             // $query->whereHas('booking', function ($q) use ($crmId) {
             //     $q->where('crm_id', 'LIKE', "%{$crmId}%");
             // });
-            $query->where('crm_id', 'LIKE', "%{$crmId}%");
+            $query->where('booking_items.crm_id', 'LIKE', "%{$crmId}%");
         }
 
         if ($oldCrmId) {
             $query->whereHas('booking', function ($q) use ($oldCrmId) {
-                $q->where('past_crm_id', 'LIKE', "%{$oldCrmId}%");
+                $q->where('bookings.past_crm_id', 'LIKE', "%{$oldCrmId}%");
             });
         }
 
         if ($request->user_id) {
             $userId = $request->user_id;
             $query->whereHas('booking', function ($q) use ($userId) {
-                $q->where('created_by', $userId)->orWhere('past_user_id', $userId);
+                $q->where('bookings.created_by', $userId)->orWhere('bookings.past_user_id', $userId);
             });
         }
 
         if ($productType) {
-            $query->where('product_type', $productType);
+            $query->where('booking_items.product_type', $productType);
         }
 
         if ($request->reservation_status) {
-            $query->where('reservation_status', $request->reservation_status);
+            $query->where('booking_items.reservation_status', $request->reservation_status);
         }
 
         if ($request->booking_status) {
-            $query->where('reservation_status', $request->booking_status);
+            $query->where('booking_items.reservation_status', $request->booking_status);
         }
 
         if ($request->customer_payment_status) {
-            $query->whereIn('booking_id', function ($q) use ($request) {
+            $query->whereIn('booking_items.booking_id', function ($q) use ($request) {
                 $q->select('id')
                     ->from('bookings')
                     ->where('payment_status', $request->customer_payment_status);
@@ -106,11 +108,11 @@ class ReservationController extends Controller
         }
 
         if ($request->expense_status) {
-            $query->where('payment_status', $request->expense_status);
+            $query->where('booking_items.payment_status', $request->expense_status);
         }
 
         if ($calenderFilter == true) {
-            $query->where('product_type', 'App\Models\PrivateVanTour')->orWhere('product_type', 'App\Models\GroupTour');
+            $query->where('booking_items.product_type', 'App\Models\PrivateVanTour')->orWhere('booking_items.product_type', 'App\Models\GroupTour');
         }
         if($search) {
             $query->whereHas('product', function ($q) use ($search) {
@@ -126,39 +128,36 @@ class ReservationController extends Controller
             if ($filter) {
                 if ($filter === 'past') {
                     $query->whereHas('booking', function ($q) {
-                        $q->where('is_past_info', true)->whereNotNull('past_user_id');
+                        $q->where('bookings.is_past_info', true)->whereNotNull('past_user_id');
                     });
                 } elseif ($filter === 'current') {
                     $query->whereHas('booking', function ($q) {
-                        $q->where('is_past_info', false)->whereNull('past_user_id');
+                        $q->where('bookings.is_past_info', false)->whereNull('past_user_id');
                     });
                 }
             }
         } else {
             $query->whereHas('booking', function ($q) {
-                $q->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+                $q->where('bookings.created_by', Auth::id())->orWhere('past_user_id', Auth::id());
             });
 
             if ($filter) {
                 if ($filter === 'past') {
                     $query->whereHas('booking', function ($q) {
-                        $q->where('is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
+                        $q->where('bookings.is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
                     });
                 } elseif ($filter === 'current') {
                     $query->whereHas('booking', function ($q) {
-                        $q->where('created_by', Auth::id())->whereNull('past_user_id');
+                        $q->where('bookings.created_by', Auth::id())->whereNull('past_user_id');
                     });
                 }
             }
         }
 
         if($request->order_by == 'customer_name') {
-            $query
-                ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
-                ->join('customers', 'bookings.customer_id', '=', 'customers.id')
-                ->orderBy('customers.name', $request->order_direction ?? 'asc');
+            $query->orderBy('customers.name', $request->order_direction ?? 'asc');
         } else {
-            $query->orderBy('created_at', $request->order_direction ?? 'desc');
+            $query->orderBy('booking_items.created_at', $request->order_direction ?? 'desc');
         }
 
         $data = $query->paginate($limit);
