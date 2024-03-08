@@ -24,7 +24,7 @@ class ReportService
             ->groupBy('created_by')
             ->select(
                 'created_by',
-                DB::raw('SUM(grand_total) as total'),
+                DB::raw('SUM(balance_due) as total_balance'),
                 DB::raw('COUNT(*) as total_booking')
             )
             ->get();
