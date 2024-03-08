@@ -56,14 +56,12 @@ class ReportController extends Controller
 
     public function getSelectData($date)
     {
-
         $sales_amount = $this->salesData($date);
         $sales_count = $this->salesCountData($date);
         $bookings = $this->bookingsData($date);
         $reservations = $this->reservationsData($date);
 
         $date = 'Date: '.Carbon::parse($date)->format('d F Y');
-
 
         $data = [
             'sales' => $sales_amount,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Services\ReportService;
 use App\Traits\HttpResponses;
 use Exception;
 use Illuminate\Http\Request;
@@ -110,6 +111,19 @@ class DashboardController extends Controller
                 ->get();
 
             return $this->success($results, 'Report by payment currency and product type');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function salesByAgentReport(Request $request)
+    {
+        try {
+            if(!$request->daterange) {
+                throw new Exception('Report by payment status: Invalid daterange to filter');
+            }
+
+            return $this->success(ReportService::getSalesByAgent($request->daterange), 'Report sales by agents');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
