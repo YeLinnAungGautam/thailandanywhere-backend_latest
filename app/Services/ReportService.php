@@ -3,7 +3,6 @@ namespace App\Services;
 
 use App\Models\Booking;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
@@ -22,11 +21,7 @@ class ReportService
             ->where('balance_due_date', '<', $today_date)
             ->whereIn('payment_status', ['partially_paid', 'not_paid'])
             ->groupBy('created_by')
-            ->select(
-                'created_by',
-                DB::raw('SUM(balance_due) as total_balance'),
-                DB::raw('COUNT(*) as total_booking')
-            )
+            ->selectRaw('created_by, GROUP_CONCAT(id) AS booking_ids, SUM(balance_due) as total_balance, COUNT(*) as total_booking')
             ->get();
     }
 }
