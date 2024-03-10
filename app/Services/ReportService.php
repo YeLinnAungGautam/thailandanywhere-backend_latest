@@ -40,13 +40,17 @@ class ReportService
             ->get();
     }
 
-    public static function getCountReport(): array
+    public static function getCountReport(string $daterange): array
     {
-        $booking_count = Booking::count();
-        $private_van_tour_sale_count = BookingItem::where('product_type', PrivateVanTour::class)->count();
-        $attraction_sale_count = BookingItem::where('product_type', EntranceTicket::class)->count();
-        $hotel_sale_count = BookingItem::where('product_type', Hotel::class)->count();
-        $air_ticket_sale_count = BookingItem::where('product_type', Airline::class)->count();
+        $dates = explode(',', $daterange);
+        $start_date = Carbon::parse($dates[0])->format('Y-m-d');
+        $end_date = Carbon::parse($dates[1])->format('Y-m-d');
+
+        $booking_count = Booking::whereBetween('created_at', [$start_date, $end_date])->count();
+        $private_van_tour_sale_count = BookingItem::where('product_type', PrivateVanTour::class)->whereBetween('created_at', [$start_date, $end_date])->count();
+        $attraction_sale_count = BookingItem::where('product_type', EntranceTicket::class)->whereBetween('created_at', [$start_date, $end_date])->count();
+        $hotel_sale_count = BookingItem::where('product_type', Hotel::class)->whereBetween('created_at', [$start_date, $end_date])->count();
+        $air_ticket_sale_count = BookingItem::where('product_type', Airline::class)->whereBetween('created_at', [$start_date, $end_date])->count();
 
         return [
             'booking_count' => $booking_count,

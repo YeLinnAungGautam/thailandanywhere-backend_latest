@@ -146,7 +146,11 @@ class DashboardController extends Controller
     public function getSaleCounts(Request $request)
     {
         try {
-            return $this->success(ReportService::getCountReport(), 'Sale count report');
+            if(!$request->daterange) {
+                throw new Exception('Sale Cunt: Invalid daterange to filter');
+            }
+
+            return $this->success(ReportService::getCountReport($request->daterange), 'Sale count report');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
