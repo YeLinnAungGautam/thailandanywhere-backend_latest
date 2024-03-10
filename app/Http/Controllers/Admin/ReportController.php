@@ -10,8 +10,8 @@ use App\Services\SaleReportService;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use DateTime;
-use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {

@@ -2,13 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\Car;
-use App\Models\City;
-use App\Models\ProductTag;
-use App\Models\Destination;
-use App\Models\AirportPickupImage;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class AirportPickup extends Model
 {

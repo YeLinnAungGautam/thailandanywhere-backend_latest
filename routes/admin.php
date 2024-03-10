@@ -76,6 +76,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('report-by-payment-and-product', [DashboardController::class, 'reportByPaymentAndProduct']);
 
     Route::get('sales-by-agent', [DashboardController::class, 'salesByAgentReport']);
+    Route::get('unpaid-bookings', [DashboardController::class, 'getUnpaidBooking']);
+    Route::get('sale-counts', [DashboardController::class, 'getSaleCounts']);
+    Route::get('top-selling-products', [DashboardController::class, 'getTopSellingProduct']);
 
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('reports/hotels', HotelReportController::class);

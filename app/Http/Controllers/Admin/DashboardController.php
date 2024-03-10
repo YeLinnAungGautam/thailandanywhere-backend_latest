@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\TopSellingProductResource;
 use App\Models\Booking;
 use App\Services\ReportService;
 use App\Traits\HttpResponses;
@@ -116,14 +117,51 @@ class DashboardController extends Controller
         }
     }
 
+    public function getUnpaidBooking(Request $request)
+    {
+        try {
+            if(!$request->daterange) {
+                throw new Exception('Unpaid Booking: Invalid daterange to filter');
+            }
+
+            return $this->success(ReportService::getUnpaidBooking($request->daterange), 'Report unpaid bookings');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function salesByAgentReport(Request $request)
+    {
+        try {
+            if(!$request->date) {
+                throw new Exception('Sale By Agent: Invalid date to filter');
+            }
+
+            return $this->success(ReportService::getSalesByAgent($request->date), 'Report sales by agents');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getSaleCounts(Request $request)
+    {
+        try {
+            return $this->success(ReportService::getCountReport(), 'Sale count report');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getTopSellingProduct(Request $request)
     {
         try {
             if(!$request->daterange) {
                 throw new Exception('Report by payment status: Invalid daterange to filter');
             }
 
-            return $this->success(ReportService::getSalesByAgent($request->daterange), 'Report sales by agents');
+            $data = ReportService::getTopSellingProduct($request->daterange, $request->product_type, $request->limit);
+
+            return $this->success(TopSellingProductResource::collection($data), 'Sale count report');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
