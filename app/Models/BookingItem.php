@@ -37,6 +37,11 @@ class BookingItem extends Model
         return $this->belongsTo(Hotel::class);
     }
 
+    public function groupTour()
+    {
+        return $this->belongsTo(GroupTour::class);
+    }
+
     public function room()
     {
         return $this->belongsTo(Room::class);
@@ -158,6 +163,10 @@ class BookingItem extends Model
 
         if($this->product_type === 'App\Models\Airline') {
             return $this->ticket->price ?? '-';
+        }
+
+        if($this->product_type === 'App\Models\GroupTour') {
+            return $this->groupTour->name ?? '-';
         }
 
         return '-';

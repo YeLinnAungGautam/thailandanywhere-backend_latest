@@ -10,15 +10,18 @@ class TopSellingProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'crm_id' => $this->crm_id,
-            'selling_price' => $this->selling_price,
-            'quantity' => $this->quantity,
-            'total_amount' => $this->calcSalePrice,
-            'product_type_name' => $this->acsr_product_type_name,
-            'product_name' => $this->product->name,
             'product_type' => $this->product_type,
-            'variation_name' => $this->acsr_variation_name
+            'product_name' => $this->product->name,
+            'variation_name' => $this->acsr_variation_name,
+            'price' => $this->getProductPrice(),
+            'quantity' => $this->total_quantity,
+            'total_amount' => $this->getProductPrice() * $this->total_quantity,
+            'product_type_name' => $this->acsr_product_type_name,
         ];
+    }
+
+    private function getProductPrice()
+    {
+        return explode(',', $this->selling_prices)[0] ?? 0;
     }
 }

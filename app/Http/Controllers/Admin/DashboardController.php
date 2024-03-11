@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TopSellingProductResource;
+use App\Http\Resources\UnpaidBookingResource;
 use App\Models\Booking;
 use App\Services\ReportService;
 use App\Traits\HttpResponses;
@@ -124,7 +125,9 @@ class DashboardController extends Controller
                 throw new Exception('Unpaid Booking: Invalid daterange to filter');
             }
 
-            return $this->success(ReportService::getUnpaidBooking($request->daterange), 'Report unpaid bookings');
+            $data = ReportService::getUnpaidBooking($request->daterange);
+
+            return $this->success(UnpaidBookingResource::collection($data), 'Sale count report');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }

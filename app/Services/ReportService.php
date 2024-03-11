@@ -8,6 +8,7 @@ use App\Models\EntranceTicket;
 use App\Models\Hotel;
 use App\Models\PrivateVanTour;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
@@ -69,11 +70,31 @@ class ReportService
         $end_date = Carbon::parse($dates[1])->format('Y-m-d');
 
         $products = BookingItem::query()
-            ->with(['booking', 'booking.customer', 'product'])
+            ->with('product:id,name')
             ->when($product_type, fn ($query) => $query->where('product_type', $product_type))
             ->whereDate('created_at', '>=', $start_date)
             ->whereDate('created_at', '<=', $end_date)
-            ->orderByDesc('amount')
+            ->groupBy(
+                'product_id',
+                'product_type',
+                'variation_id',
+                'car_id',
+                'room_id',
+                'ticket_id'
+            )
+            ->select(
+                'product_id',
+                'product_type',
+                'variation_id',
+                'car_id',
+                'room_id',
+                'ticket_id',
+                DB::raw('GROUP_CONCAT(id) AS reservation_ids'),
+                DB::raw('GROUP_CONCAT(selling_price) AS selling_prices'),
+                DB::raw('SUM(quantity) as total_quantity'),
+                DB::raw('SUM(amount) as total_amount')
+            )
+            ->orderByDesc('total_quantity')
             ->paginate($limit ?? 5);
 
         return $products;
