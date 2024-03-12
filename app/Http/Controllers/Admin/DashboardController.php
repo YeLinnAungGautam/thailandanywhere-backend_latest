@@ -125,7 +125,7 @@ class DashboardController extends Controller
                 throw new Exception('Unpaid Booking: Invalid daterange to filter');
             }
 
-            $data = ReportService::getUnpaidBooking($request->daterange);
+            $data = ReportService::getUnpaidBooking($request->daterange, $request->agent_id);
 
             return $this->success(UnpaidBookingResource::collection($data), 'Sale count report');
         } catch (Exception $e) {
@@ -136,11 +136,11 @@ class DashboardController extends Controller
     public function salesByAgentReport(Request $request)
     {
         try {
-            if(!$request->date) {
-                throw new Exception('Sale By Agent: Invalid date to filter');
+            if(!$request->daterange) {
+                throw new Exception('Sale By Agent: Invalid daterange to filter');
             }
 
-            return $this->success(ReportService::getSalesByAgent($request->date), 'Report sales by agents');
+            return $this->success(ReportService::getSalesByAgent($request->daterange), 'Report sales by agents');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }

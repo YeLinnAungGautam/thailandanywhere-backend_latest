@@ -12,17 +12,22 @@ use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
-    public static function getSalesByAgent(string $date)
+    public static function getSalesByAgent(string $daterange)
     {
+        $dates = explode(',', $daterange);
+
+        $start_date = Carbon::parse($dates[0])->format('Y-m-d');
+        $end_date = Carbon::parse($dates[1])->format('Y-m-d');
+
         return Booking::query()
             ->with('createdBy:id,name')
             ->groupBy('created_by')
-            ->whereDate('created_at', Carbon::parse($date)->format('Y-m-d'))
+            ->whereBetween('created_at', [$start_date, $end_date])
             ->selectRaw('created_by, GROUP_CONCAT(id) AS booking_ids, SUM(grand_total) as total, COUNT(*) as total_booking')
             ->get();
     }
 
-    public static function getUnpaidBooking(string $daterange)
+    public static function getUnpaidBooking(string $daterange, string|null $agent_id)
     {
         $dates = explode(',', $daterange);
 
@@ -32,6 +37,7 @@ class ReportService
 
         return Booking::query()
             ->with('createdBy:id,name')
+            ->when($agent_id, fn ($query) => $query->where('created_by', $agent_id))
             ->whereDate('created_at', '>=', $start_date)
             ->whereDate('created_at', '<=', $end_date)
             ->where('balance_due_date', '<', $today_date)
