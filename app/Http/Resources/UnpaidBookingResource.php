@@ -32,6 +32,7 @@ class UnpaidBookingResource extends JsonResource
             $booking = Booking::find($booking_id);
 
             $infos[] = [
+                'id' => $booking->id,
                 'customer_name' => $booking->customer->name,
                 'crm_id' => $booking->crm_id,
                 'balance_due' => $booking->balance_due
