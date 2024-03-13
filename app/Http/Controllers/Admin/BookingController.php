@@ -46,7 +46,8 @@ class BookingController extends Controller
             ->when($request->inclusive_only, function ($q) use ($request) {
                 $is_inclusive = $request->inclusive_only ? 1 : 0;
                 $q->where('is_inclusive', $is_inclusive);
-            });
+            })
+            ->when($request->created_by, fn ($query) => $query->where('created_by', $request->created_by));
 
 
         if ($search) {
