@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
+use App\Jobs\HotelConfirmationReceiptUploadNotifierJob;
 use App\Jobs\SendReservationNotifyEmailJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -370,10 +371,15 @@ class ReservationController extends Controller
             $save = ReservationInfo::create($saveData);
 
             if ($request->paid_slip) {
+                $paid_slip_names = [];
                 foreach ($request->paid_slip as $image) {
                     $fileData = $this->uploads($image, 'images/');
                     ReservationPaidSlip::create(['booking_item_id' => $save->booking_item_id, 'file' => $fileData['fileName']]);
+
+                    array_push($paid_slip_names, $fileData['fileName']);
                 }
+
+                HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
             }
 
 
@@ -412,10 +418,15 @@ class ReservationController extends Controller
             $findInfo->update();
 
             if ($request->paid_slip) {
+                $paid_slip_names = [];
                 foreach ($request->paid_slip as $image) {
                     $fileData = $this->uploads($image, 'images/');
                     ReservationPaidSlip::create(['booking_item_id' => $findInfo->booking_item_id, 'file' => $fileData['fileName']]);
+
+                    array_push($paid_slip_names, $fileData['fileName']);
                 }
+
+                HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
             }
         }
 
