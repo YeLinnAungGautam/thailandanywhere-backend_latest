@@ -31,6 +31,7 @@ class SaleReportService
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
                 'created_by',
+                DB::raw('COUNT(*) as total_count'),
                 DB::raw('SUM(grand_total) as total'),
                 DB::raw('SUM(deposit) as total_deposit'),
                 DB::raw('SUM(balance_due) as total_balance'),
@@ -39,7 +40,7 @@ class SaleReportService
             ->groupBy('created_by', 'created_at')
             ->get();
 
-        return $this->generateSaleResponse($sales, $created_by, true);
+        return $this->generateSaleResponse($sales, $created_by, true, true);
     }
 
     public function getSaleCountData($created_by = null): array
@@ -180,7 +181,7 @@ class SaleReportService
         return iterator_to_array($dates);
     }
 
-    private function generateSaleResponse($sales, $created_by = null, $with_balance = false): array
+    private function generateSaleResponse($sales, $created_by = null, $with_balance = false, $with_count = false): array
     {
         $result = [];
         $agents = Admin::agentOnly()
@@ -196,19 +197,41 @@ class SaleReportService
             foreach($agents as $agent_id => $agent_name) {
                 $sale_records = $sales->where('sale_date', $date)->where('created_by', $agent_id);
 
+                $data_result = [
+                    'name' => $agent_name,
+                    'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
+                ];
+
                 if($with_balance) {
-                    $agent_result[] = [
-                        'name' => $agent_name,
+                    $data_result += [
                         'total_deposit' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_deposit'),
                         'total_balance' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_balance'),
-                        'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
-                    ];
-                } else {
-                    $agent_result[] = [
-                        'name' => $agent_name,
-                        'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
                     ];
                 }
+
+                if($with_count) {
+                    $data_result += [
+                        'total_count' => $sale_records->sum('total_count'),
+                    ];
+                }
+
+                // if($with_balance) {
+                //     $agent_result[] = [
+                //         'name' => $agent_name,
+                //         'total_deposit' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_deposit'),
+                //         'total_balance' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_balance'),
+                //         'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
+                //     ];
+                // } elseif($with_count) {
+
+                // } else {
+                //     $agent_result[] = [
+                //         'name' => $agent_name,
+                //         'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
+                //     ];
+                // }
+
+                $agent_result[] = $data_result;
             }
 
             $result[] = [
