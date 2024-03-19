@@ -34,6 +34,7 @@ class CarBookingResource extends JsonResource
             'extra_collect_amount' => $extra_collect_amount,
             'total_cost' => $total_cost,
             'balance_amount' => $balance_amount,
+            'customer_name' => $this->booking->customer->name,
         ];
     }
 

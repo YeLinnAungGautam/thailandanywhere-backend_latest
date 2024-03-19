@@ -19,12 +19,15 @@ class CarBookingController extends Controller
 
     public function index(Request $request)
     {
+        // dd(BookingItemDataService::getTotalSummary(PrivateVanTour::class));
+
         $booking_item_query = BookingItem::privateVanTour()
             ->with(
                 'car',
                 'booking',
                 'product',
-                'reservationCarInfo'
+                'reservationCarInfo',
+                'booking.customer:id,name'
             )
             ->when($request->date, fn ($query) => $query->where('created_at', $request->date));
 
