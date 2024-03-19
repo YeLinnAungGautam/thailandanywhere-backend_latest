@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AirlineTicketController;
 use App\Http\Controllers\Admin\AirportPickupController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CityController;
@@ -118,7 +119,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('entrance-tickets-variations/export/csv', [EntranceTicketVariationExportImportController::class, 'export']);
     Route::post('entrance-tickets-variations/import/csv', [EntranceTicketVariationExportImportController::class, 'import']);
 
+    # Airport Pickup
     Route::apiResource('airport-pickups', AirportPickupController::class);
+
+    # Inclusive
     Route::apiResource('inclusive', InclusiveController::class);
 
     # Destination
@@ -186,6 +190,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('airline-tickets', AirlineTicketController::class);
     Route::get('airline-tickets/export/csv', [AirlineTicketExportImportController::class, 'export']);
     Route::post('airline-tickets/import/csv', [AirlineTicketExportImportController::class, 'import']);
+
+    # Private Van Tour Reservation
+    Route::get('car-bookings', [CarBookingController::class, 'index']);
+    Route::get('car-bookings/{booking_item_id}/edit', [CarBookingController::class, 'edit']);
+    Route::post('car-bookings/{booking_item_id}', [CarBookingController::class, 'update']);
 
     Route::delete('booking-receipt/{id}', [BookingController::class, 'deleteReceipt']);
     Route::delete('reservation-receipt/{id}', [ReservationController::class, 'deleteReceipt']);

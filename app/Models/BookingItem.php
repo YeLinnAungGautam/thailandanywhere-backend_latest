@@ -102,6 +102,11 @@ class BookingItem extends Model
         return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());
     }
 
+    public function scopePrivateVanTour($query)
+    {
+        return $query->where('product_type', PrivateVanTour::class);
+    }
+
     public function getAcsrProductTypeNameAttribute()
     {
         switch ($this->product_type) {

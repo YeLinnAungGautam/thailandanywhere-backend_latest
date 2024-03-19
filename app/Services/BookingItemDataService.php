@@ -2,7 +2,9 @@
 namespace App\Services;
 
 use App\Models\BookingItem;
+use App\Models\PrivateVanTour;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class BookingItemDataService
 {
@@ -26,6 +28,29 @@ class BookingItemDataService
     public function getNights($checkin_date, $checkout_date)
     {
         return (int) Carbon::parse($checkin_date)->diff(Carbon::parse($checkout_date))->format("%a");
+    }
+
+    /**
+     * Static Methods
+     */
+    public static function getTotalSummary(string $product_type)
+    {
+        if(PrivateVanTour::class === $product_type) {
+            $total_booking = BookingItem::privateVanTour()
+                ->groupBy('booking_id')
+                ->select(DB::raw('count(*) as total_count'))
+                ->get()
+                ->count();
+
+            return [
+                'total_booking' => $total_booking,
+                'total_sales' => BookingItem::privateVanTour()->count(),
+                'total_cost' => 0000,
+                'total_balance' => 0000
+            ];
+        }
+
+        return [];
     }
 
     private function getCostPrice()
