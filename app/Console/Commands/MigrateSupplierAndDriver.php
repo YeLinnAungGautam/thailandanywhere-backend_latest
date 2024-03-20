@@ -34,30 +34,30 @@ class MigrateSupplierAndDriver extends Command
         $victor_ary = ['Mr. Victor', 'Victor'];
         $ps_ary = ['P Sailom', 'P Silom', 'Pee silom'];
         $p_tee_ary = ['P Tee', 'P Tee - Chiang Mai', 'P Tee Chiang Mai'];
-        $th_anywhere = ['TH Anywhere'];
+        $th_anywhere = ['TH Anywhere', 'Own'];
         $th_anywhere_no_one = ['TH Anywhere & No One', 'TH Anywhere & No. One', 'TH Anywhere + No. One'];
-        $supplier = ['Supplier Name', 'supplier'];
+        $supplier = ['Supplier Name', 'supplier', 'qqq'];
 
         foreach($car_infos as $car_info) {
             if($car_info->supplier_name) {
                 if(in_array($car_info->supplier_name, $one_ary)) {
-                    $this->updateInfos($car_info, 'Number One');
+                    $this->updateInfos($car_info, 'Number One Taxi');
                 }
 
                 if(in_array($car_info->supplier_name, $victor_ary)) {
-                    $this->updateInfos($car_info, 'Victor Car Service');
+                    $this->updateInfos($car_info, 'Victor Service');
                 }
 
                 if(in_array($car_info->supplier_name, $ps_ary)) {
-                    $this->updateInfos($car_info, 'Pee silom');
+                    $this->updateInfos($car_info, 'Phuket Silom Service');
                 }
 
                 if(in_array($car_info->supplier_name, $p_tee_ary)) {
-                    $this->updateInfos($car_info, 'P Tee');
+                    $this->updateInfos($car_info, 'P Tee Service');
                 }
 
                 if(in_array($car_info->supplier_name, $th_anywhere)) {
-                    $this->updateInfos($car_info, 'TH Anywhere');
+                    $this->updateInfos($car_info, 'Thailand Anywhere');
                 }
 
                 if(in_array($car_info->supplier_name, $th_anywhere_no_one)) {
@@ -65,7 +65,7 @@ class MigrateSupplierAndDriver extends Command
                 }
 
                 if(in_array($car_info->supplier_name, $supplier)) {
-                    $this->updateInfos($car_info, 'Supplier');
+                    $this->updateInfos($car_info, 'Unknown Supplier');
                 }
             }
         }

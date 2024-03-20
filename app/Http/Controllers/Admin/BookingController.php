@@ -188,6 +188,7 @@ class BookingController extends Controller
                     'duration' => $item['duration'] ?? null,
                     'selling_price' => $item['selling_price'] ?? null,
                     'cost_price' => $item['cost_price'] ?? null,
+                    'total_cost_price' => $item['total_cost_price'] ?? null,
                     'payment_method' => $item['payment_method'] ?? null,
                     'payment_status' => $item['payment_status'] ?? 'not_paid',
                     'exchange_rate' => $item['exchange_rate'] ?? null,

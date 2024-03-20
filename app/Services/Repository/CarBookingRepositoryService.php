@@ -2,6 +2,8 @@
 namespace App\Services\Repository;
 
 use App\Models\BookingItem;
+use App\Models\ReservationCarInfo;
+use App\Models\ReservationInfo;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,21 +21,25 @@ class CarBookingRepositoryService
                 'total_cost_price' => $request->total_cost_price,
             ];
 
-            $reservation_info_data = [
-                'route_plan' => $request->route_plan,
-                'special_request' => $request->special_request,
-            ];
-
-            $reservation_car_info_data = [
-                'supplier_id' => $request->supplier_id,
-                'driver_id' => $request->driver_id,
-                'driver_contact' => $request->driver_contact,
-                'car_number' => $request->car_number,
-            ];
-
             $booking_item->update($booking_item_data);
-            $booking_item->reservationInfo()->update($reservation_info_data);
-            $booking_item->reservationCarInfo()->update($reservation_car_info_data);
+
+            ReservationInfo::updateOrCreate(
+                ['booking_item_id' => $booking_item->id],
+                [
+                    'route_plan' => $request->route_plan,
+                    'special_request' => $request->special_request,
+                ]
+            );
+
+            ReservationCarInfo::updateOrCreate(
+                ['booking_item_id' => $booking_item->id],
+                [
+                    'supplier_id' => $request->supplier_id,
+                    'driver_id' => $request->driver_id,
+                    'driver_contact' => $request->driver_contact,
+                    'car_number' => $request->car_number,
+                ]
+            );
 
             DB::commit();
 
