@@ -286,6 +286,7 @@ class ReservationController extends Controller
             'selling_price' => $request->selling_price ?? $find->selling_price,
             'duration' => $request->duration ?? $find->duration,
             'cost_price' => $request->cost_price ?? $find->cost_price,
+            'total_cost_price' => $request->total_cost_price ?? $find->total_cost_price,
             'payment_method' => $request->payment_method ?? $find->payment_method,
             'payment_status' => $request->payment_status ?? $find->payment_status,
             'exchange_rate' => $request->exchange_rate ?? $find->exchange_rate,
@@ -389,8 +390,6 @@ class ReservationController extends Controller
                     ReservationCustomerPassport::create(['booking_item_id' => $save->booking_item_id, 'file' => $fileData['fileName']]);
                 }
             }
-
-
 
         } else {
             $findInfo->customer_feedback = $request->customer_feedback ?? $findInfo->customer_feedback;

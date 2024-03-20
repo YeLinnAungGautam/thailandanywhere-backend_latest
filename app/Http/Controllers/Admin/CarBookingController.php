@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CarBookingResource;
 use App\Models\BookingItem;
-use App\Models\PrivateVanTour;
 use App\Models\Supplier;
 use App\Services\BookingItemDataService;
 use App\Services\Repository\CarBookingRepositoryService;
@@ -19,7 +18,7 @@ class CarBookingController extends Controller
 
     public function index(Request $request)
     {
-        // dd(BookingItemDataService::getTotalSummary(PrivateVanTour::class));
+        // dd(BookingItemDataService::getCarBookingSummary());
 
         $booking_item_query = BookingItem::privateVanTour()
             ->with(
@@ -38,15 +37,17 @@ class CarBookingController extends Controller
         if($request->supplier_id) {
             $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $request->supplier_id));
         } else {
-            $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->whereNull('supplier_id'));
+            $booking_item_query = $booking_item_query->doesnthave('reservationCarInfo');
         }
+
+        $booking_item_query->orderByDESC('created_at');
 
         return CarBookingResource::collection($booking_item_query->paginate($request->limit ?? 10))
             ->additional([
                 'result' => 1,
                 'message' => 'success',
                 'suppliers' => Supplier::pluck('name', 'id')->toArray(),
-                'summary' => BookingItemDataService::getTotalSummary(PrivateVanTour::class)
+                'summary' => BookingItemDataService::getCarBookingSummary()
             ]);
     }
 

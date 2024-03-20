@@ -2,7 +2,6 @@
 namespace App\Services;
 
 use App\Models\BookingItem;
-use App\Models\PrivateVanTour;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -33,26 +32,22 @@ class BookingItemDataService
     /**
      * Static Methods
      */
-    public static function getTotalSummary(string $product_type)
+    public static function getCarBookingSummary()
     {
-        if(PrivateVanTour::class === $product_type) {
-            $total_booking = BookingItem::privateVanTour()
-                ->groupBy('booking_id')
-                ->select(
-                    DB::raw('count(*) as total_count'),
-                    DB::raw('sum(total_cost_price) as total_cost'),
-                )
-                ->get();
+        $total_booking = BookingItem::privateVanTour()
+            ->groupBy('booking_id')
+            ->select(
+                DB::raw('count(booking_id) as total_count'),
+                DB::raw('sum(total_cost_price) as total_cost'),
+            )
+            ->get();
 
-            return [
-                'total_booking' => $total_booking->count(),
-                'total_sales' => BookingItem::privateVanTour()->count(),
-                'total_cost' => $total_booking->sum('total_cost'),
-                'total_balance' => 0000
-            ];
-        }
-
-        return [];
+        return [
+            'total_booking' => $total_booking->count(),
+            'total_sales' => BookingItem::privateVanTour()->count(),
+            'total_cost' => $total_booking->sum('total_cost'),
+            'total_balance' => 0000
+        ];
     }
 
     private function getCostPrice()
