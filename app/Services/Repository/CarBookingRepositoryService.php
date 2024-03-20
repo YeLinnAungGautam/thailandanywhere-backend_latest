@@ -55,15 +55,15 @@ class CarBookingRepositoryService
             'cost_price' => $booking_item->cost_price,
             'total_cost_price' => $booking_item->total_cost_price,
 
-            'supplier_id' => $booking_item->reservationCarInfo->supplier_id,
-            'supplier_name' => optional($booking_item->reservationCarInfo->supplier)->name,
-            'driver_id' => $booking_item->reservationCarInfo->driver_id,
-            'driver_name' => optional($booking_item->reservationCarInfo->driver)->name,
-            'driver_contact' => optional($booking_item->reservationCarInfo->driver)->contact,
-            'car_number' => $booking_item->reservationCarInfo->car_number,
+            'supplier_id' => $booking_item->reservationCarInfo->supplier_id ?? null,
+            'supplier_name' => $booking_item->reservationCarInfo->supplier->name ?? null,
+            'driver_id' => $booking_item->reservationCarInfo->driver_id ?? null,
+            'driver_name' => $booking_item->reservationCarInfo->driver->name ?? null,
+            'driver_contact' => $booking_item->reservationCarInfo->driver->contact ?? null,
+            'car_number' => $booking_item->reservationCarInfo->car_number ?? null,
 
-            'route_plan' => $booking_item->reservationInfo->route_plan,
-            'special_request' => $booking_item->reservationInfo->special_request,
+            'route_plan' => $booking_item->reservationInfo->route_plan ?? null,
+            'special_request' => $booking_item->reservationInfo->special_request ?? null,
         ];
     }
 }
