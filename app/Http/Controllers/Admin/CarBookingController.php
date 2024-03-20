@@ -29,7 +29,11 @@ class CarBookingController extends Controller
                 'reservationCarInfo',
                 'booking.customer:id,name'
             )
-            ->when($request->date, fn ($query) => $query->where('created_at', $request->date));
+            ->when($request->daterange, function ($query) use ($request) {
+                $dates = explode(',', $request->daterange);
+
+                $query->whereBetween('created_at', [$dates[0], $dates[1]]);
+            });
 
         if($request->supplier_id) {
             $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $request->supplier_id));

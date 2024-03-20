@@ -38,14 +38,16 @@ class BookingItemDataService
         if(PrivateVanTour::class === $product_type) {
             $total_booking = BookingItem::privateVanTour()
                 ->groupBy('booking_id')
-                ->select(DB::raw('count(*) as total_count'))
-                ->get()
-                ->count();
+                ->select(
+                    DB::raw('count(*) as total_count'),
+                    DB::raw('sum(total_cost_price) as total_cost'),
+                )
+                ->get();
 
             return [
-                'total_booking' => $total_booking,
+                'total_booking' => $total_booking->count(),
                 'total_sales' => BookingItem::privateVanTour()->count(),
-                'total_cost' => 0000,
+                'total_cost' => $total_booking->sum('total_cost'),
                 'total_balance' => 0000
             ];
         }
