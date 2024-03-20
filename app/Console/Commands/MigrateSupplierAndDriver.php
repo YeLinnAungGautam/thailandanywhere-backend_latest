@@ -78,7 +78,7 @@ class MigrateSupplierAndDriver extends Command
         $supplier = Supplier::firstOrCreate(
             ['name' => $supplier_name],
             [
-                'contact' => 'example contact',
+                'contact' => 'unknown contact',
                 'logo' => 'example.png'
             ],
         );
@@ -86,8 +86,8 @@ class MigrateSupplierAndDriver extends Command
         $driver = Driver::firstOrCreate(
             [
                 'supplier_id' => $supplier->id,
-                'name' => $car_info->driver_name ?? 'example name',
-                'contact' => $car_info->driver_contact ?? 'example contact'
+                'name' => $car_info->driver_name ?? 'unknown driver',
+                'contact' => $car_info->driver_contact ?? 'unknown contact'
             ],
             [
                 'profile' => $car_info->driver_contact ?? 'example.png',
