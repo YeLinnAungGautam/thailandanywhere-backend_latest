@@ -32,6 +32,9 @@ class CarBookingController extends Controller
                 $dates = explode(',', $request->daterange);
 
                 $query->whereBetween('created_at', [$dates[0], $dates[1]]);
+            })
+            ->when($request->agent_id, function ($query) use ($request) {
+                $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->agent_id));
             });
 
         if($request->supplier_id) {
