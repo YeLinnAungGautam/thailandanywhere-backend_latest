@@ -74,6 +74,7 @@ class BookingItemResource extends JsonResource
             'duration' => $this->duration,
             'selling_price' => $this->selling_price,
             'cost_price' => $this->cost_price,
+            'total_cost_price' => $this->total_cost_price,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'bank_name' => $this->bank_name,
