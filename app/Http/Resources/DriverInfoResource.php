@@ -14,6 +14,10 @@ class DriverInfoResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        $response = parent::toArray($request);
+
+        $response['driver_name'] = $this->driver->name;
+
+        return $response;
     }
 }

@@ -16,7 +16,7 @@ class DriverController extends Controller
 
     public function index(Request $request)
     {
-        $drivers = Driver::with('supplier')
+        $drivers = Driver::with('supplier', 'driverInfos')
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->search}%");
             })
@@ -58,7 +58,7 @@ class DriverController extends Controller
 
     public function show(string $id)
     {
-        $driver = Driver::find($id);
+        $driver = Driver::with('supplier', 'driverInfos')->find($id);
 
         if(is_null($driver)) {
             return $this->error(null, 'Driver not found.');
