@@ -13,7 +13,7 @@ return new class extends Migration {
     {
         Schema::create('driver_infos', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Driver::class);
+            $table->foreignIdFor(Driver::class)->constrained('drivers')->cascadeOnDelete();
             $table->string('car_number');
             $table->boolean('is_default')->default(false);
             $table->timestamps();
