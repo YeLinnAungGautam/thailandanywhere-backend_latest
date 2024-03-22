@@ -58,9 +58,9 @@ class DriverInfoRepositoryService
                 if($first_info) {
                     $first_info->update(['is_default' => true]);
                 }
-
-                $driver_info->delete();
             }
+
+            $driver_info->delete();
         } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
