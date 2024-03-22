@@ -30,6 +30,7 @@ use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
 use App\Http\Controllers\EntranceTicketVariationExportImportController;
 use App\Http\Controllers\GroupTourExportImportController;
@@ -177,6 +178,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Driver
     Route::apiResource('drivers', DriverController::class);
+
+    # Driver Info
+    Route::apiResource('drivers/{driver_id}/infos', DriverInfoController::class);
 
     # Supplier
     Route::apiResource('suppliers', SupplierController::class);

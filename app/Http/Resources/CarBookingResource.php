@@ -42,8 +42,8 @@ class CarBookingResource extends JsonResource
     {
         if($this->extra_collect_amount) {
             return ($selling_price + $extra_collect_amount) - $total_cost;
-        } else {
-            return $total_cost - 1;
+        }  {
+            return $total_cost * (-1);
         }
     }
 }
