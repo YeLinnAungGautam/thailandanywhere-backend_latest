@@ -20,7 +20,7 @@ class SupplierController extends Controller
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->search}%");
             })
-            ->paginate($limit ?? 20);
+            ->paginate($request->limit ?? 20);
 
         return $this->success(SupplierResource::collection($suppliers)
             ->additional([

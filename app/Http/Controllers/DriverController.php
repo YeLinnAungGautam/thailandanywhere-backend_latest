@@ -21,7 +21,7 @@ class DriverController extends Controller
                 $query->where('name', 'LIKE', "%{$request->search}%");
             })
             ->when($request->supplier_id, fn ($query) => $query->where('supplier_id', $request->supplier_id))
-            ->paginate($limit ?? 20);
+            ->paginate($request->limit ?? 20);
 
         return $this->success(DriverResource::collection($drivers)
             ->additional([
