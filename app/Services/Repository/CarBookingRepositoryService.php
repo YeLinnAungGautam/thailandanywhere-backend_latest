@@ -68,7 +68,7 @@ class CarBookingRepositoryService
             'driver_name' => $booking_item->reservationCarInfo->driver->name ?? null,
             'driver_contact' => $booking_item->reservationCarInfo->driver->contact ?? null,
             // 'car_number' => $booking_item->reservationCarInfo->car_number ?? null,
-            'driver_info_id' => $booking_item->reservationCarInfo->driver_info_id,
+            'driver_info_id' => $booking_item->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $booking_item->reservationCarInfo->driverInfo->car_number ?? null,
 
             'route_plan' => $booking_item->reservationInfo->route_plan ?? null,
