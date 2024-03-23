@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CarBookingRequest;
 use App\Http\Resources\CarBookingResource;
 use App\Models\BookingItem;
 use App\Models\Supplier;
@@ -65,7 +66,7 @@ class CarBookingController extends Controller
         return $this->success(CarBookingRepositoryService::getCarBooking($booking_item), 'Edit car booking');
     }
 
-    public function update(string|int $booking_item_id, Request $request)
+    public function update(string|int $booking_item_id, CarBookingRequest $request)
     {
         try {
             $booking_item = BookingItem::privateVanTour()->find($booking_item_id);

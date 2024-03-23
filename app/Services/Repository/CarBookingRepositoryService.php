@@ -36,6 +36,7 @@ class CarBookingRepositoryService
                 [
                     'supplier_id' => $request->supplier_id,
                     'driver_id' => $request->driver_id,
+                    'driver_info_id' => $request->driver_info_id,
                     'driver_contact' => $request->driver_contact,
                     'car_number' => $request->car_number,
                 ]
