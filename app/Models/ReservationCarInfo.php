@@ -20,4 +20,9 @@ class ReservationCarInfo extends Model
     {
         return $this->belongsTo(Driver::class, 'driver_id');
     }
+
+    public function driverInfo()
+    {
+        return $this->belongsTo(DriverInfo::class, 'driver_info_id');
+    }
 }
