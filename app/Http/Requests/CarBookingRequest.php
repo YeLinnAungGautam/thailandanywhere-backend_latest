@@ -21,8 +21,6 @@ class CarBookingRequest extends FormRequest
      */
     public function rules(): array
     {
-        dd(request()->all());
-
         return [
             'supplier_id' => 'required',
             'driver_id' => 'required',
