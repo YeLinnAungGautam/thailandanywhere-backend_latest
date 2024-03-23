@@ -195,10 +195,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('airline-tickets/export/csv', [AirlineTicketExportImportController::class, 'export']);
     Route::post('airline-tickets/import/csv', [AirlineTicketExportImportController::class, 'import']);
 
-    # Private Van Tour Reservation
+    # Car Booking
     Route::get('car-bookings', [CarBookingController::class, 'index']);
     Route::get('car-bookings/{booking_item_id}/edit', [CarBookingController::class, 'edit']);
     Route::post('car-bookings/{booking_item_id}', [CarBookingController::class, 'update']);
+    Route::get('car-bookings/summary', [CarBookingController::class, 'getSummary']);
 
     Route::delete('booking-receipt/{id}', [BookingController::class, 'deleteReceipt']);
     Route::delete('reservation-receipt/{id}', [ReservationController::class, 'deleteReceipt']);

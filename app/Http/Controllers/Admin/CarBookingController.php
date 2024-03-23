@@ -19,8 +19,6 @@ class CarBookingController extends Controller
 
     public function index(Request $request)
     {
-        // dd(BookingItemDataService::getCarBookingSummary());
-
         $booking_item_query = BookingItem::privateVanTour()
             ->with(
                 'car',
@@ -32,7 +30,7 @@ class CarBookingController extends Controller
             ->when($request->daterange, function ($query) use ($request) {
                 $dates = explode(',', $request->daterange);
 
-                $query->whereBetween('created_at', [$dates[0], $dates[1]]);
+                $query->whereBetween('service_date', [$dates[0], $dates[1]]);
             })
             ->when($request->agent_id, function ($query) use ($request) {
                 $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->agent_id));
@@ -51,7 +49,7 @@ class CarBookingController extends Controller
                 'result' => 1,
                 'message' => 'success',
                 'suppliers' => Supplier::pluck('name', 'id')->toArray(),
-                'summary' => BookingItemDataService::getCarBookingSummary()
+                'summary' => BookingItemDataService::getCarBookingSummary($request->all())
             ]);
     }
 
@@ -81,5 +79,12 @@ class CarBookingController extends Controller
         } catch (Exception $e) {
             $this->error(null, $e->getMessage(), 500);
         }
+    }
+
+    public function getSummary(Request $request)
+    {
+        $summary = BookingItemDataService::getCarBookingSummary($request->all());
+
+        dd($summary);
     }
 }

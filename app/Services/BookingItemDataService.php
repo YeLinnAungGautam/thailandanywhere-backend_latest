@@ -32,9 +32,12 @@ class BookingItemDataService
     /**
      * Static Methods
      */
-    public static function getCarBookingSummary()
+    public static function getCarBookingSummary(array $filters)
     {
         $total_booking = BookingItem::privateVanTour()
+            ->when($filters['supplier_id'] ?? null, function ($query) use ($filters) {
+                $query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $filters['supplier_id']));
+            })
             ->groupBy('booking_id')
             ->select(
                 DB::raw('count(booking_id) as total_count'),
