@@ -3,7 +3,6 @@ namespace App\Services;
 
 use App\Models\BookingItem;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class BookingItemDataService
 {
@@ -29,31 +28,55 @@ class BookingItemDataService
         return (int) Carbon::parse($checkin_date)->diff(Carbon::parse($checkout_date))->format("%a");
     }
 
+    public function calcBalanceAmount(string $payment_method, $total_cost, $selling_price, $extra_collect_amount)
+    {
+        if($this->booking_item->extra_collect_amount) {
+            return ($selling_price + $extra_collect_amount) - $total_cost;
+        }  {
+            return $total_cost * (-1);
+        }
+    }
+
     /**
      * Static Methods
      */
     public static function getCarBookingSummary(array $filters)
     {
-        $total_booking = BookingItem::privateVanTour()
+        $booking_items = BookingItem::privateVanTour()
             ->when($filters['supplier_id'] ?? null, function ($query) use ($filters) {
                 $query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $filters['supplier_id']));
             })
-            ->groupBy('booking_id')
-            ->select(
-                DB::raw('count(booking_id) as total_count'),
-                DB::raw('sum(total_cost_price) as total_cost'),
-            )
+            ->when($filters['daterange'] ?? null, function ($query) use ($filters) {
+                $dates = explode(',', $filters['daterange']);
+
+                $query->whereBetween('service_date', [$dates[0], $dates[1]]);
+            })
+            ->when($filters['agent_id'] ?? null, function ($query) use ($filters) {
+                $query->whereHas('booking', fn ($q) => $q->where('created_by', $filters['agent_id']));
+            })
             ->get();
 
+        $total_balance = 0;
+        foreach($booking_items as $booking_item) {
+            $self = new static($booking_item);
+
+            $total_balance += $self->calcBalanceAmount(
+                $booking_item->booking->payment_method,
+                $self->getTotalCost(),
+                $booking_item->selling_price,
+                $booking_item->extra_collect_amount
+            );
+        }
+
         return [
-            'total_booking' => $total_booking->count(),
-            'total_sales' => BookingItem::privateVanTour()->count(),
-            'total_cost' => $total_booking->sum('total_cost'),
-            'total_balance' => 0000
+            'total_booking' => $booking_items->groupBy('booking_id')->count(),
+            'total_sales' => $booking_items->count(),
+            'total_cost' => $booking_items->sum('total_cost_price'),
+            'total_balance' => $total_balance
         ];
     }
 
-    private function getCostPrice()
+    private function getCostPrice(): int
     {
         $cost_price = null;
 
@@ -75,15 +98,15 @@ class BookingItemDataService
             $cost_price = $booking_item->cost_price;
         }
 
-        return $cost_price;
+        return (int) $cost_price;
     }
 
-    private function getQuantity()
+    private function getQuantity(): int
     {
         if($this->booking_item->product_type == 'App\Models\Hotel') {
             return $this->booking_item->quantity * $this->getNights($this->booking_item->checkin_date, $this->booking_item->checkout_date);
         }
 
-        return $this->booking_item->quantity;
+        return (int) $this->booking_item->quantity;
     }
 }

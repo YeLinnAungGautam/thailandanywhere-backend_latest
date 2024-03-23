@@ -21,12 +21,14 @@ class CarBookingRequest extends FormRequest
      */
     public function rules(): array
     {
+        dd(request()->all());
+
         return [
             'supplier_id' => 'required',
             'driver_id' => 'required',
             'driver_info_id' => 'required',
-            'cost_price' => 'required',
-            'total_cost_price' => 'required'
+            'cost_price' => 'required|integer',
+            'total_cost_price' => 'required|integer'
         ];
     }
 }

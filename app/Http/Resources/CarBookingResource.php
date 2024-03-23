@@ -17,9 +17,11 @@ class CarBookingResource extends JsonResource
     {
         // return parent::toArray($request);
 
-        $total_cost = (new BookingItemDataService($this->resource))->getTotalCost();
+        $data_service = new BookingItemDataService($this->resource);
+
+        $total_cost = $data_service->getTotalCost();
         $extra_collect_amount = $this->extra_collect_amount ?? 0;
-        $balance_amount = $this->calcBalanceAmount($this->booking->payment_method, $total_cost, $this->selling_price, $extra_collect_amount);
+        $balance_amount = $data_service->calcBalanceAmount($this->booking->payment_method, $total_cost, $this->selling_price, $extra_collect_amount);
 
         return [
             'id' => $this->id,
@@ -38,14 +40,5 @@ class CarBookingResource extends JsonResource
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
         ];
-    }
-
-    private function calcBalanceAmount(string $payment_method, $total_cost, $selling_price, $extra_collect_amount)
-    {
-        if($this->extra_collect_amount) {
-            return ($selling_price + $extra_collect_amount) - $total_cost;
-        }  {
-            return $total_cost * (-1);
-        }
     }
 }

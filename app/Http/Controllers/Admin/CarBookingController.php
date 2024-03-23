@@ -83,8 +83,6 @@ class CarBookingController extends Controller
 
     public function getSummary(Request $request)
     {
-        $summary = BookingItemDataService::getCarBookingSummary($request->all());
-
-        dd($summary);
+        return $this->success(BookingItemDataService::getCarBookingSummary($request->all()), 'Success car booking summary');
     }
 }
