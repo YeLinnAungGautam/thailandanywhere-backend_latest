@@ -22,7 +22,11 @@ class ReservationTransactionController extends Controller
     {
         $transactions = ReservationTransaction::query()
             ->with('bookingItems', 'vendorable', 'reservationPaymentSlips')
-            ->when($request->datetime, fn ($query) => $query->where('datetime', $request->datetime))
+            ->when($request->daterange, function ($query) use ($request) {
+                $dates = explode(',', $request->daterange);
+
+                $query->where('datetime', '>=', $dates[0])->where('datetime', '<=', $dates[1]);
+            })
             ->paginate($request->limit ?? 20);
 
         return ReservationTransactionResource::collection($transactions)->additional(['result' => 1, 'message' => 'success']);
