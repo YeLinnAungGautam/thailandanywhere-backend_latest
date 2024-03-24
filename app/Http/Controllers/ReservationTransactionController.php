@@ -27,6 +27,9 @@ class ReservationTransactionController extends Controller
 
                 $query->where('datetime', '>=', $dates[0])->where('datetime', '<=', $dates[1]);
             })
+            ->when($request->supplier_id, function ($query) use ($request) {
+                $query->where('vendorable_id', $request->supplier_id)->where('vendorable_type', Supplier::class);
+            })
             ->paginate($request->limit ?? 20);
 
         return ReservationTransactionResource::collection($transactions)->additional(['result' => 1, 'message' => 'success']);

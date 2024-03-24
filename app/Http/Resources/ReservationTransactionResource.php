@@ -22,7 +22,7 @@ class ReservationTransactionResource extends JsonResource
         return [
             'id' => $this->id,
             'datetime' => Carbon::parse($this->datetime)->format('Y-m-d H:i:s'),
-            'supplier_id' => $this->supplier_id,
+            'supplier_id' => $this->vendorable_id,
             'supplier_name' => $this->vendorable->name,
             'total_paid' => $this->total_paid,
             'crm_ids' => $this->bookingItems->pluck('crm_id'),
