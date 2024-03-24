@@ -41,6 +41,7 @@ use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealExportImportController;
 use App\Http\Controllers\PrivateVanTourExportImportController;
 use App\Http\Controllers\ReservationExportController;
+use App\Http\Controllers\ReservationTransactionController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\RestaurantExportImportController;
 use App\Http\Controllers\RoomController;
@@ -205,4 +206,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::delete('reservation-receipt/{id}', [ReservationController::class, 'deleteReceipt']);
     Route::delete('confirmation-receipt/{id}', [ReservationController::class, 'deleteConfirmationReceipt']);
     Route::delete('customer-passport/{id}', [ReservationController::class, 'deleteCustomerPassport']);
+
+    # Reservation Transaction
+    Route::apiResource('reservation-transactions', ReservationTransactionController::class);
+    Route::delete('reservation-transactions/{reservation_id}/{transaction_id}', [ReservationTransactionController::class, 'deleteTransaction']);
 });
