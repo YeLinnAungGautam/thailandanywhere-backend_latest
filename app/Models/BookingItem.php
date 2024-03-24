@@ -97,6 +97,11 @@ class BookingItem extends Model
         return $this->hasMany(ReservationAssociatedCustomer::class, 'booking_item_id');
     }
 
+    public function reservationTransactions()
+    {
+        return $this->belongsToMany(ReservationTransaction::class);
+    }
+
     protected function calcSalePrice(): Attribute
     {
         return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());
@@ -175,5 +180,10 @@ class BookingItem extends Model
         }
 
         return '-';
+    }
+
+    public function isFullyPaid(): bool
+    {
+        return $this->payment_status === 'fully_paid';
     }
 }
