@@ -17,8 +17,8 @@ class CarBookingRepositoryService
         try {
             $booking_item_data = [
                 'extra_collect_amount' => $request->extra_collect_amount,
-                'cost_price' => $request->cost_price,
-                'total_cost_price' => $request->total_cost_price,
+                'cost_price' => $request->cost_price ?? null,
+                'total_cost_price' => $request->total_cost_price ?? 0,
             ];
 
             $booking_item->update($booking_item_data);

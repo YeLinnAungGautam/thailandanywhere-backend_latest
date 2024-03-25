@@ -25,8 +25,8 @@ class CarBookingRequest extends FormRequest
             'supplier_id' => 'required',
             'driver_id' => 'required',
             'driver_info_id' => 'required',
-            'cost_price' => 'required|integer',
-            'total_cost_price' => 'required|integer'
+            'cost_price' => 'nullable|integer',
+            'total_cost_price' => 'nullable|integer'
         ];
     }
 }
