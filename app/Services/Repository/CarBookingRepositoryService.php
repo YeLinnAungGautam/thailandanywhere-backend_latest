@@ -19,6 +19,7 @@ class CarBookingRepositoryService
                 'extra_collect_amount' => $request->extra_collect_amount,
                 'cost_price' => $request->cost_price ?? null,
                 'total_cost_price' => $request->total_cost_price ?? 0,
+                'dropoff_location' => $request->dropoff_location
             ];
 
             $booking_item->update($booking_item_data);
@@ -28,6 +29,8 @@ class CarBookingRepositoryService
                 [
                     'route_plan' => $request->route_plan,
                     'special_request' => $request->special_request,
+                    'pickup_location' => $request->pickup_location,
+                    'pickup_time' => $request->pickup_time,
                 ]
             );
 

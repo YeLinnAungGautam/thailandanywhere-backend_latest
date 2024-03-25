@@ -197,7 +197,7 @@ class ReservationController extends Controller
         }
 
         $booking_item->load(
-            'booking:id,crm_id,grand_total',
+            'booking:id,crm_id,grand_total,booking_date',
             'product'
         );
 

@@ -27,7 +27,8 @@ class ReservationTransactionResource extends JsonResource
             'total_paid' => $this->total_paid,
             'crm_ids' => $this->bookingItems->pluck('crm_id'),
             'reservation_ids' => $this->bookingItems->pluck('id'),
-            'payment_slips' => $payment_slips
+            'payment_slips' => $payment_slips,
+            'notes' => $this->notes ?? null
         ];
     }
 }
