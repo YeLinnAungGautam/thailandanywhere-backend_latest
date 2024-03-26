@@ -90,7 +90,7 @@
 
 <body>
     <div id="watermark">
-    <img src="{{ public_path() . '/assets/vantour_template.jpg' }}" height="100%" width="100%" />
+        <img src="{{ public_path() . '/assets/vantour_template.jpg' }}" height="100%" width="100%" />
     </div>
     <div>
         <div style="margin-top: 410px;
@@ -107,30 +107,30 @@
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Booking ID:</td>
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->crm_id }}</td>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Trip Name:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{$data->product->name}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->product->name }}</td>
                     </tr>
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Reservation ID:</td>
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ preg_match('/_(\d+)$/', $data->crm_id, $matches) ? $matches[1] : '' }}</td>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Car Type:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{$data->car->name}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->car->name }}</td>
                     </tr>
                     {{--  --}}
                     <tr>
                         <th style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">Customer Detail</th>
                         <td></td>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Service Date:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{Carbon\Carbon::parse($data->service_date)->format('d F Y')}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ Carbon\Carbon::parse($data->service_date)->format('d F Y') }}</td>
                     </tr>
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Customer Name:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{$data->booking->customer->name}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->booking->customer->name }}</td>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Pick up time:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{$data->pickup_time ? $data->pickup_time : '-'}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->pickup_time ?? '-' }}</td>
                     </tr>
                     <tr>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Contact:</td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{$data->booking->customer->phone_number}}</td>
+                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">{{ $data->booking->customer->phone_number }}</td>
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Pick up location:</td>
                         <td></td>
                     </tr>
@@ -139,7 +139,7 @@
                         <th style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">Payment & Expense</th>
                         <td></td>
                         <td colspan="2" rowspan="2" style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
-                           {{$data->pickup_location ? $data->pickup_location : '-'}}
+                            {{ $data->pickup_location ?? '-' }}
                         </td>
                     </tr>
 
@@ -158,16 +158,16 @@
 
                         <td style="width:50%;font-size:16px;padding-bottom:12px!important">Route Plan:</td>
                         <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
-                           {{ $data->reservationInfo->route_plan ?? '-' }}
+                            {{ $data->route_plan ?? '-' }}
                         </td>
                     </tr>
 
-                    @if($data->payment_method == 'Cash')
-                    <tr>
-                        <td style="width:50%;font-size:16px;padding-bottom:12px!important">To Collect:
-                        </td>
-                        <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important;color:green">{{ $sale_price }}</td>
-                    </tr>
+                    @if ($data->payment_method == 'Cash')
+                        <tr>
+                            <td style="width:50%;font-size:16px;padding-bottom:12px!important">To Collect:
+                            </td>
+                            <td style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important;color:green">{{ $sale_price }}</td>
+                        </tr>
                     @endif
 
                     {{--  --}}
@@ -182,7 +182,7 @@
                         <td></td>
                         <td></td>
                         <td colspan="2" style="width:50%;font-size:16px;font-weight:bold;padding-bottom:12px!important">
-                           {{$data->special_request ? $data->special_request : '-'}}
+                            {{ $data->special_request ?? '-' }}
                         </td>
                     </tr>
 

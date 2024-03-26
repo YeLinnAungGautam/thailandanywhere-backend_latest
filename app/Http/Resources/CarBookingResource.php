@@ -39,6 +39,12 @@ class CarBookingResource extends JsonResource
             'customer_name' => $this->booking->customer->name,
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
+
+            'route_plan' => $this->route_plan,
+            'special_request' => $this->special_request,
+            'dropoff_location' => $this->dropoff_location,
+            'pickup_location' => $this->pickup_location,
+            'pickup_time' => $this->pickup_time,
         ];
     }
 }

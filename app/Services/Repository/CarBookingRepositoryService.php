@@ -3,7 +3,6 @@ namespace App\Services\Repository;
 
 use App\Models\BookingItem;
 use App\Models\ReservationCarInfo;
-use App\Models\ReservationInfo;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,20 +18,14 @@ class CarBookingRepositoryService
                 'extra_collect_amount' => $request->extra_collect_amount,
                 'cost_price' => $request->cost_price ?? null,
                 'total_cost_price' => $request->total_cost_price ?? 0,
-                'dropoff_location' => $request->dropoff_location
+                'dropoff_location' => $request->dropoff_location,
+                'route_plan' => $request->route_plan,
+                'special_request' => $request->special_request,
+                'pickup_location' => $request->pickup_location,
+                'pickup_time' => $request->pickup_time,
             ];
 
             $booking_item->update($booking_item_data);
-
-            ReservationInfo::updateOrCreate(
-                ['booking_item_id' => $booking_item->id],
-                [
-                    'route_plan' => $request->route_plan,
-                    'special_request' => $request->special_request,
-                    'pickup_location' => $request->pickup_location,
-                    'pickup_time' => $request->pickup_time,
-                ]
-            );
 
             ReservationCarInfo::updateOrCreate(
                 ['booking_item_id' => $booking_item->id],
@@ -65,17 +58,19 @@ class CarBookingRepositoryService
             'cost_price' => $booking_item->cost_price,
             'total_cost_price' => $booking_item->total_cost_price,
 
+            'route_plan' => $booking_item->route_plan,
+            'special_request' => $booking_item->special_request,
+            'dropoff_location' => $booking_item->dropoff_location,
+            'pickup_location' => $booking_item->pickup_location,
+            'pickup_time' => $booking_item->pickup_time,
+
             'supplier_id' => $booking_item->reservationCarInfo->supplier_id ?? null,
             'supplier_name' => $booking_item->reservationCarInfo->supplier->name ?? null,
             'driver_id' => $booking_item->reservationCarInfo->driver_id ?? null,
             'driver_name' => $booking_item->reservationCarInfo->driver->name ?? null,
             'driver_contact' => $booking_item->reservationCarInfo->driver->contact ?? null,
-            // 'car_number' => $booking_item->reservationCarInfo->car_number ?? null,
             'driver_info_id' => $booking_item->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $booking_item->reservationCarInfo->driverInfo->car_number ?? null,
-
-            'route_plan' => $booking_item->reservationInfo->route_plan ?? null,
-            'special_request' => $booking_item->reservationInfo->special_request ?? null,
         ];
     }
 }

@@ -10,4 +10,9 @@ class ReservationInfo extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    public function bookingItem()
+    {
+        return $this->belongsTo(BookingItem::class);
+    }
 }

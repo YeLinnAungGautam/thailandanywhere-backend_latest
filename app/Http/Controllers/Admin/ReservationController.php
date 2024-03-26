@@ -282,6 +282,7 @@ class ReservationController extends Controller
     public function update(Request $request, string $id)
     {
         $find = BookingItem::find($id);
+
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
@@ -301,7 +302,10 @@ class ReservationController extends Controller
             'slip_code' => $request->slip_code ?? $find->slip_code,
             'expense_amount' => $request->expense_amount ?? $find->expense_amount,
             'comment' => $request->comment ?? $find->comment,
+            'route_plan' => $request->route_plan ?? $find->route_plan,
+            'special_request' => $request->special_request ?? $find->special_request,
             'dropoff_location' => $request->dropoff_location ?? $find->dropoff_location,
+            'pickup_location' => $request->pickup_location ?? $find->pickup_location,
             'pickup_time' => $request->pickup_time ?? $find->pickup_time,
         ];
 
@@ -357,10 +361,7 @@ class ReservationController extends Controller
                 'customer_score' => $request->customer_score,
                 'driver_score' => $request->driver_score,
                 'product_score' => $request->product_score,
-                'special_request' => $request->special_request,
                 'other_info' => $request->other_info,
-                'route_plan' => $request->route_plan,
-                'pickup_location' => $request->pickup_location,
                 'payment_method' => $request->payment_method,
                 'bank_name' => $request->bank_name,
                 'bank_account_number' => $request->bank_account_number,
@@ -369,12 +370,6 @@ class ReservationController extends Controller
                 'payment_status' => $request->payment_status,
                 'payment_due' => $request->payment_due,
             ];
-
-            //            if ($file = $request->file('paid_slip')) {
-            //                $fileData = $this->uploads($file, 'images/');
-            //                $saveData['paid_slip'] = $fileData['fileName'];
-            //            }
-
 
             $save = ReservationInfo::create($saveData);
 
@@ -390,7 +385,6 @@ class ReservationController extends Controller
                 HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
             }
 
-
             if ($request->customer_passport) {
                 foreach ($request->customer_passport as $passport) {
                     $fileData = $this->uploads($passport, 'files/');
@@ -403,10 +397,7 @@ class ReservationController extends Controller
             $findInfo->customer_score = $request->customer_score ?? $findInfo->customer_score;
             $findInfo->driver_score = $request->driver_score ?? $findInfo->driver_score;
             $findInfo->product_score = $request->product_score ?? $findInfo->product_score;
-            $findInfo->special_request = $request->special_request ?? $findInfo->special_request;
             $findInfo->other_info = $request->other_info ?? $findInfo->other_info;
-            $findInfo->route_plan = $request->route_plan ?? $findInfo->route_plan;
-            $findInfo->pickup_location = $request->pickup_location ?? $findInfo->pickup_location;
             $findInfo->payment_method = $request->payment_method ?? $findInfo->payment_method;
             $findInfo->payment_status = $request->payment_status ?? $findInfo->payment_status;
             $findInfo->payment_due = $request->payment_due ?? $findInfo->payment_due;
@@ -415,11 +406,6 @@ class ReservationController extends Controller
             $findInfo->bank_name = $request->bank_name ?? $findInfo->bank_name;
             $findInfo->cost = $request->cost ?? $findInfo->cost;
             $findInfo->bank_account_number = $request->bank_account_number ?? $findInfo->bank_account_number;
-
-            //            if ($file = $request->file('paid_slip')) {
-            //                $fileData = $this->uploads($file, 'images/');
-            //                $findInfo->paid_slip = $fileData['fileName'];
-            //            }
 
             $findInfo->update();
 
@@ -436,7 +422,6 @@ class ReservationController extends Controller
             }
         }
 
-
         $isEntranceTicketType = $bookingItem->product_type === 'App\Models\EntranceTicket';
         $isHotelType = $bookingItem->product_type === 'App\Models\Hotel';
 
@@ -444,12 +429,12 @@ class ReservationController extends Controller
             $findCarInfo = ReservationCarInfo::where('booking_item_id', $bookingItem->id)->first();
             if (!$findCarInfo) {
                 $data = [
-                    'booking_item_id' => $bookingItem->id,
                     // 'driver_name' => $request->driver_name,
-                    'driver_contact' => $request->driver_contact,
-                    'account_holder_name' => $request->account_holder_name,
                     // 'supplier_name' => $request->supplier_name,
                     // 'car_number' => $request->car_number,
+                    'booking_item_id' => $bookingItem->id,
+                    'driver_contact' => $request->driver_contact,
+                    'account_holder_name' => $request->account_holder_name,
                     'supplier_id' => $request->supplier_id,
                     'driver_id' => $request->driver_id,
                     'driver_info_id' => $request->driver_info_id,
@@ -461,14 +446,13 @@ class ReservationController extends Controller
                 }
                 ReservationCarInfo::create($data);
             } else {
-
+                // $findCarInfo->driver_name = $request->driver_name ?? $findCarInfo->driver_name;
+                // $findCarInfo->supplier_name = $request->supplier_name ?? $findCarInfo->supplier_name;
+                // $findCarInfo->car_number = $request->car_number ?? $findCarInfo->car_number;
                 $findCarInfo->driver_contact = $request->driver_contact ?? $findCarInfo->driver_contact;
                 $findCarInfo->supplier_id = $request->supplier_id ?? $findCarInfo->supplier_id;
                 $findCarInfo->driver_id = $request->driver_id ?? $findCarInfo->driver_id;
                 $findCarInfo->driver_info_id = $request->driver_info_id ?? $findCarInfo->driver_info_id;
-                // $findCarInfo->driver_name = $request->driver_name ?? $findCarInfo->driver_name;
-                // $findCarInfo->supplier_name = $request->supplier_name ?? $findCarInfo->supplier_name;
-                // $findCarInfo->car_number = $request->car_number ?? $findCarInfo->car_number;
                 $findCarInfo->account_holder_name = $request->account_holder_name ?? $findCarInfo->account_holder_name;
 
                 if ($file = $request->file('car_photo')) {

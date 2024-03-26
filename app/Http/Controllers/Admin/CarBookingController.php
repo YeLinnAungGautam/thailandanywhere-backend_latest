@@ -25,6 +25,7 @@ class CarBookingController extends Controller
                 'booking',
                 'product',
                 'reservationCarInfo',
+                'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
                 'booking.customer:id,name'
             )
             ->when($request->daterange, function ($query) use ($request) {
