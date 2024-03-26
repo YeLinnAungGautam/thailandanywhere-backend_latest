@@ -46,7 +46,14 @@ class ReservationController extends Controller
         $search_attraction = $request->input('attraction_name');
 
         $query = BookingItem::query()
-            ->with(['booking', 'booking.customer'])
+            ->with([
+                'booking',
+                'booking.customer',
+                'reservationCarInfo',
+                'reservationCarInfo.supplier',
+                'reservationCarInfo.driver',
+                'reservationCarInfo.driverInfo',
+            ])
             ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
             ->join('customers', 'bookings.customer_id', '=', 'customers.id')
             ->when($request->sale_daterange, function ($q) use ($request) {
@@ -438,11 +445,14 @@ class ReservationController extends Controller
             if (!$findCarInfo) {
                 $data = [
                     'booking_item_id' => $bookingItem->id,
-                    'driver_name' => $request->driver_name,
+                    // 'driver_name' => $request->driver_name,
                     'driver_contact' => $request->driver_contact,
                     'account_holder_name' => $request->account_holder_name,
-                    'supplier_name' => $request->supplier_name,
-                    'car_number' => $request->car_number,
+                    // 'supplier_name' => $request->supplier_name,
+                    // 'car_number' => $request->car_number,
+                    'supplier_id' => $request->supplier_id,
+                    'driver_id' => $request->driver_id,
+                    'driver_info_id' => $request->driver_info_id,
                 ];
 
                 if ($file = $request->file('car_photo')) {
@@ -452,10 +462,13 @@ class ReservationController extends Controller
                 ReservationCarInfo::create($data);
             } else {
 
-                $findCarInfo->driver_name = $request->driver_name ?? $findCarInfo->driver_name;
                 $findCarInfo->driver_contact = $request->driver_contact ?? $findCarInfo->driver_contact;
-                $findCarInfo->supplier_name = $request->supplier_name ?? $findCarInfo->supplier_name;
-                $findCarInfo->car_number = $request->car_number ?? $findCarInfo->car_number;
+                $findCarInfo->supplier_id = $request->supplier_id ?? $findCarInfo->supplier_id;
+                $findCarInfo->driver_id = $request->driver_id ?? $findCarInfo->driver_id;
+                $findCarInfo->driver_info_id = $request->driver_info_id ?? $findCarInfo->driver_info_id;
+                // $findCarInfo->driver_name = $request->driver_name ?? $findCarInfo->driver_name;
+                // $findCarInfo->supplier_name = $request->supplier_name ?? $findCarInfo->supplier_name;
+                // $findCarInfo->car_number = $request->car_number ?? $findCarInfo->car_number;
                 $findCarInfo->account_holder_name = $request->account_holder_name ?? $findCarInfo->account_holder_name;
 
                 if ($file = $request->file('car_photo')) {
