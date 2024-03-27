@@ -93,7 +93,7 @@ class BookingItemResource extends JsonResource
             'pickup_location' => $this->pickup_location,
             'pickup_time' => $this->pickup_time,
 
-            'reservation_info' => [
+            'reservation_info' => $this->reservationInfo ? [
                 "id" => $this->reservationInfo->id,
                 "booking_item_id" => $this->reservationInfo->booking_item_id,
                 "customer_feedback" => $this->reservationInfo->customer_feedback,
@@ -110,7 +110,7 @@ class BookingItemResource extends JsonResource
                 "expense_amount" => $this->reservationInfo->expense_amount,
                 "driver_score" => $this->reservationInfo->driver_score,
                 "product_score" => $this->reservationInfo->product_score,
-            ],
+            ] : null,
 
             'checkin_date' => $this->checkin_date,
             'checkout_date' => $this->checkout_date,
