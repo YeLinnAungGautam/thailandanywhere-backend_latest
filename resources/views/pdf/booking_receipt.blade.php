@@ -221,7 +221,7 @@
 
                     <tr>
                         <td>{{ $row->service_date }}</td>
-                        <td style="max-width: 100px;">{{ $row->product->name }} </br>
+                        <td style="max-width: 100px;">{{ $row->product->name ?? '-' }} </br>
                             @if ($row->product_type === 'App\Models\Inclusive')
                                 @if ($row->product->privateVanTours)
                                     @foreach ($row->product->privateVanTours as $pvt)
