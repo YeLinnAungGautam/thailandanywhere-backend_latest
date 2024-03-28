@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\City;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CityResource;
+use App\Models\City;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CityController extends Controller
@@ -30,6 +30,7 @@ class CityController extends Controller
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(CityResource::collection($data)
             ->additional([
                 'meta' => [
@@ -47,7 +48,7 @@ class CityController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'  => 'required',
+            'name' => 'required',
         ]);
 
         $data = [
@@ -60,6 +61,7 @@ class CityController extends Controller
         }
 
         $save = City::create($data);
+
         return $this->success(new CityResource($save), 'Successfully created');
     }
 
@@ -118,6 +120,7 @@ class CityController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }
