@@ -1,2 +1,2 @@
-- php artisan db:seed --class=MigrateLocationFieldSeeder
+- php artisan db:seed --class=MigrateLocationFieldSeeder - (Done)
 - Delete special_request, route_plan, pickup_location, pickup_time columns from reservation_infos table
