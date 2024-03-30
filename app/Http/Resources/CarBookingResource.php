@@ -33,6 +33,7 @@ class CarBookingResource extends JsonResource
             'payment_status' => $this->payment_status,
             'payment_method' => $this->booking->payment_method,
             'selling_price' => $this->selling_price,
+            'is_driver_collect' => $this->is_driver_collect,
             'extra_collect_amount' => $extra_collect_amount,
             'total_cost' => $total_cost,
             'balance_amount' => $balance_amount,

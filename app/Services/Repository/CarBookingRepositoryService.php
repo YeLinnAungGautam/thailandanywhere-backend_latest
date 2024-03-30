@@ -15,7 +15,6 @@ class CarBookingRepositoryService
 
         try {
             $booking_item_data = [
-                'extra_collect_amount' => $request->extra_collect_amount,
                 'cost_price' => $request->cost_price ?? null,
                 'total_cost_price' => $request->total_cost_price ?? 0,
                 'dropoff_location' => $request->dropoff_location,
@@ -24,6 +23,11 @@ class CarBookingRepositoryService
                 'pickup_location' => $request->pickup_location,
                 'pickup_time' => $request->pickup_time,
             ];
+
+            if($request->is_driver_collect) {
+                $booking_item_data['is_driver_collect'] = true;
+                $booking_item_data['extra_collect_amount'] = $request->extra_collect_amount;
+            }
 
             $booking_item->update($booking_item_data);
 
@@ -53,6 +57,7 @@ class CarBookingRepositoryService
     {
         return [
             'id' => $booking_item->id,
+            'is_driver_collect' => $booking_item->is_driver_collect,
             'extra_collect' => $booking_item->extra_collect_amount ?? 0,
             'quantity' => $booking_item->quantity,
             'cost_price' => $booking_item->cost_price,

@@ -30,7 +30,7 @@ class BookingItemDataService
 
     public function calcBalanceAmount(string $payment_method, $total_cost, $selling_price, $extra_collect_amount)
     {
-        if($this->booking_item->extra_collect_amount) {
+        if($this->booking_item->is_driver_collect) {
             return ($selling_price + $extra_collect_amount) - $total_cost;
         }  {
             return $total_cost * (-1);

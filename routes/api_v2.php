@@ -25,4 +25,7 @@ Route::group([], function () {
     # Room
     Route::get('rooms', [RoomController::class, 'index']);
     Route::get('rooms/{room_id}', [RoomController::class, 'show']);
+
+    # Entrance Ticket
+    
 });

@@ -172,6 +172,8 @@ class BookingController extends Controller
             }
 
             foreach ($request->items as $key => $item) {
+                $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
+
                 $data = [
                     'booking_id' => $save->id,
                     'crm_id' => $save->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
@@ -205,6 +207,7 @@ class BookingController extends Controller
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
+                    'is_driver_collect' => $is_driver_collect
                 ];
 
                 if (isset($request->items[$key]['customer_attachment'])) {

@@ -87,6 +87,9 @@ class BookingItemResource extends JsonResource
             'reservation_status' => $this->reservation_status,
             'expense_amount' => $this->expense_amount,
 
+            'is_driver_collect' => $this->is_driver_collect,
+            'extra_collect_amount' => $this->extra_collect_amount,
+
             'route_plan' => $this->route_plan,
             'special_request' => $this->special_request,
             'dropoff_location' => $this->dropoff_location,
