@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\API\V2\CarController;
 use App\Http\Controllers\API\V2\CityController;
+use App\Http\Controllers\API\V2\EntranceTicketController;
+use App\Http\Controllers\API\V2\EntranceTicketVariationController;
 use App\Http\Controllers\API\V2\HotelController;
 use App\Http\Controllers\API\V2\PrivateVanTourController;
 use App\Http\Controllers\API\V2\RoomController;
@@ -27,5 +29,14 @@ Route::group([], function () {
     Route::get('rooms/{room_id}', [RoomController::class, 'show']);
 
     # Entrance Ticket
-    
+    Route::get('entrance-tickets', [EntranceTicketController::class, 'index']);
+    Route::get('entrance-tickets/{entrance_ticket_id}', [EntranceTicketController::class, 'show']);
+
+    # Entrance Ticket Variation
+    Route::get('entrance-ticket-variations', [EntranceTicketVariationController::class, 'index']);
+    Route::get('entrance-ticket-variations/{entrance_ticket_variation_id}', [EntranceTicketVariationController::class, 'show']);
+
+    # Group Tour
+    // Route::get('group-tours', [EntranceTicketController::class, 'index']);
+    // Route::get('group-tours/{entrance_ticket_id}', [EntranceTicketController::class, 'show']);
 });
