@@ -30,10 +30,6 @@ class AirlineTicketController extends Controller
                 $a_query->where('airline_id', $airline_id);
             });
 
-        if ($search) {
-            $query->where('description', 'LIKE', "%{$search}%");
-        }
-
         $data = $query->paginate($limit);
 
         return $this->success(AirlineTicketResource::collection($data)
