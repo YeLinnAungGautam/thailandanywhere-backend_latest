@@ -47,6 +47,7 @@ class ReservationController extends Controller
 
         $query = BookingItem::query()
             ->with([
+                'product',
                 'booking',
                 'booking.customer',
                 'reservationCarInfo',
@@ -122,16 +123,19 @@ class ReservationController extends Controller
         if ($calenderFilter == true) {
             $query->where('booking_items.product_type', 'App\Models\PrivateVanTour')->orWhere('booking_items.product_type', 'App\Models\GroupTour');
         }
+
         if($search) {
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%");
             });
         }
+
         if($search_attraction) {
             $query->whereHas('variation', function ($q) use ($search_attraction) {
                 $q->where('name', 'LIKE', "%{$search_attraction}%");
             });
         }
+
         if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
             if ($filter) {
                 if ($filter === 'past') {
@@ -162,11 +166,7 @@ class ReservationController extends Controller
             }
         }
 
-        if($request->order_by == 'customer_name') {
-            $query->orderBy('customers.name', $request->order_direction ?? 'asc');
-        } else {
-            $query->orderBy('booking_items.created_at', $request->order_direction ?? 'desc');
-        }
+        $this->orderByKey($query, $request);
 
         $query->select('booking_items.*');
 
@@ -636,6 +636,61 @@ class ReservationController extends Controller
             Log::error($e);
 
             return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    private function orderByKey($query, $request)
+    {
+        switch ($request->order_by) {
+            case 'crm_id':
+                $query->orderBy('crm_id', $request->order_direction ?? 'asc');
+
+                break;
+
+            case 'customer_name':
+                $query->orderBy('customers.name', $request->order_direction ?? 'asc');
+
+                break;
+
+            case 'product_type':
+                $query->orderBy('product_type', $request->order_direction ?? 'asc');
+
+                break;
+
+                // case 'product_name':
+                //     $query->orderBy('product.name', $request->order_direction ?? 'asc');
+
+                //     break;
+
+                // case 'variation_name':
+                //     $query->orderBy('specificVariation.name', $request->order_direction ?? 'asc');
+
+                //     break;
+
+            case 'payment_status':
+                $query->orderBy('bookings.payment_status', $request->order_direction ?? 'asc');
+
+                break;
+
+            case 'reservation_status':
+                $query->orderBy('reservation_status', $request->order_direction ?? 'asc');
+
+                break;
+
+            case 'expense_status':
+                $query->orderBy('payment_status', $request->order_direction ?? 'asc');
+
+                break;
+
+            case 'service_date':
+                $query->orderBy('service_date', $request->order_direction ?? 'asc');
+
+                break;
+
+            default:
+                $query->orderBy('booking_items.created_at', $request->order_direction ?? 'desc');
+
+                break;
         }
     }
 }
