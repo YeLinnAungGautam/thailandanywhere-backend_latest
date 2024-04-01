@@ -40,7 +40,10 @@ class CarBookingController extends Controller
         if($request->supplier_id) {
             $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $request->supplier_id));
         } else {
-            $booking_item_query = $booking_item_query->doesnthave('reservationCarInfo');
+            $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
+                ->orWhereHas('reservationCarInfo', function ($query) {
+                    $query->whereNull('supplier_id');
+                });
         }
 
         $booking_item_query->orderByDESC('created_at');
