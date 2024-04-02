@@ -41,8 +41,11 @@ class CarBookingController extends Controller
             $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $request->supplier_id));
         } else {
             $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
-                ->orWhereHas('reservationCarInfo', function ($query) {
-                    $query->whereNull('supplier_id');
+                ->orWhereHas('reservationCarInfo', fn ($q) => $q->whereNull('supplier_id'))
+                ->when($request->daterange, function ($query) use ($request) {
+                    $dates = explode(',', $request->daterange);
+
+                    $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
                 });
         }
 
