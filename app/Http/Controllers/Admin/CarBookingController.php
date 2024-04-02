@@ -61,7 +61,6 @@ class CarBookingController extends Controller
                 'result' => 1,
                 'message' => 'success',
                 'suppliers' => Supplier::pluck('name', 'id')->toArray(),
-                'summary' => BookingItemDataService::getCarBookingSummary($request->all())
             ]);
     }
 
