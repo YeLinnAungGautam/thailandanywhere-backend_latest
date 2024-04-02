@@ -38,23 +38,21 @@ class CarBookingController extends Controller
             });
 
         if($request->supplier_id) {
-            $booking_item_query = $booking_item_query->whereHas('reservationCarInfo', fn ($query) => $query->where('supplier_id', $request->supplier_id));
+            $booking_item_query = $booking_item_query
+                ->whereIn('id', function ($query) use ($request) {
+                    $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
+                });
         } else {
             $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
                 ->orWhereIn('id', function ($query) {
-                    $query->select('booking_item_id')->from('reservation_car_infos')
-                        ->whereNull('supplier_id');
+                    $query->select('booking_item_id')->from('reservation_car_infos')->whereNull('supplier_id');
                 })
-                // this query making lower performance
-                // ->orWhereHas('reservationCarInfo', fn ($q) => $q->whereNull('supplier_id'))
                 ->when($request->daterange, function ($query) use ($request) {
                     $dates = explode(',', $request->daterange);
 
                     $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
                 });
         }
-
-        // dd($booking_item_query->pluck('service_date')->unique());
 
         $booking_item_query->orderByDESC('created_at');
 
