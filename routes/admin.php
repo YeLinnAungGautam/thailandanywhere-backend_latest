@@ -40,6 +40,7 @@ use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealExportImportController;
 use App\Http\Controllers\PrivateVanTourExportImportController;
+use App\Http\Controllers\ProductAvailableScheduleController;
 use App\Http\Controllers\ReservationExportController;
 use App\Http\Controllers\ReservationTransactionController;
 use App\Http\Controllers\RestaurantController;
@@ -210,4 +211,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Reservation Transaction
     Route::apiResource('reservation-transactions', ReservationTransactionController::class);
     Route::delete('reservation-transactions/{reservation_id}/{transaction_id}', [ReservationTransactionController::class, 'deleteTransaction']);
+
+    # Product Available Schedule
+    Route::apiResource('product-available-schedules', ProductAvailableScheduleController::class);
 });
