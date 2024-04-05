@@ -24,11 +24,12 @@ class ProductAvailableScheduleRequest extends FormRequest
         return [
             'product_type' => 'required|string',
             'product_id' => 'required|string',
-            'variable_id' => 'required|string',
-            'quantity' => 'required|numeric',
-            'date' => 'nullable|date|date_format:Y-m-d',
-            'checkin_date' => 'nullable|date|date_format:Y-m-d',
-            'checkin_date' => 'nullable|date|date_format:Y-m-d',
+            'variations' => 'required|array'
+            // 'variable_id' => 'required|array',
+            // 'quantity' => 'required|array',
+            // 'date' => 'nullable|array',
+            // 'checkin_date' => 'nullable|array',
+            // 'checkin_date' => 'nullable|array',
         ];
     }
 }

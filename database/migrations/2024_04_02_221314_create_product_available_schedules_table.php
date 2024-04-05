@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->date('date')->nullable();
             $table->date('checkin_date')->nullable();
             $table->date('checkout_date')->nullable();
+            $table->enum('status', ['pending', 'available', 'unavailable'])->default('pending');
             $table->timestamps();
         });
     }
