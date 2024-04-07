@@ -34,7 +34,7 @@ class ProductAvailableScheduleController extends Controller
                 $query->whereBetween('checkin_date', [$dates[0], $dates[1]])
                     ->orWhereBetween('checkout_date', [$dates[0], $dates[1]]);
             })
-            ->when($request->date, fn ($query) => $query->whereBetween('date', $request->date))
+            ->when($request->date, fn ($query) => $query->where('date', $request->date))
             ->paginate(10);
 
         return ProductAvailableScheduleResource::collection($schedules)->additional(['result' => 1, 'message' => 'success']);
