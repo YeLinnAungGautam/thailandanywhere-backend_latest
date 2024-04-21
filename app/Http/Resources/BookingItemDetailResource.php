@@ -26,7 +26,8 @@ class BookingItemDetailResource extends JsonResource
             'total_rooms' => $this->quantity,
             'total_nights' => $this->getNights($this->checkin_date, $this->checkout_date),
             'sale_price' => $this->selling_price * $this->getQuantity(),
-            'sale_date' => $this->booking->booking_date
+            'sale_date' => $this->booking->booking_date,
+            'service_date' => $this->service_date,
         ];
 
         if($this->product_type == 'App\Models\Hotel') {
