@@ -23,7 +23,7 @@ class UpdateHotelRequest extends FormRequest
     {
         return [
             'name' => 'required',
-            'type' => 'nullable|in:direct_booking,other_booking'
+            'type' => 'nullable|in:direct_booking,other_booking',
         ];
     }
 }
