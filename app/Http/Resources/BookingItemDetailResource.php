@@ -15,8 +15,11 @@ class BookingItemDetailResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $total_cost = $this->getCostPrice() * $this->getQuantity();
+        $sale_price = $this->selling_price * $this->getQuantity();
+
         $data = [
-            'total_cost' => $this->getCostPrice() * $this->getQuantity(),
+            'total_cost' => $total_cost,
             'bank_name' => $this->product->bank_name,
             'bank_account_number' => $this->product->bank_account_number,
             'account_name' => $this->product->account_name ?? '-',
@@ -25,9 +28,10 @@ class BookingItemDetailResource extends JsonResource
             'hotel_name' => $this->product->name,
             'total_rooms' => $this->quantity,
             'total_nights' => $this->getNights($this->checkin_date, $this->checkout_date),
-            'sale_price' => $this->selling_price * $this->getQuantity(),
+            'sale_price' => $sale_price,
             'sale_date' => $this->booking->booking_date,
             'service_date' => $this->service_date,
+            'score' => number_format(($sale_price - $total_cost) / $sale_price, 4),
         ];
 
         if($this->product_type == 'App\Models\Hotel') {
