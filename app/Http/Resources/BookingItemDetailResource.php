@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\EntranceTicket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -37,6 +38,11 @@ class BookingItemDetailResource extends JsonResource
         if($this->product_type == 'App\Models\Hotel') {
             $data['checkin_date'] = $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null;
             $data['checkout_date'] = $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null;
+            $data['room_name'] = $this->room->name;
+        }
+
+        if($this->product_type === EntranceTicket::class) {
+            $data['entrance_ticket_name'] = $this->product->name;
         }
 
         return $data;
