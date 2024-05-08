@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CityResource;
+use App\Imports\CityImport;
 use App\Models\City;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -122,5 +124,18 @@ class CityController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate(['file' => 'required|mimes:csv,txt']);
+
+            \Excel::import(new CityImport, $request->file('file'));
+
+            return $this->success(null, 'CSV import is successful');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 }

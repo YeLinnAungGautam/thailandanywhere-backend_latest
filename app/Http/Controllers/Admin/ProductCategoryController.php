@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Traits\HttpResponses;
-use App\Models\ProductCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductCategoryResource;
+use App\Imports\ProductCategoryImport;
+use App\Models\ProductCategory;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductCategoryController extends Controller
@@ -30,6 +32,7 @@ class ProductCategoryController extends Controller
         }
 
         $data = $query->paginate($limit);
+
         return $this->success(ProductCategoryResource::collection($data)
             ->additional([
                 'meta' => [
@@ -47,7 +50,7 @@ class ProductCategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'  => 'required',
+            'name' => 'required',
             'icon' => 'sometimes|image|max:2048'  // 2 MB
         ]);
 
@@ -61,6 +64,7 @@ class ProductCategoryController extends Controller
         }
 
         $save = ProductCategory::create($data);
+
         return $this->success(new ProductCategoryResource($save), 'Successfully created');
     }
 
@@ -118,6 +122,20 @@ class ProductCategoryController extends Controller
         }
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate(['file' => 'required|mimes:csv,txt']);
+
+            \Excel::import(new ProductCategoryImport, $request->file('file'));
+
+            return $this->success(null, 'CSV import is successful');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 }

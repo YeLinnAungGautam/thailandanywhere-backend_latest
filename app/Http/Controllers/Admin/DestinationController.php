@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DestinationStoreRequest;
 use App\Http\Resources\DestinationResource;
+use App\Imports\DestinationImport;
 use App\Models\Destination;
 use App\Models\ProductImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -191,5 +193,18 @@ class DestinationController extends Controller
         }
 
         return $this->success(new DestinationResource($destination), 'Successfully created');
+    }
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate(['file' => 'required|mimes:csv,txt']);
+
+            \Excel::import(new DestinationImport, $request->file('file'));
+
+            return $this->success(null, 'CSV import is successful');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 }

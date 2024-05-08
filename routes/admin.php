@@ -101,9 +101,16 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('posts', PostController::class);
 
+    # Product Category
     Route::apiResource('product-categories', ProductCategoryController::class);
+    Route::post('product-categories/import/csv', [ProductCategoryController::class, 'import']);
+
     Route::apiResource('product-sub-categories', ProductSubCategoryController::class);
+
+    # City
     Route::apiResource('cities', CityController::class);
+    Route::post('cities/import/csv', [CityController::class, 'import']);
+
     Route::apiResource('cars', CarController::class);
     Route::apiResource('product-tags', ProductTagController::class);
 
@@ -132,6 +139,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('destinations', DestinationController::class);
     Route::delete('destinations/{destination_id}/images/{product_image_id}', [DestinationController::class, 'deleteImage']);
     Route::post('destinations/{destination_id}/images', [DestinationController::class, 'uploadImage']);
+    Route::post('destinations/import/csv', [DestinationController::class, 'import']);
 
     # Facility
     Route::apiResource('facilities', FacilityController::class);
