@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Entrance Ticket Variation
     Route::apiResource('entrance-tickets-variations', EntranceTicketVariationController::class);
+    Route::delete('entrance-tickets-variations/{entrance_ticket_variation}/images/{product_image}', [EntranceTicketVariationController::class, 'deleteImage']);
     Route::get('entrance-tickets-variations/export/csv', [EntranceTicketVariationExportImportController::class, 'export']);
     Route::post('entrance-tickets-variations/import/csv', [EntranceTicketVariationExportImportController::class, 'import']);
 

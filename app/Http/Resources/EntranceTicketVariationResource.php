@@ -23,6 +23,7 @@ class EntranceTicketVariationResource extends JsonResource
             'agent_price' => $this->agent_price,
             'description' => $this->description,
             'entrance_ticket' => new EntranceTicketResource($this->entranceTicket),
+            'images' => ProductImageResource::collection($this->images),
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
