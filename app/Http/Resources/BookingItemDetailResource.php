@@ -42,7 +42,7 @@ class BookingItemDetailResource extends JsonResource
         }
 
         if($this->product_type === EntranceTicket::class) {
-            $data['entrance_ticket_variation_name'] = $this->variation->name;
+            $data['entrance_ticket_variation_name'] = $this->variation->name ?? '-';
         }
 
         return $data;
