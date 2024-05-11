@@ -12,6 +12,7 @@ class PrivateVanTourController extends Controller
     public function index(Request $request)
     {
         $items = PrivateVanTour::query()
+            ->vanTour()
             ->with('cars', 'cities', 'destinations', 'tags', 'images')
             ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "%{$request->search}%"))
             ->when($request->city_id, function ($query) use ($request) {
