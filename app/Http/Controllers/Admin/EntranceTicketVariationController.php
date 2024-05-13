@@ -156,8 +156,14 @@ class EntranceTicketVariationController extends Controller
         return $this->success(null, 'Successfully deleted', 200);
     }
 
-    public function deleteImage(EntranceTicketVariation $entrance_tickets_variation, string $product_image_id)
+    public function deleteImage(string $entrance_tickets_variation_id, string $product_image_id)
     {
+        $entrance_tickets_variation = EntranceTicketVariation::find($entrance_tickets_variation_id);
+
+        if(!$entrance_tickets_variation) {
+            return $this->error(null, 'Invalid entrance variation', 404);
+        }
+
         $product_image = ProductImage::find($product_image_id);
 
         if(!$product_image) {
