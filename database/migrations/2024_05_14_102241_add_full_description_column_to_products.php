@@ -27,7 +27,7 @@ return new class extends Migration {
         });
 
         Schema::table('airlines', function (Blueprint $table) {
-            $table->longText('full_description')->nullable();
+            $table->longText('full_description')->nullable()->after('legal_name');
         });
 
         Schema::table('restaurants', function (Blueprint $table) {
