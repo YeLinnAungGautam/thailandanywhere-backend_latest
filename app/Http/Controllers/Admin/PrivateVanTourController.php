@@ -78,6 +78,7 @@ class PrivateVanTourController extends Controller
             'type' => $request->type ?? PrivateVanTour::TYPES['car_rental'],
             'sku_code' => $request->sku_code,
             'long_description' => $request->long_description,
+            'full_description' => $request->full_description,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -151,6 +152,7 @@ class PrivateVanTourController extends Controller
             'type' => $request->type ?? $find->type,
             'sku_code' => $request->sku_code ?? $find->sku_code,
             'long_description' => $request->long_description ?? $find->long_description,
+            'full_description' => $request->full_description ?? $find->full_description,
         ];
 
         if ($file = $request->file('cover_image')) {

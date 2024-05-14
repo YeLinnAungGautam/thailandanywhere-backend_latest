@@ -60,6 +60,7 @@ class GroupTourController extends Controller
         $data = [
             'name' => $request->name,
             'description' => $request->description,
+            'full_description' => $request->full_description,
             'sku_code' => $request->sku_code,
             'price' => $request->price,
             'cancellation_policy_id' => $request->cancellation_policy_id,
@@ -119,10 +120,10 @@ class GroupTourController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-
         $data = [
             'name' => $request->name ?? $find->name,
             'description' => $request->description ?? $find->description,
+            'full_description' => $request->full_description ?? $find->full_description,
             'sku_code' => $request->sku_code ?? $find->sku_code,
             'price' => $request->price ?? $find->price,
             'cancellation_policy_id' => $request->cancellation_policy_id ?? $find->cancellation_policy_id,

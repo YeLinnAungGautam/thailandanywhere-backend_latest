@@ -61,6 +61,7 @@ class EntranceTicketController extends Controller
         $data = [
             'name' => $request->name,
             'description' => $request->description,
+            'full_description' => $request->full_description,
             'provider' => $request->provider,
             'place' => $request->place,
             'legal_name' => $request->legal_name,
@@ -148,6 +149,7 @@ class EntranceTicketController extends Controller
         $data = [
             'name' => $request->name ?? $find->name,
             'description' => $request->description ?? $find->description,
+            'full_description' => $request->full_description ?? $find->full_description,
             'provider' => $request->provider ?? $find->provider,
             'place' => $request->place ?? $find->place,
             'legal_name' => $request->legal_name ?? $find->legal_name,

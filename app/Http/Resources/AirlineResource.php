@@ -19,6 +19,7 @@ class AirlineResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'full_description' => $this->full_description,
             'legal_name' => $this->legal_name,
             'starting_balance' => $this->starting_balance,
             'contract' => $this->contract ? config('app.url') . Storage::url('contracts/' . $this->contract) : null,

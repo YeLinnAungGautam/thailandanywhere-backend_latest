@@ -2,20 +2,28 @@
 
 namespace App\Models;
 
-use App\Models\City;
-use App\Models\ProductTag;
-use App\Models\EntranceVariation;
-use App\Models\EntranceTicketImage;
-use App\Models\EntranceTicketVariation;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EntranceTicket extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'provider', 'cancellation_policy_id', 'cover_image', 'place', 'legal_name', 'bank_name', 'payment_method', 'bank_account_number', 'account_name'];
+    protected $fillable = [
+        'name',
+        'description',
+        'full_description',
+        'provider',
+        'cancellation_policy_id',
+        'cover_image',
+        'place',
+        'legal_name',
+        'bank_name',
+        'payment_method',
+        'bank_account_number',
+        'account_name'
+    ];
 
     public function images()
     {

@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
-use App\Models\AirlineTicket;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Airline extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','contract','legal_name','starting_balance'];
+    protected $fillable = [
+        'name',
+        'contract',
+        'legal_name',
+        'starting_balance',
+        'full_description'
+    ];
 
     public function tickets(): HasMany
     {

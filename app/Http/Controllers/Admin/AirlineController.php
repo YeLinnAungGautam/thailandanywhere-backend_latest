@@ -50,6 +50,7 @@ class AirlineController extends Controller
         $data = [
             'name' => $request->name,
             'legal_name' => $request->legal_name,
+            'full_description' => $request->full_description,
             'starting_balance' => $request->starting_balance,
         ];
 
@@ -80,6 +81,7 @@ class AirlineController extends Controller
         $airline->update([
             'name' => $request->name ?? $airline->name,
             'legal_name' => $request->legal_name ?? $airline->legal_name,
+            'full_description' => $request->full_description ?? $airline->full_description,
             'starting_balance' => $request->starting_balance ?? $airline->starting_balance,
         ]);
 

@@ -3,11 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Http\Resources\PrivateVanTourTagResource;
-use App\Http\Resources\PrivateVanTourCityResource;
-use App\Http\Resources\PrivateVanTourImageResource;
+use Illuminate\Support\Facades\Storage;
 
 class EntranceTicketResource extends JsonResource
 {
@@ -29,6 +26,7 @@ class EntranceTicketResource extends JsonResource
             'account_name' => $this->account_name,
             'name' => $this->name,
             'description' => $this->description,
+            'full_description' => $this->full_description,
             'cover_image' => $this->cover_image ? config('app.url') . Storage::url('images/' . $this->cover_image) : null,
             'tags' => PrivateVanTourTagResource::collection($this->tags),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
