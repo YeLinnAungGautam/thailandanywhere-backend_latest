@@ -30,7 +30,7 @@ return new class extends Migration {
             $table->longText('full_description')->nullable();
         });
 
-        Schema::table('hotels', function (Blueprint $table) {
+        Schema::table('restaurants', function (Blueprint $table) {
             $table->longText('full_description')->nullable()->after('description');
         });
     }
@@ -57,6 +57,10 @@ return new class extends Migration {
         });
 
         Schema::table('airlines', function (Blueprint $table) {
+            $table->dropColumn('full_description');
+        });
+
+        Schema::table('restaurants', function (Blueprint $table) {
             $table->dropColumn('full_description');
         });
     }
