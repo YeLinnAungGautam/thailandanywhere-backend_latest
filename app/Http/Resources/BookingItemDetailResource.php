@@ -32,6 +32,7 @@ class BookingItemDetailResource extends JsonResource
             'score' => number_format(($sale_price - $total_cost) / $sale_price, 4),
             'payment_method' => $this->booking->payment_method,
             'payment_status' => $this->booking->payment_status,
+            'product_name' => $this->product->name ?? '-',
             'expense_comment' => ''
         ];
 
@@ -39,13 +40,13 @@ class BookingItemDetailResource extends JsonResource
             $data['checkin_date'] = $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null;
             $data['checkout_date'] = $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null;
             $data['room_name'] = $this->room->name;
-            $data['hotel_name'] = $this->product->name;
+            // $data['hotel_name'] = $this->product->name;
             $data['total_rooms'] = $this->quantity;
             $data['total_nights'] = $this->getNights($this->checkin_date, $this->checkout_date);
         }
 
         if($this->product_type == 'App\Models\Airline') {
-            $data['airline_name'] = $this->product->name;
+            // $data['airline_name'] = $this->product->name;
             $data['ticket_type'] = $this->ticket->price;
             $data['total_ticket'] = $this->getQuantity();
         }
