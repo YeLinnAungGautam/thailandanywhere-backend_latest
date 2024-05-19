@@ -26,9 +26,6 @@ class BookingItemDetailResource extends JsonResource
             'account_name' => $this->product->account_name ?? '-',
             'crm_id' => $this->booking->crm_id ,
             'reservation_code' => $this->crm_id,
-            'hotel_name' => $this->product->name,
-            'total_rooms' => $this->quantity,
-            'total_nights' => $this->getNights($this->checkin_date, $this->checkout_date),
             'sale_price' => $sale_price,
             'sale_date' => $this->booking->booking_date,
             'service_date' => $this->service_date,
@@ -40,6 +37,9 @@ class BookingItemDetailResource extends JsonResource
             $data['checkin_date'] = $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null;
             $data['checkout_date'] = $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null;
             $data['room_name'] = $this->room->name;
+            $data['hotel_name'] = $this->product->name;
+            $data['total_rooms'] = $this->quantity;
+            $data['total_nights'] = $this->getNights($this->checkin_date, $this->checkout_date);
         }
 
         if($this->product_type == 'App\Models\Airline') {
