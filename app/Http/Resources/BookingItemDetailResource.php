@@ -33,12 +33,19 @@ class BookingItemDetailResource extends JsonResource
             'sale_date' => $this->booking->booking_date,
             'service_date' => $this->service_date,
             'score' => number_format(($sale_price - $total_cost) / $sale_price, 4),
+            'expense_comment' => ''
         ];
 
         if($this->product_type == 'App\Models\Hotel') {
             $data['checkin_date'] = $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null;
             $data['checkout_date'] = $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null;
             $data['room_name'] = $this->room->name;
+        }
+
+        if($this->product_type == 'App\Models\Airline') {
+            $data['airline_name'] = $this->product->name;
+            $data['ticket_type'] = $this->ticket->price;
+            $data['total_ticket'] = $this->getQuantity();
         }
 
         if($this->product_type === EntranceTicket::class) {
