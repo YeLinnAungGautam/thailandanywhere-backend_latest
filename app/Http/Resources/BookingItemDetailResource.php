@@ -30,6 +30,8 @@ class BookingItemDetailResource extends JsonResource
             'sale_date' => $this->booking->booking_date,
             'service_date' => $this->service_date,
             'score' => number_format(($sale_price - $total_cost) / $sale_price, 4),
+            'payment_method' => $this->booking->payment_method,
+            'payment_status' => $this->booking->payment_status,
             'expense_comment' => ''
         ];
 
