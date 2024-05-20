@@ -41,6 +41,8 @@ class CarBookingResource extends JsonResource
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
 
+            'supplier_name' => $this->reservationCarInfo->supplier->name ?? '-',
+
             'route_plan' => $this->route_plan,
             'special_request' => $this->special_request,
             'dropoff_location' => $this->dropoff_location,

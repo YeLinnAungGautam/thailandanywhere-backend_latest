@@ -38,20 +38,22 @@ class CarBookingController extends Controller
             });
 
         if($request->supplier_id) {
-            $booking_item_query = $booking_item_query
-                ->whereIn('id', function ($query) use ($request) {
-                    $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
-                });
-        } else {
-            $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
-                ->orWhereIn('id', function ($query) {
-                    $query->select('booking_item_id')->from('reservation_car_infos')->whereNull('supplier_id');
-                })
-                ->when($request->daterange, function ($query) use ($request) {
-                    $dates = explode(',', $request->daterange);
+            if($request->supplier_id === 'unassigned') {
+                $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
+                    ->orWhereIn('id', function ($query) {
+                        $query->select('booking_item_id')->from('reservation_car_infos')->whereNull('supplier_id');
+                    })
+                    ->when($request->daterange, function ($query) use ($request) {
+                        $dates = explode(',', $request->daterange);
 
-                    $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
-                });
+                        $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
+                    });
+            } else {
+                $booking_item_query = $booking_item_query
+                    ->whereIn('id', function ($query) use ($request) {
+                        $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
+                    });
+            }
         }
 
         $booking_item_query->orderByDESC('created_at');
