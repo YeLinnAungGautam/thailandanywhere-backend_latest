@@ -23,8 +23,8 @@ class CarBookingRequest extends FormRequest
     {
         return [
             'supplier_id' => 'required',
-            'driver_id' => 'required',
-            'driver_info_id' => 'required',
+            'driver_id' => 'nullable',
+            'driver_info_id' => 'nullable',
             'cost_price' => 'nullable|integer',
             'total_cost_price' => 'nullable|integer'
         ];

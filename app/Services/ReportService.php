@@ -23,7 +23,12 @@ class ReportService
             ->with('createdBy:id,name')
             ->groupBy('created_by')
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->selectRaw('created_by, GROUP_CONCAT(id) AS booking_ids, SUM(grand_total) as total, COUNT(*) as total_booking')
+            ->selectRaw(
+                'created_by,
+                GROUP_CONCAT(id) AS booking_ids,
+                SUM(grand_total) as total,
+                COUNT(*) as total_booking'
+            )
             ->get();
     }
 
