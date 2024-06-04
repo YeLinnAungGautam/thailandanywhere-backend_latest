@@ -114,6 +114,9 @@ class CarBookingController extends Controller
                     'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
                     'booking.customer:id,name'
                 )
+                ->when($request->created_by, function ($query) use ($request) {
+                    $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->created_by));
+                })
                 ->when($request->daterange, function ($query) use ($request) {
                     $dates = explode(',', $request->daterange);
 
