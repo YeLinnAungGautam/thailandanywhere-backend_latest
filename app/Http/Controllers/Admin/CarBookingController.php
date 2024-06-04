@@ -191,7 +191,8 @@ class CarBookingController extends Controller
             return success([
                 'total' => $total,
                 'needed' => $needed,
-                'needed_percentage' => number_format(($needed / 100) * $total, 2, '.', '')
+                'needed_percentage' => number_format(($needed / 100) * $total, 2, '.', ''),
+                'complete_percentage' => number_format(($total - $needed / 100) * $total, 2, '.', ''),
             ]);
         } catch (Exception $e) {
             Log::error($e);
