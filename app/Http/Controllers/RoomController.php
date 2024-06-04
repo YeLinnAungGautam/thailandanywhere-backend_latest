@@ -71,6 +71,7 @@ class RoomController extends Controller
             'max_person' => $request->max_person,
             'is_extra' => $request->is_extra ?? 0,
             'agent_price' => $request->agent_price,
+            'owner_price' => $request->owner_price,
         ]);
 
         if ($request->file('images')) {
@@ -115,7 +116,8 @@ class RoomController extends Controller
                 'room_price' => $request->room_price ?? $room->room_price,
                 'max_person' => $request->max_person,
                 'is_extra' => $request->is_extra ?? 0,
-                'agent_price' => $request->agent_price ?? $room->agent_price
+                'agent_price' => $request->agent_price ?? $room->agent_price,
+                'owner_price' => $request->owner_price ?? $room->owner_price
             ]);
 
             if ($request->file('images')) {

@@ -12,6 +12,7 @@ use App\Services\Repository\CarBookingRepositoryService;
 use App\Traits\HttpResponses;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CarBookingController extends Controller
 {
@@ -97,5 +98,105 @@ class CarBookingController extends Controller
     public function getSummary(Request $request)
     {
         return $this->success(BookingItemDataService::getCarBookingSummary($request->all()), 'Success car booking summary');
+    }
+
+    public function completePercentage(Request $request)
+    {
+        try {
+            $request->validate(['role' => 'required|in:super_admin,admin,reservation']);
+
+            $query = BookingItem::privateVanTour()
+                ->with(
+                    'car',
+                    'booking',
+                    'product',
+                    'reservationCarInfo',
+                    'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+                    'booking.customer:id,name'
+                )
+                ->when($request->daterange, function ($query) use ($request) {
+                    $dates = explode(',', $request->daterange);
+
+                    $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
+                });
+
+            $total = $query->count();
+            $admin_needed = 0;
+            $sale_needed = 0;
+            $reservation_needed = 0;
+
+            foreach($query->cursor() as $booking_item) {
+                $admin = [];
+                $sale = [];
+                $reservation = [];
+
+                if(
+                    is_null($booking_item->reservationCarInfo) ||
+                    is_null($booking_item->reservationCarInfo->supplier) ||
+                    is_null($booking_item->reservationCarInfo->driverInfo) ||
+                    is_null($booking_item->reservationCarInfo->driverInfo->driver) ||
+                    is_null($booking_item->reservationCarInfo->driverInfo->driver->contact) ||
+                    is_null($booking_item->cost_price) ||
+                    is_null($booking_item->total_cost_price)
+                ) {
+                    $admin[] = 1;
+                    $reservation[] = 1;
+                }
+
+                if(
+                    is_null($booking_item->pickup_time) ||
+                    is_null($booking_item->route_plan) ||
+                    is_null($booking_item->special_request)
+                ) {
+                    $admin[] = 1;
+                    $sale[] = 1;
+                }
+
+                if($booking_item->is_driver_collect && is_null($booking_item->extra_collect_amount)) {
+                    $admin[] = 1;
+                    $sale[] = 1;
+                }
+
+                if(!empty($admin)) {
+                    $admin_needed += 1;
+                }
+
+                if(!empty($sale)) {
+                    $sale_needed += 1;
+                }
+
+                if(!empty($reservation)) {
+                    $reservation_needed += 1;
+                }
+            }
+
+            $needed = 0;
+            switch ($request->role) {
+                case 'admin':
+                    $needed = $sale_needed;
+
+                    break;
+
+                case 'reservation':
+                    $needed = $reservation_needed;
+
+                    break;
+
+                default:
+                    $needed = $admin_needed;
+
+                    break;
+            }
+
+            return success([
+                'total' => $total,
+                'needed' => $needed,
+                'needed_percentage' => number_format(($needed / 100) * $total, 2, '.', '')
+            ]);
+        } catch (Exception $e) {
+            Log::error($e);
+
+            return failedMessage('Something went wrong! Please contact to admin.');
+        }
     }
 }

@@ -22,7 +22,7 @@ class CarBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => 'required',
+            'supplier_id' => 'nullable',
             'driver_id' => 'nullable',
             'driver_info_id' => 'nullable',
             'cost_price' => 'nullable|integer',

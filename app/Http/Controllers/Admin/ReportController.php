@@ -170,14 +170,12 @@ class ReportController extends Controller
             $query->whereBetween('created_at', [date($from), date($to)]);
 
         }
-
-
         $data = $query->get();
 
         $results = BookingResource::collection($data);
 
         $items = [];
-
+        $one = [];
         foreach($results as $key => $res) {
             foreach($res->items as $res1) {
                 $reserve_types = substr($res1->product_type, 11);
