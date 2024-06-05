@@ -21,18 +21,24 @@ class ReportService
 
         $bookings = Booking::query()
             ->join('admins', 'bookings.created_by', '=', 'admins.id')
-            ->with('createdBy:id,name')
+            ->with('createdBy:id,name,target_amount')
             ->whereBetween('bookings.created_at', [$start_date, $end_date])
             ->selectRaw(
                 'bookings.created_by,
+                admins.target_amount as target_amount,
                 GROUP_CONCAT(bookings.id) AS booking_ids,
+                GROUP_CONCAT(CONCAT(DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
                 SUM(bookings.grand_total) as total,
-                COUNT(*) as total_booking,
-                SUM(CASE WHEN bookings.grand_total > admins.target_amount THEN bookings.grand_total ELSE 0 END) as amount_above_target,
-                COUNT(CASE WHEN bookings.grand_total > admins.target_amount THEN 1 ELSE NULL END) as count_above_target',
+                COUNT(*) as total_booking',
             )
-            ->groupBy('bookings.created_by')
+            ->groupBy('bookings.created_by', 'admins.target_amount')
             ->get();
+
+        foreach($bookings as $booking) {
+            $test = self::adminHasOverratedTargetAmount($booking);
+
+            $booking->over_target_count = $test;
+        }
 
         return $bookings;
     }
@@ -114,5 +120,30 @@ class ReportService
             ->paginate($limit ?? 5);
 
         return $products;
+    }
+
+    private static function adminHasOverratedTargetAmount($booking)
+    {
+        $over_target_count = 0;
+        $created_grand_total = explode(',', $booking->created_at_grand_total);
+
+        $collection = collect($created_grand_total);
+
+        // Group by the date prefix and map to get only the values after '__'
+        $grouped = $collection->groupBy(function ($item) {
+            // Extract the date prefix by splitting on '__'
+            return explode('__', $item)[0];
+        })->map(function ($group) {
+            // Map over each group to get only the values after '__' and calculate the sum
+            return $group->sum(function ($item) {
+                return (int)explode('__', $item)[1];
+            });
+        });
+
+        $result = $grouped->filter(function ($data) use ($booking) {
+            return $data >= $booking->target_amount;
+        });
+
+        return $result->count();
     }
 }
