@@ -103,7 +103,7 @@ class CarBookingController extends Controller
     public function completePercentage(Request $request)
     {
         try {
-            $request->validate(['role' => 'required|in:super_admin,admin,reservation']);
+            $auth_user = auth()->user();
 
             $query = BookingItem::privateVanTour()
                 ->with(
@@ -114,14 +114,15 @@ class CarBookingController extends Controller
                     'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
                     'booking.customer:id,name'
                 )
-                ->when($request->created_by, function ($query) use ($request) {
-                    $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->created_by));
-                })
                 ->when($request->daterange, function ($query) use ($request) {
                     $dates = explode(',', $request->daterange);
 
                     $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
                 });
+
+            if($auth_user->role != 'super_admin') {
+                $query->whereHas('booking', fn ($q) => $q->where('created_by', $auth_user->id));
+            }
 
             $total = $query->count();
             $admin_needed = 0;
@@ -174,7 +175,7 @@ class CarBookingController extends Controller
             }
 
             $needed = 0;
-            switch ($request->role) {
+            switch ($auth_user->role) {
                 case 'admin':
                     $needed = $sale_needed;
 
@@ -194,8 +195,8 @@ class CarBookingController extends Controller
             return success([
                 'total' => $total,
                 'needed' => $needed,
-                'needed_percentage' => $needed / $total * 100,
-                'complete_percentage' => ($total - $needed) / $total * 100,
+                'needed_percentage' => number_format($needed / $total * 100, 2),
+                'complete_percentage' => number_format(($total - $needed) / $total * 100, 2),
             ]);
         } catch (Exception $e) {
             Log::error($e);

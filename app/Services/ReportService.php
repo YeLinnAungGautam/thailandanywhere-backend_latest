@@ -19,17 +19,22 @@ class ReportService
         $start_date = Carbon::parse($dates[0])->format('Y-m-d');
         $end_date = Carbon::parse($dates[1])->format('Y-m-d');
 
-        return Booking::query()
+        $bookings = Booking::query()
+            ->join('admins', 'bookings.created_by', '=', 'admins.id')
             ->with('createdBy:id,name')
-            ->groupBy('created_by')
-            ->whereBetween('created_at', [$start_date, $end_date])
+            ->whereBetween('bookings.created_at', [$start_date, $end_date])
             ->selectRaw(
-                'created_by,
-                GROUP_CONCAT(id) AS booking_ids,
-                SUM(grand_total) as total,
-                COUNT(*) as total_booking'
+                'bookings.created_by,
+                GROUP_CONCAT(bookings.id) AS booking_ids,
+                SUM(bookings.grand_total) as total,
+                COUNT(*) as total_booking,
+                SUM(CASE WHEN bookings.grand_total > admins.target_amount THEN bookings.grand_total ELSE 0 END) as amount_above_target,
+                COUNT(CASE WHEN bookings.grand_total > admins.target_amount THEN 1 ELSE NULL END) as count_above_target',
             )
+            ->groupBy('bookings.created_by')
             ->get();
+
+        return $bookings;
     }
 
     public static function getUnpaidBooking(string $daterange, string|null $agent_id)
