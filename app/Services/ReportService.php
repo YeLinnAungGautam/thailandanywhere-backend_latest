@@ -133,17 +133,23 @@ class ReportService
         $grouped = $collection->groupBy(function ($item) {
             // Extract the date prefix by splitting on '__'
             return explode('__', $item)[0];
-        })->map(function ($group) {
-            // Map over each group to get only the values after '__' and calculate the sum
-            return $group->sum(function ($item) {
-                return (int)explode('__', $item)[1];
-            });
-        });
+        })->toArray();
 
-        $result = $grouped->filter(function ($data) use ($booking) {
-            return $data >= $booking->target_amount;
-        });
+        $filteredDates = [];
 
-        return $result->count();
+        foreach ($grouped as $date => $entries) {
+            $total = 0;
+            foreach ($entries as $entry) {
+                $parts = explode('__', $entry);
+                if (isset($parts[1])) {
+                    $total += (int)$parts[1];
+                }
+            }
+            if ($total >= $booking->target_amount) {
+                $filteredDates[$date] = count($entries);
+            }
+        }
+
+        return array_sum($filteredDates);
     }
 }
