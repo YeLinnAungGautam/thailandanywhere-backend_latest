@@ -82,6 +82,10 @@ class HotelController extends Controller
             'place' => $request->place,
             'legal_name' => $request->legal_name,
             'contract_due' => $request->contract_due,
+            'location_map_title' => $request->location_map_title,
+            'location_map' => $request->location_map,
+            'rating' => $request->rating,
+            'nearby_places' => $request->nearby_places ? json_encode($request->nearby_places) : null
         ]);
 
         $contractArr = [];
@@ -148,6 +152,10 @@ class HotelController extends Controller
             'bank_account_number' => $request->bank_account_number ?? $hotel->bank_account_number,
             'legal_name' => $request->legal_name,
             'contract_due' => $request->contract_due,
+            'location_map_title' => $request->location_map_title ?? $hotel->location_map_title,
+            'location_map' => $request->location_map ?? $hotel->location_map,
+            'rating' => $request->rating ?? $hotel->rating,
+            'nearby_places' => $request->nearby_places ? json_encode($request->nearby_places) : null
         ]);
 
         $contractArr = [];

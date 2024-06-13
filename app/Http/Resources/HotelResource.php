@@ -37,6 +37,11 @@ class HotelResource extends JsonResource
             'lowest_room_price' => $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
+
+            'location_map_title' => $this->location_map_title,
+            'location_map' => $this->location_map,
+            'rating' => $this->rating,
+            'nearby_places' => $this->nearby_places ? json_decode($this->nearby_places) : $this->nearby_places,
         ];
     }
 }

@@ -37,6 +37,17 @@ class HotelController extends Controller
             ->when($request->place, function ($p_query) use ($request) {
                 $p_query->where('place', $request->place);
             })
+            ->when($request->price_range, function ($q) use ($request) {
+                $q->whereIn('id', function ($q1) use ($request) {
+                    $prices = explode('-', $request->price_range);
+
+                    $q1->select('hotel_id')
+                        ->from('rooms')
+                        ->where('is_extra', 0)
+                        ->where('room_price', '>=', $prices[0])
+                        ->where('room_price', '<=', $prices[1]);
+                });
+            })
             ->paginate($request->limit ?? 10);
 
         return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
