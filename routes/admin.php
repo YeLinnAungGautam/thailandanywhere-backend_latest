@@ -165,12 +165,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
+    Route::get('incomplete-hotels', [HotelController::class, 'incomplete']);
     Route::delete('hotels/{hotel}/images/{hotel_image}', [HotelController::class, 'deleteImage']);
     Route::get('hotels/export/csv', [HotelExportImportController::class, 'export']);
     Route::post('hotels/import/csv', [HotelExportImportController::class, 'import']);
 
     # Room
     Route::apiResource('rooms', RoomController::class);
+    Route::get('incomplete-rooms', [RoomController::class, 'incomplete']);
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
     Route::get('rooms/export/csv', [RoomExportImportController::class, 'export']);
     Route::post('rooms/import/csv', [RoomExportImportController::class, 'import']);

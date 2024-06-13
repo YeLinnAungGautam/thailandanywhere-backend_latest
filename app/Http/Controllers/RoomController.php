@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
@@ -237,5 +238,37 @@ class RoomController extends Controller
         }
 
         return $overlaps;
+    }
+
+    public function incomplete(Request $request)
+    {
+        $limit = $request->query('limit', 10);
+
+        $columns = Schema::getColumnListing('rooms');
+        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at', 'extra_price', 'owner_price'];
+        $columnsToCheck = array_diff($columns, $excludedColumns);
+
+        $query = Room::query()
+            ->where(function ($query) use ($columnsToCheck) {
+                foreach ($columnsToCheck as $column) {
+                    $query->orWhereNull($column);
+                }
+            })
+            ->orWhereDoesntHave('images');
+
+        if ($request->hotel_id) {
+            $query->where('hotel_id', $request->hotel_id);
+        }
+
+        $data = $query->paginate($limit);
+
+        return $this->success(RoomResource::collection($data)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int) ceil($data->total() / $data->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Hotel List');
     }
 }

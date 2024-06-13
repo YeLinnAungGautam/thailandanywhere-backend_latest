@@ -11,6 +11,7 @@ use App\Models\HotelImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class HotelController extends Controller
@@ -215,5 +216,33 @@ class HotelController extends Controller
         $hotel_image->delete();
 
         return $this->success(null, 'Hotel image is successfully deleted');
+    }
+
+    public function incomplete(Request $request)
+    {
+        $limit = $request->query('limit', 10);
+
+        $columns = Schema::getColumnListing('hotels');
+        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+        $columnsToCheck = array_diff($columns, $excludedColumns);
+
+        $query = Hotel::query()
+            ->where(function ($query) use ($columnsToCheck) {
+                foreach ($columnsToCheck as $column) {
+                    $query->orWhereNull($column);
+                }
+            })
+            ->orWhereDoesntHave('images');
+
+        $data = $query->paginate($limit);
+
+        return $this->success(HotelResource::collection($data)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int) ceil($data->total() / $data->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Hotel List');
     }
 }
