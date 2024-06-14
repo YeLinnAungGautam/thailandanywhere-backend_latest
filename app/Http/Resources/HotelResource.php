@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class HotelResource extends JsonResource
 {
@@ -41,7 +42,23 @@ class HotelResource extends JsonResource
             'location_map_title' => $this->location_map_title,
             'location_map' => $this->location_map,
             'rating' => $this->rating,
-            'nearby_places' => $this->nearby_places ? json_decode($this->nearby_places) : $this->nearby_places,
+            'nearby_places' => $this->getNearbyPlaces()
         ];
+    }
+
+    public function getNearbyPlaces()
+    {
+        $places = [];
+        $hotel_nearby_places = json_decode($this->nearby_places);
+
+        foreach($hotel_nearby_places as $nearby) {
+            $places[] = [
+                'name' => $nearby->name,
+                'distance' => $nearby->distance,
+                'image' => $nearby->image ? config('app.url') . Storage::url('images/' . $nearby->image) : null,
+            ];
+        }
+
+        return $places;
     }
 }

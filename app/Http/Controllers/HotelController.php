@@ -70,6 +70,25 @@ class HotelController extends Controller
      */
     public function store(StoreHotelRequest $request)
     {
+        $hotel_nearby_places = [];
+        if($request->nearby_places) {
+            foreach($request->nearby_places as $nearby_place) {
+                $file_name = null;
+
+                if(isset($nearby_place['image'])) {
+                    $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
+
+                    $file_name = $nearby_image_data['fileName'];
+                }
+
+                $hotel_nearby_places [] = [
+                    'name' => $nearby_place['name'],
+                    'distance' => $nearby_place['distance'],
+                    'image' => $file_name,
+                ];
+            }
+        }
+
         $save = Hotel::create([
             'name' => $request->name,
             'description' => $request->description,
@@ -86,7 +105,7 @@ class HotelController extends Controller
             'location_map_title' => $request->location_map_title,
             'location_map' => $request->location_map,
             'rating' => $request->rating,
-            'nearby_places' => $request->nearby_places ? json_encode($request->nearby_places) : null
+            'nearby_places' => json_encode($hotel_nearby_places)
         ]);
 
         $contractArr = [];
@@ -140,6 +159,25 @@ class HotelController extends Controller
      */
     public function update(UpdateHotelRequest $request, Hotel $hotel)
     {
+        $hotel_nearby_places = [];
+        if($request->nearby_places) {
+            foreach($request->nearby_places as $nearby_place) {
+                $file_name = null;
+
+                if(isset($nearby_place['image'])) {
+                    $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
+
+                    $file_name = $nearby_image_data['fileName'];
+                }
+
+                $hotel_nearby_places [] = [
+                    'name' => $nearby_place['name'],
+                    'distance' => $nearby_place['distance'],
+                    'image' => $file_name,
+                ];
+            }
+        }
+
         $hotel->update([
             'name' => $request->name ?? $hotel->name,
             'description' => $request->description ?? $hotel->description,
@@ -156,7 +194,7 @@ class HotelController extends Controller
             'location_map_title' => $request->location_map_title ?? $hotel->location_map_title,
             'location_map' => $request->location_map ?? $hotel->location_map,
             'rating' => $request->rating ?? $hotel->rating,
-            'nearby_places' => $request->nearby_places ? json_encode($request->nearby_places) : null
+            'nearby_places' => json_encode($hotel_nearby_places)
         ]);
 
         $contractArr = [];

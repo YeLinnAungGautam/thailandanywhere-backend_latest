@@ -26,7 +26,7 @@ class StoreHotelRequest extends FormRequest
             'type' => 'nullable|in:direct_booking,other_booking',
             'place' => 'required',
             'rating' => 'nullable|integer',
-            'nearby_places' => 'nullable|array'
+            'nearby_places' => 'nullable|array',
         ];
     }
 }
