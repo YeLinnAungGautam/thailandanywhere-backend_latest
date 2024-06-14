@@ -42,7 +42,7 @@ class HotelResource extends JsonResource
             'location_map_title' => $this->location_map_title,
             'location_map' => $this->location_map,
             'rating' => $this->rating,
-            'nearby_places' => $this->nearby_places ? $this->getNearbyPlaces() : null
+            'nearby_places' => isset($this->nearby_places) ? $this->getNearbyPlaces() : null
         ];
     }
 
@@ -53,8 +53,8 @@ class HotelResource extends JsonResource
 
         foreach($hotel_nearby_places as $nearby) {
             $places[] = [
-                'name' => $nearby->name,
-                'distance' => $nearby->distance,
+                'name' => $nearby->name ?? '-',
+                'distance' => $nearby->distance ?? '-',
                 'image' => $nearby->image ? config('app.url') . Storage::url('images/' . $nearby->image) : null,
             ];
         }
