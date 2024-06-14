@@ -42,7 +42,7 @@ class HotelResource extends JsonResource
             'location_map_title' => $this->location_map_title,
             'location_map' => $this->location_map,
             'rating' => $this->rating,
-            'nearby_places' => $this->getNearbyPlaces()
+            'nearby_places' => $this->nearby_places ? $this->getNearbyPlaces() : null
         ];
     }
 
