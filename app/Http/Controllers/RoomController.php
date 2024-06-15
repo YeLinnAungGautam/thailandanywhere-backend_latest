@@ -203,7 +203,7 @@ class RoomController extends Controller
                 'end_date' => $period['end_date'],
                 'sale_price' => $period['sale_price'],
                 'cost_price' => $period['cost_price'],
-                'agent_price' => $period['agent_price'],
+                'agent_price' => $period['agent_price'] ?? null,
             ]);
 
             $array_of_ids[] = $job->id;
