@@ -245,20 +245,30 @@ class RoomController extends Controller
         $limit = $request->query('limit', 10);
 
         $columns = Schema::getColumnListing('rooms');
-        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at', 'extra_price', 'owner_price'];
+        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at', 'extra_price', 'owner_price', 'name'];
         $columnsToCheck = array_diff($columns, $excludedColumns);
 
-        $query = Room::query()
-            ->where(function ($query) use ($columnsToCheck) {
-                foreach ($columnsToCheck as $column) {
-                    $query->orWhereNull($column);
-                }
-            })
-            ->orWhereDoesntHave('images');
+        $query = Room::query();
 
         if ($request->hotel_id) {
             $query->where('hotel_id', $request->hotel_id);
         }
+
+        if ($request->search) {
+            $query->where('name', 'LIKE', "%{$request->search}%");
+        }
+
+        // Combine the conditions for columns being null and hotels without images
+        $query->where(function ($query) use ($columnsToCheck) {
+            // Condition to check for null columns
+            $query->where(function ($subQuery) use ($columnsToCheck) {
+                foreach ($columnsToCheck as $column) {
+                    $subQuery->orWhereNull($column);
+                }
+            })
+            // Condition to check for hotels without images
+                ->orWhereDoesntHave('images');
+        });
 
         $data = $query->paginate($limit);
 

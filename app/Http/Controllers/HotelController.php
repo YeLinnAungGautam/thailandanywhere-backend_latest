@@ -261,18 +261,30 @@ class HotelController extends Controller
     public function incomplete(Request $request)
     {
         $limit = $request->query('limit', 10);
+        $search = $request->query('search');
 
         $columns = Schema::getColumnListing('hotels');
-        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+        $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at', 'name'];
         $columnsToCheck = array_diff($columns, $excludedColumns);
 
-        $query = Hotel::query()
-            ->where(function ($query) use ($columnsToCheck) {
+        $query = Hotel::query();
+
+        // Add search filter if search term is provided
+        if ($search) {
+            $query->where('name', 'LIKE', "%{$search}%");
+        }
+
+        // Combine the conditions for columns being null and hotels without images
+        $query->where(function ($query) use ($columnsToCheck) {
+            // Condition to check for null columns
+            $query->where(function ($subQuery) use ($columnsToCheck) {
                 foreach ($columnsToCheck as $column) {
-                    $query->orWhereNull($column);
+                    $subQuery->orWhereNull($column);
                 }
             })
-            ->orWhereDoesntHave('images');
+            // Condition to check for hotels without images
+                ->orWhereDoesntHave('images');
+        });
 
         $data = $query->paginate($limit);
 
