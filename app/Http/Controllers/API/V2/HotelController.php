@@ -48,6 +48,7 @@ class HotelController extends Controller
                         ->where('room_price', '<=', $prices[1]);
                 });
             })
+            ->when($request->rating, fn ($query) => $query->where('rating', $request->rating))
             ->paginate($request->limit ?? 10);
 
         return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
