@@ -31,12 +31,21 @@ class EntranceTicketResource extends JsonResource
             'tags' => PrivateVanTourTagResource::collection($this->tags),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
             'categories' => ProductCategoryResource::collection($this->categories),
-            'variations' => $this->variations,
+            'variations' => $this->getVariations(),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
             'contacts' => HotelContractResource::collection($this->contracts),
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'lowest_variation_price' => $this->variations->sortBy('price')->first()->price ?? 0,
         ];
+    }
+
+    public function getVariations()
+    {
+        return $this->variations->map(function ($variation) {
+            $variation->image_links = ProductImageResource::collection($variation->images);
+
+            return $variation;
+        });
     }
 }
