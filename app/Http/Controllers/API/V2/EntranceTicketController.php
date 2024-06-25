@@ -21,6 +21,13 @@ class EntranceTicketController extends Controller
                     $q->select('entrance_ticket_id')->from('entrance_ticket_cities')->where('city_id', $request->query('city_id'));
                 });
             })
+            ->when($request->activity_id, function ($query) use ($request) {
+                $query->whereIn('id', function ($q) use ($request) {
+                    $q->select('entrance_ticket_id')
+                        ->from('activity_entrance_ticket')
+                        ->where('attraction_activity_id', $request->activity_id);
+                });
+            })
             ->orderBy('created_at', 'desc')
             ->paginate($limit ?? 10);
 

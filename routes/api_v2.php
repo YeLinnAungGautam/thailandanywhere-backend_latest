@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\V2\AirlineController;
 use App\Http\Controllers\API\V2\AirlineTicketController;
+use App\Http\Controllers\API\V2\AttractionActivityController;
 use App\Http\Controllers\API\V2\CarController;
 use App\Http\Controllers\API\V2\CityController;
 use App\Http\Controllers\API\V2\EntranceTicketController;
@@ -60,4 +61,7 @@ Route::group([], function () {
     # Meal
     Route::get('meals', [MealController::class, 'index']);
     Route::get('meals/{meal_id}', [MealController::class, 'show']);
+
+    # Attraction Activities
+    Route::get('attraction-activities', [AttractionActivityController::class, 'index']);
 });

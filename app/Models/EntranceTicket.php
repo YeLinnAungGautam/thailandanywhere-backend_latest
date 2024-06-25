@@ -54,4 +54,9 @@ class EntranceTicket extends Model
     {
         return $this->hasMany(EntranceTicketContract::class, 'entrance_ticket_id');
     }
+
+    public function activities()
+    {
+        return $this->belongsToMany(AttractionActivity::class, 'activity_entrance_ticket');
+    }
 }

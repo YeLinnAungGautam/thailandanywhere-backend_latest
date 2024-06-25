@@ -37,6 +37,13 @@ class EntranceTicketController extends Controller
                     $q->select('entrance_ticket_id')->from('entrance_ticket_cities')->where('city_id', $request->query('city_id'));
                 });
             })
+            ->when($request->activity_id, function ($query) use ($request) {
+                $query->whereIn('id', function ($q) use ($request) {
+                    $q->select('entrance_ticket_id')
+                        ->from('activity_entrance_ticket')
+                        ->where('attraction_activity_id', $request->activity_id);
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
@@ -57,7 +64,6 @@ class EntranceTicketController extends Controller
      */
     public function store(StoreEntranceTicketRequest $request)
     {
-
         $data = [
             'name' => $request->name,
             'description' => $request->description,
@@ -79,6 +85,9 @@ class EntranceTicketController extends Controller
 
         $save = EntranceTicket::create($data);
 
+        if($request->activities) {
+            $save->activities()->attach($request->activities);
+        }
         if ($request->tag_ids) {
             $save->tags()->sync($request->tag_ids);
         }
@@ -91,9 +100,9 @@ class EntranceTicketController extends Controller
             $save->categories()->sync($request->category_ids);
         }
 
-        if ($request->variations) {
-            $save->variations()->sync($request->variations);
-        }
+        // if ($request->variations) {
+        //     $save->variations()->sync($request->variations);
+        // }
 
         if ($request->file('images')) {
             foreach ($request->file('images') as $image) {
@@ -172,6 +181,9 @@ class EntranceTicketController extends Controller
 
         $find->update($data);
 
+        if($request->activities) {
+            $find->activities()->sync($request->activities);
+        }
 
         if ($request->tag_ids) {
             $find->tags()->sync($request->tag_ids);
@@ -185,10 +197,9 @@ class EntranceTicketController extends Controller
             $find->categories()->sync($request->category_ids);
         }
 
-        if ($request->variations) {
-            $find->variations()->sync($request->variations);
-        }
-
+        // if ($request->variations) {
+        //     $find->variations()->sync($request->variations);
+        // }
 
         if ($request->file('images')) {
             foreach ($request->file('images') as $image) {
@@ -245,6 +256,7 @@ class EntranceTicketController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
+        $find->activities()->detach();
         $find->tags()->detach();
         $find->categories()->detach();
         $find->cities()->detach();
