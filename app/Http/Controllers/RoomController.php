@@ -120,7 +120,7 @@ class RoomController extends Controller
                 'is_extra' => $request->is_extra ?? 0,
                 'agent_price' => $request->agent_price ?? $room->agent_price,
                 'owner_price' => $request->owner_price ?? $room->owner_price,
-                'amenities' => $request->amenities ? json_encode($request->amenities) : null,
+                'amenities' => $request->amenities ? json_encode($request->amenities) : $room->amenities,
             ]);
 
             if ($request->file('images')) {

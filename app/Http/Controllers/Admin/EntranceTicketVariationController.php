@@ -56,6 +56,8 @@ class EntranceTicketVariationController extends Controller
     {
         DB::beginTransaction();
 
+        $request->validate(['including_services' => 'nullable|array']);
+
         try {
             $save = EntranceTicketVariation::create([
                 'name' => $request->name,
@@ -66,6 +68,7 @@ class EntranceTicketVariationController extends Controller
                 'owner_price' => $request->owner_price,
                 'entrance_ticket_id' => $request->entrance_ticket_id,
                 'description' => $request->description,
+                'including_services' => $request->including_services ? json_encode($request->including_services) : null,
             ]);
 
 
@@ -108,6 +111,8 @@ class EntranceTicketVariationController extends Controller
     {
         DB::beginTransaction();
 
+        $request->validate(['including_services' => 'nullable|array']);
+
         try {
             $entrance_tickets_variation->update([
                 'name' => $request->name ?? $entrance_tickets_variation->name,
@@ -118,6 +123,7 @@ class EntranceTicketVariationController extends Controller
                 'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
                 'owner_price' => $request->owner_price ?? $entrance_tickets_variation->owner_price,
                 'description' => $request->description ?? $entrance_tickets_variation->description,
+                'including_services' => $request->including_services ? json_encode($request->including_services) : $entrance_tickets_variation->including_services,
             ]);
 
             if ($request->file('images')) {
