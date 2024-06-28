@@ -43,7 +43,7 @@ class ReportService
         return $bookings;
     }
 
-    public static function getUnpaidBooking(string $daterange, string|null $agent_id)
+    public static function getUnpaidBooking(string $daterange, string|null $agent_id, string|null $service_daterange)
     {
         $dates = explode(',', $daterange);
 
@@ -54,6 +54,14 @@ class ReportService
         return Booking::query()
             ->with('createdBy:id,name')
             ->when($agent_id, fn ($query) => $query->where('created_by', $agent_id))
+            ->when($service_daterange, function ($query) use ($service_daterange) {
+                $query->whereHas('items', function ($q) use ($service_daterange) {
+                    $service_dates = explode(',', $service_daterange);
+
+                    $q->whereDate('service_date', '>=', Carbon::parse($service_dates[0])->format('Y-m-d'))
+                        ->whereDate('service_date', '<=', Carbon::parse($service_dates[1])->format('Y-m-d'));
+                });
+            })
             ->whereDate('created_at', '>=', $start_date)
             ->whereDate('created_at', '<=', $end_date)
             ->where('balance_due_date', '<', $today_date)
