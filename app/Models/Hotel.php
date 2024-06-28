@@ -52,4 +52,9 @@ class Hotel extends Model
     {
         return $this->belongsToMany(Facility::class);
     }
+
+    public function scopeDirectBooking($query)
+    {
+        return $query->where('type', self::TYPES['direct_booking']);
+    }
 }

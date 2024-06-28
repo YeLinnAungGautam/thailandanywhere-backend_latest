@@ -12,6 +12,7 @@ class HotelController extends Controller
     public function index(Request $request)
     {
         $items = Hotel::query()
+            ->directBooking()
             ->with(
                 'city',
                 'rooms',
