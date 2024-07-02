@@ -13,7 +13,7 @@ class FacilityController extends Controller
     {
         $data = Facility::query()
             ->when($request->search, fn ($query) => $query->where('name', 'LIKE', "%{$request->search}%"))
-            ->paginate($request->limit ?? 20);
+            ->get();
 
         return FacilityResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
     }
