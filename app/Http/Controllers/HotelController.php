@@ -51,6 +51,13 @@ class HotelController extends Controller
             })
             ->when($request->type, function ($q) use ($request) {
                 $q->where('type', $request->type);
+            })
+            ->when($request->facilities, function ($query) use ($request) {
+                $ids = explode(',', $request->facilities);
+
+                $query->whereIn('id', function ($q) use ($ids) {
+                    $q->select('hotel_id')->from('facility_hotel')->whereIn('facility_id', $ids);
+                });
             });
 
         $data = $query->paginate($limit);

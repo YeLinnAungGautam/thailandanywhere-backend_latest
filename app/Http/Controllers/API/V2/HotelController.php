@@ -50,6 +50,13 @@ class HotelController extends Controller
                 });
             })
             ->when($request->rating, fn ($query) => $query->where('rating', $request->rating))
+            ->when($request->facilities, function ($query) use ($request) {
+                $ids = explode(',', $request->facilities);
+
+                $query->whereIn('id', function ($q) use ($ids) {
+                    $q->select('hotel_id')->from('facility_hotel')->whereIn('facility_id', $ids);
+                });
+            })
             ->paginate($request->limit ?? 10);
 
         return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);

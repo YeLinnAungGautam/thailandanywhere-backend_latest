@@ -7,6 +7,7 @@ use App\Http\Controllers\API\V2\CarController;
 use App\Http\Controllers\API\V2\CityController;
 use App\Http\Controllers\API\V2\EntranceTicketController;
 use App\Http\Controllers\API\V2\EntranceTicketVariationController;
+use App\Http\Controllers\API\V2\FacilityController;
 use App\Http\Controllers\API\V2\GroupTourController;
 use App\Http\Controllers\API\V2\HotelController;
 use App\Http\Controllers\API\V2\MealController;
@@ -29,6 +30,9 @@ Route::group([], function () {
     # Hotel
     Route::get('hotels', [HotelController::class, 'index']);
     Route::get('hotels/{hotel_id}', [HotelController::class, 'show']);
+
+    # Hotel Facilities
+    Route::get('facilities', [FacilityController::class, 'index']);
 
     # Room
     Route::get('rooms', [RoomController::class, 'index']);
