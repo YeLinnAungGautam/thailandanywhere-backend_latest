@@ -58,7 +58,8 @@ class HotelController extends Controller
                 $query->whereIn('id', function ($q) use ($ids) {
                     $q->select('hotel_id')->from('facility_hotel')->whereIn('facility_id', $ids);
                 });
-            });
+            })
+            ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
 
         $data = $query->paginate($limit);
 
@@ -99,6 +100,7 @@ class HotelController extends Controller
 
         $save = Hotel::create([
             'name' => $request->name,
+            'category_id' => $request->category_id ?? null,
             'description' => $request->description,
             'full_description' => $request->full_description,
             'type' => $request->type ?? Hotel::TYPES['direct_booking'],
@@ -189,6 +191,7 @@ class HotelController extends Controller
 
         $hotel->update([
             'name' => $request->name ?? $hotel->name,
+            'category_id' => $request->category_id ?? $hotel->category_id,
             'description' => $request->description ?? $hotel->description,
             'full_description' => $request->full_description ?? $hotel->full_description,
             'type' => $request->type ?? $hotel->type,
@@ -263,6 +266,19 @@ class HotelController extends Controller
         $hotel_image->delete();
 
         return $this->success(null, 'Hotel image is successfully deleted');
+    }
+
+    public function deleteContract(Hotel $hotel, HotelContract $hotel_contract)
+    {
+        if ($hotel->id !== $hotel_contract->hotel_id) {
+            return $this->error(null, 'This contract is not belongs to the hotel', 403);
+        }
+
+        Storage::delete('public/contracts/' . $hotel_contract->file);
+
+        $hotel_contract->delete();
+
+        return $this->success(null, 'Hotel contract is successfully deleted');
     }
 
     public function incomplete(Request $request)

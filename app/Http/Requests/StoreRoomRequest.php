@@ -24,7 +24,8 @@ class StoreRoomRequest extends FormRequest
         return [
             'name' => 'required',
             'hotel_id' => 'required',
-            'amenities' => 'nullable|array'
+            'amenities' => 'nullable|array',
+            'has_breakfast' => 'nullable|in:1,0',
         ];
     }
 }

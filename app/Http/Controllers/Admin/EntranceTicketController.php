@@ -278,4 +278,17 @@ class EntranceTicketController extends Controller
 
         return $this->success(null, 'Successfully deleted');
     }
+
+    public function deleteContract(EntranceTicket $entrance_ticket, EntranceTicketContract $entrance_ticket_contract)
+    {
+        if ($entrance_ticket->id !== $entrance_ticket_contract->entrance_ticket_id) {
+            return $this->error(null, 'This contract is not belongs to this attraction', 403);
+        }
+
+        Storage::delete('public/contracts/' . $entrance_ticket_contract->file);
+
+        $entrance_ticket_contract->delete();
+
+        return $this->success(null, 'Entrance ticket contract is successfully deleted');
+    }
 }

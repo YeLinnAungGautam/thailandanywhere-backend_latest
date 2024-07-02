@@ -57,4 +57,9 @@ class Hotel extends Model
     {
         return $query->where('type', self::TYPES['direct_booking']);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(HotelCategory::class, 'category_id');
+    }
 }

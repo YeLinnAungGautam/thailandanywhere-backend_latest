@@ -20,6 +20,7 @@ class HotelResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'category' => new HotelCategoryResource($this->category),
             'description' => $this->description,
             'full_description' => $this->full_description,
             'type' => $this->type,

@@ -1,55 +1,56 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\MealController;
-use App\Http\Controllers\RoomController;
-use App\Http\Controllers\HotelController;
-use App\Http\Controllers\DriverController;
-use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\Admin\CarController;
-use App\Http\Controllers\Admin\TagController;
-use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\CityController;
-use App\Http\Controllers\Admin\PostController;
-use App\Http\Controllers\DriverInfoController;
-use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\HotelReportController;
-use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\AirlineController;
-use App\Http\Controllers\Admin\BookingController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\FacilityController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\GroupTourController;
-use App\Http\Controllers\Admin\InclusiveController;
-use App\Http\Controllers\Admin\CarBookingController;
-use App\Http\Controllers\Admin\ProductTagController;
-use App\Http\Controllers\MealExportImportController;
-use App\Http\Controllers\RoomExportImportController;
-use App\Http\Controllers\Admin\DestinationController;
-use App\Http\Controllers\Admin\ReservationController;
-use App\Http\Controllers\HotelExportImportController;
-use App\Http\Controllers\ReservationExportController;
 use App\Http\Controllers\Admin\AirlineTicketController;
 use App\Http\Controllers\Admin\AirportPickupController;
-use App\Http\Controllers\AirlineExportImportController;
+use App\Http\Controllers\Admin\AttractionActivityController;
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\CarBookingController;
+use App\Http\Controllers\Admin\CarController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CityController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
+use App\Http\Controllers\Admin\EntranceTicketVariationController;
+use App\Http\Controllers\Admin\FacilityController;
+use App\Http\Controllers\Admin\GroupTourController;
+use App\Http\Controllers\Admin\HotelCategoryController;
+use App\Http\Controllers\Admin\InclusiveController;
+use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PrivateVanTourController;
 use App\Http\Controllers\Admin\ProductCategoryController;
-use App\Http\Controllers\GroupTourExportImportController;
-use App\Http\Controllers\ReservationTransactionController;
-use App\Http\Controllers\RestaurantExportImportController;
-use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\ProductSubCategoryController;
-use App\Http\Controllers\ProductAvailableScheduleController;
+use App\Http\Controllers\Admin\ProductTagController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ReservationController;
+use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DriverController;
+use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
-use App\Http\Controllers\PrivateVanTourExportImportController;
-use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\EntranceTicketVariationExportImportController;
+use App\Http\Controllers\GroupTourExportImportController;
+use App\Http\Controllers\HotelController;
+use App\Http\Controllers\HotelExportImportController;
+use App\Http\Controllers\HotelReportController;
+use App\Http\Controllers\MealController;
+use App\Http\Controllers\MealExportImportController;
+use App\Http\Controllers\PrivateVanTourExportImportController;
+use App\Http\Controllers\ProductAvailableScheduleController;
+use App\Http\Controllers\ReservationExportController;
+use App\Http\Controllers\ReservationTransactionController;
+use App\Http\Controllers\RestaurantController;
+use App\Http\Controllers\RestaurantExportImportController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\RoomExportImportController;
+use App\Http\Controllers\SupplierController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/bookings/{id}/receipt', [BookingController::class, 'printReceipt']);
@@ -122,6 +123,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Entrance Ticket
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
+    Route::delete('entrance-tickets/{entrance_ticket}/contracts/{entrance_ticket_contract}', [EntranceTicketController::class, 'deleteContract']);
     Route::get('entrance-tickets/export/csv', [EntranceTicketExportImportController::class, 'export']);
     Route::post('entrance-tickets/import/csv', [EntranceTicketExportImportController::class, 'import']);
 
@@ -146,6 +148,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Facility
     Route::apiResource('facilities', FacilityController::class);
 
+    # Hotel Category
+    Route::apiResource('hotel-categories', HotelCategoryController::class);
+
     # Customer
     Route::apiResource('customers', CustomerController::class);
     Route::get('customers/{id}/sales', [CustomerController::class, 'getSales']);
@@ -168,6 +173,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('hotels', HotelController::class);
     Route::get('incomplete-hotels', [HotelController::class, 'incomplete']);
     Route::delete('hotels/{hotel}/images/{hotel_image}', [HotelController::class, 'deleteImage']);
+    Route::delete('hotels/{hotel}/contracts/{hotel_contract}', [HotelController::class, 'deleteContract']);
     Route::get('hotels/export/csv', [HotelExportImportController::class, 'export']);
     Route::post('hotels/import/csv', [HotelExportImportController::class, 'import']);
 

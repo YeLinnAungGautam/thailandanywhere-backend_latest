@@ -57,6 +57,7 @@ class HotelController extends Controller
                     $q->select('hotel_id')->from('facility_hotel')->whereIn('facility_id', $ids);
                 });
             })
+            ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id))
             ->paginate($request->limit ?? 10);
 
         return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
