@@ -23,6 +23,7 @@ class HotelResource extends JsonResource
             'category' => new HotelCategoryResource($this->category),
             'description' => $this->description,
             'full_description' => $this->full_description,
+            'full_description_en' => $this->full_description_en,
             'type' => $this->type,
             'legal_name' => $this->legal_name,
             'account_name' => $this->account_name,
