@@ -59,4 +59,9 @@ class EntranceTicket extends Model
     {
         return $this->belongsToMany(AttractionActivity::class, 'activity_entrance_ticket');
     }
+
+    public function bookingItems()
+    {
+        return $this->morphMany(BookingItem::class, 'product');
+    }
 }

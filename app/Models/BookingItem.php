@@ -186,4 +186,9 @@ class BookingItem extends Model
     {
         return $this->payment_status === 'fully_paid';
     }
+
+    public function scopeOnlyEntranceTicket($query)
+    {
+        $query->where('product_type', EntranceTicket::class);
+    }
 }

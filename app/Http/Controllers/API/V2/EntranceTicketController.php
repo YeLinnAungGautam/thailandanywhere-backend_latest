@@ -11,7 +11,8 @@ class EntranceTicketController extends Controller
 {
     public function index(Request $request)
     {
-        $items = EntranceTicket::query()
+        $query = EntranceTicket::query()
+            ->withCount('bookingItems')
             ->with('tags', 'cities', 'categories', 'images', 'contracts', 'variations')
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->search}%");
@@ -27,9 +28,17 @@ class EntranceTicketController extends Controller
                         ->from('activity_entrance_ticket')
                         ->whereIn('attraction_activity_id', explode(',', $request->activities));
                 });
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate($limit ?? 10);
+            });
+
+        if($request->order_by) {
+            if($request->order_by == 'top_selling_products') {
+                $query = $query->orderBy('booking_items_count', 'desc');
+            }
+        } else {
+            $query = $query->orderBy('created_at', 'desc');
+        }
+
+        $items = $query->paginate($limit ?? 10);
 
         return EntranceTicketResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
