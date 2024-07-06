@@ -25,7 +25,8 @@ class UpdateHotelRequest extends FormRequest
             'name' => 'required',
             'type' => 'nullable|in:direct_booking,other_booking',
             'rating' => 'nullable|integer',
-            'nearby_places' => 'nullable|array'
+            'nearby_places' => 'nullable|array',
+            'category_id' => 'nullable|numeric',
         ];
     }
 }
