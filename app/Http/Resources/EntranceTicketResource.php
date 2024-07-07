@@ -27,6 +27,7 @@ class EntranceTicketResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'full_description' => $this->full_description,
+            'full_description_en' => $this->full_description_en,
             'cover_image' => $this->cover_image ? config('app.url') . Storage::url('images/' . $this->cover_image) : null,
             'activities' => AttractionActivityResource::collection($this->activities),
             'tags' => PrivateVanTourTagResource::collection($this->tags),

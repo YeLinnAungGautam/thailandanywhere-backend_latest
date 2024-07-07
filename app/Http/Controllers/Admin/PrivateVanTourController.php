@@ -79,6 +79,7 @@ class PrivateVanTourController extends Controller
             'sku_code' => $request->sku_code,
             'long_description' => $request->long_description,
             'full_description' => $request->full_description,
+            'full_description_en' => $request->full_description_en,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -153,6 +154,7 @@ class PrivateVanTourController extends Controller
             'sku_code' => $request->sku_code ?? $find->sku_code,
             'long_description' => $request->long_description ?? $find->long_description,
             'full_description' => $request->full_description ?? $find->full_description,
+            'full_description_en' => $request->full_description_en ?? $find->full_description_en,
         ];
 
         if ($file = $request->file('cover_image')) {

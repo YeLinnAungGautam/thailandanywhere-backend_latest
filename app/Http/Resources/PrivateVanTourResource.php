@@ -23,6 +23,7 @@ class PrivateVanTourResource extends JsonResource
             'type' => $this->type,
             'long_description' => $this->long_description,
             'full_description' => $this->full_description,
+            'full_description_en' => $this->full_description_en,
             'cover_image' => $this->cover_image ? config('app.url') . Storage::url('images/' . $this->cover_image) : null,
             'cars' => PrivateVanTourCarResource::collection($this->cars),
             'destinations' => PrivateVanTourDestinationResource::collection($this->destinations),

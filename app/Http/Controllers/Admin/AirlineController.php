@@ -51,6 +51,7 @@ class AirlineController extends Controller
             'name' => $request->name,
             'legal_name' => $request->legal_name,
             'full_description' => $request->full_description,
+            'full_description_en' => $request->full_description_en,
             'starting_balance' => $request->starting_balance,
         ];
 
@@ -82,6 +83,7 @@ class AirlineController extends Controller
             'name' => $request->name ?? $airline->name,
             'legal_name' => $request->legal_name ?? $airline->legal_name,
             'full_description' => $request->full_description ?? $airline->full_description,
+            'full_description_en' => $request->full_description_en ?? $airline->full_description_en,
             'starting_balance' => $request->starting_balance ?? $airline->starting_balance,
         ]);
 
