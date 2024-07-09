@@ -11,7 +11,8 @@ class PrivateVanTourController extends Controller
 {
     public function index(Request $request)
     {
-        $items = PrivateVanTour::query()
+        $query = PrivateVanTour::query()
+            ->withCount('bookingItems')
             ->vanTour()
             ->with('cars', 'cities', 'destinations', 'tags', 'images')
             ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "%{$request->search}%"))
@@ -20,8 +21,17 @@ class PrivateVanTourController extends Controller
             })
             ->when($request->car_id, function ($query) use ($request) {
                 $query->whereIn('id', fn ($q) => $q->select('private_van_tour_id')->from('private_van_tour_cars')->where('car_id', $request->car_id));
-            })
-            ->paginate($request->limit ?? 10);
+            });
+
+        if($request->order_by) {
+            if($request->order_by == 'top_selling_products') {
+                $query = $query->orderBy('booking_items_count', 'desc');
+            }
+        } else {
+            $query = $query->orderBy('created_at', 'desc');
+        }
+
+        $items = $query->paginate($limit ?? 10);
 
         return PrivateVanTourResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }

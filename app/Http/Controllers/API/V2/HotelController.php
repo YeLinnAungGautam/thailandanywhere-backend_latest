@@ -11,7 +11,9 @@ class HotelController extends Controller
 {
     public function index(Request $request)
     {
-        $items = Hotel::query()
+        $query = Hotel::query()
+            ->withCount('bookingItems')
+            ->withCount('bookingItems')
             ->directBooking()
             ->with(
                 'city',
@@ -57,8 +59,17 @@ class HotelController extends Controller
                     $q->select('hotel_id')->from('facility_hotel')->whereIn('facility_id', $ids);
                 });
             })
-            ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id))
-            ->paginate($request->limit ?? 10);
+            ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
+
+        if($request->order_by) {
+            if($request->order_by == 'top_selling_products') {
+                $query = $query->orderBy('booking_items_count', 'desc');
+            }
+        } else {
+            $query = $query->orderBy('created_at', 'desc');
+        }
+
+        $items = $query->paginate($limit ?? 10);
 
         return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }

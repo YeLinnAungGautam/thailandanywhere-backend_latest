@@ -33,6 +33,7 @@ class PrivateVanTourResource extends JsonResource
             'lowest_car_price' => $this->cars()->orderByPivot('price', 'desc')->first()->pivot->price ?? 0,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
+            'total_booking_count' => $this->bookingItems()->count()
         ];
     }
 }

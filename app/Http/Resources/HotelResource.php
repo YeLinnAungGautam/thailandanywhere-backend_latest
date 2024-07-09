@@ -44,7 +44,8 @@ class HotelResource extends JsonResource
             'location_map_title' => $this->location_map_title,
             'location_map' => $this->location_map,
             'rating' => $this->rating,
-            'nearby_places' => is_null($this->nearby_places) ? null : json_decode($this->nearby_places)
+            'nearby_places' => is_null($this->nearby_places) ? null : json_decode($this->nearby_places),
+            'total_booking_count' => $this->bookingItems()->count()
         ];
     }
 
