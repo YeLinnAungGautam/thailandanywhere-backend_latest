@@ -9,7 +9,8 @@
     <script>
         window.opener.postMessage({
             token: "{{ $token }}"
-        }, "{{ url('/') }}")
+        }, "https://thanywhere.com")
+
         window.close()
     </script>
 </head>
