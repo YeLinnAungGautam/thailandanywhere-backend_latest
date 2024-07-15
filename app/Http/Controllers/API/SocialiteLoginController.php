@@ -6,6 +6,7 @@ use App\Exceptions\EmailTakenException;
 use App\Http\Controllers\Controller;
 use App\Models\OAuthProvider;
 use App\Models\User;
+use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -21,15 +22,21 @@ class SocialiteLoginController extends Controller
 
     public function callback(string $provider)
     {
-        $user = Socialite::driver($provider)->stateless()->user();
+        try {
+            $user = Socialite::driver($provider)->stateless()->user();
 
-        Log::info($user->getEmail());
+            Log::info($user->getEmail());
 
-        $user = $this->findOrCreateUser($provider, $user);
+            $user = $this->findOrCreateUser($provider, $user);
+            
+            return view('oauth/callback', [
+                'token' => $user->createToken('UserToken')->plainTextToken,
+            ]);
+        } catch (Exception $e) {
+            Log::error($e);
 
-        return view('oauth/callback', [
-            'token' => $user->createToken('UserToken')->plainTextToken,
-        ]);
+            return failedMessage($e->getMessage());
+        }
     }
 
     protected function findOrCreateUser(string $provider, $user)
