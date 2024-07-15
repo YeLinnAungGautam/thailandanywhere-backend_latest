@@ -1,1 +1,0 @@
-- remove and delete agent price column from rooms table and entrance ticket variations table
