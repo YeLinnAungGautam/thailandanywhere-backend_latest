@@ -6,6 +6,7 @@ use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
 use App\Http\Controllers\API\Frontend\PrivateVantourController;
 use App\Http\Controllers\API\Frontend\ProductCategoryController;
+use App\Http\Controllers\API\SocialiteLoginController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
@@ -64,3 +65,7 @@ Route::group([
     Route::apiResource('hotels', HotelController::class)->only('show');
     Route::get('hotels/{id}/related-hotels', [HotelController::class, 'getRelatedHotels']);
 });
+
+# Socialite Login
+Route::post('oauth/{driver}/redirect', [SocialiteLoginController::class, 'redirect']);
+Route::get('oauth/{driver}/callback', [SocialiteLoginController::class, 'callback'])->name('oauth.callback');
