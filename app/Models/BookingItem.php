@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ExcludeProductTypesScope;
 use App\Services\BookingItemDataService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +17,11 @@ class BookingItem extends Model
     protected $hidden = [
         'laravel_through_key'
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new ExcludeProductTypesScope);
+    }
 
     public function product()
     {

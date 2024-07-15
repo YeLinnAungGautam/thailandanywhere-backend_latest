@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ExcludeProductTypesScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,21 @@ class Booking extends Model
     protected $guarded = [];
 
     // protected $fillable = ['invoice_number', 'bank_name', 'crm_id', 'customer_id', 'sold_from', 'payment_method', 'payment_currency', 'payment_status', 'booking_date', 'money_exchange_rate', 'discount', 'sub_total', 'grand_total', 'deposit', 'balance_due', 'balance_due_date', 'comment', 'reservation_status', 'created_by', 'is_past_info', 'past_user_id', 'past_crm_id', 'payment_notes'];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new ExcludeProductTypesScope);
+    }
+
+    public static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->invoice_number = $model->generateInvoiceNumber();
+            $model->crm_id = $model->generateCrmID();
+        });
+    }
 
     public function customer()
     {
@@ -32,22 +48,13 @@ class Booking extends Model
     public function items()
     {
         return $this->hasMany(BookingItem::class);
+        // return $this->hasMany(BookingItem::class)
+        //     ->whereNotIn('product_type', [Airline::class, AirportPickup::class]);
     }
 
     public function receipts()
     {
         return $this->hasMany(BookingReceipt::class);
-    }
-
-
-    public static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            $model->invoice_number = $model->generateInvoiceNumber();
-            $model->crm_id = $model->generateCrmID();
-        });
     }
 
     public function generateInvoiceNumber()
