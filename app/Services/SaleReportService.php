@@ -25,7 +25,6 @@ class SaleReportService
     public function getSaleData($created_by = null): array
     {
         $sales = Booking::query()
-            ->excludeAirline()
             ->when($created_by, function ($q) use ($created_by) {
                 $q->where('created_by', $created_by);
             })
@@ -47,7 +46,6 @@ class SaleReportService
     public function getSaleCountData($created_by = null): array
     {
         $sales = Booking::query()
-            ->excludeAirline()
             ->when($created_by, function ($q) use ($created_by) {
                 $q->where('created_by', $created_by);
             })
@@ -66,7 +64,6 @@ class SaleReportService
     public function getBookingData($created_by = null): array
     {
         $sales = Booking::query()
-            ->excludeAirline()
             ->when($created_by, function ($q) use ($created_by) {
                 $q->where('created_by', $created_by);
             })
@@ -84,7 +81,7 @@ class SaleReportService
 
     public function getReservationsData(): array
     {
-        $data = Booking::query()->excludeAirline()->whereDate('created_at', date($this->date))->get();
+        $data = Booking::query()->whereDate('created_at', date($this->date))->get();
 
         $results = BookingResource::collection($data);
 
@@ -165,7 +162,6 @@ class SaleReportService
         $date = $date ?? Carbon::now()->format('Y-m-d');
 
         return Booking::query()
-            ->excludeAirline()
             ->whereDate('created_at', $date)
             ->groupBy('created_by')
             ->orderByRaw('total DESC')
