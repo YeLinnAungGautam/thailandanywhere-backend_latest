@@ -20,7 +20,7 @@ class BookingItem extends Model
 
     protected static function booted()
     {
-        static::addGlobalScope(new ExcludeProductTypesScope);
+        // static::addGlobalScope(new ExcludeProductTypesScope);
     }
 
     public function product()
