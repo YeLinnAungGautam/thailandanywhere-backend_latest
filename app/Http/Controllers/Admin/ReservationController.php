@@ -74,7 +74,7 @@ class ReservationController extends Controller
                 //         ->whereDate('created_at', $request->booking_date);
                 // });
 
-                $q->where('created_at', $request->booking_date);
+                $q->where('booking_items.created_at', $request->booking_date);
             });
 
         if ($serviceDate) {
