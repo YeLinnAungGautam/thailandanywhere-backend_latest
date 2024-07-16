@@ -20,6 +20,7 @@ class ReportService
         $end_date = Carbon::parse($dates[1])->format('Y-m-d');
 
         $bookings = Booking::query()
+            ->excludeAirline()
             ->join('admins', 'bookings.created_by', '=', 'admins.id')
             ->with('createdBy:id,name,target_amount')
             ->whereBetween('bookings.created_at', [$start_date, $end_date])
@@ -52,6 +53,7 @@ class ReportService
         $today_date = Carbon::now()->format('Y-m-d');
 
         return Booking::query()
+            ->excludeAirline()
             ->with('createdBy:id,name')
             ->when($agent_id, fn ($query) => $query->where('created_by', $agent_id))
             ->when($service_daterange, function ($query) use ($service_daterange) {
@@ -77,7 +79,7 @@ class ReportService
         $start_date = Carbon::parse($dates[0])->format('Y-m-d');
         $end_date = Carbon::parse($dates[1])->format('Y-m-d');
 
-        $booking_count = Booking::whereBetween('created_at', [$start_date, $end_date])->count();
+        $booking_count = Booking::excludeAirline()->whereBetween('created_at', [$start_date, $end_date])->count();
         $private_van_tour_sale_count = BookingItem::where('product_type', PrivateVanTour::class)->whereBetween('created_at', [$start_date, $end_date])->count();
         $attraction_sale_count = BookingItem::where('product_type', EntranceTicket::class)->whereBetween('created_at', [$start_date, $end_date])->count();
         $hotel_sale_count = BookingItem::where('product_type', Hotel::class)->whereBetween('created_at', [$start_date, $end_date])->count();
@@ -100,6 +102,7 @@ class ReportService
         $end_date = Carbon::parse($dates[1])->format('Y-m-d');
 
         $products = BookingItem::query()
+            ->excludeAirline()
             ->with('product:id,name')
             ->when($product_type, fn ($query) => $query->where('product_type', $product_type))
             ->whereDate('created_at', '>=', $start_date)

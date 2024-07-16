@@ -81,13 +81,17 @@ class ReportController extends Controller
     {
 
         if($from != '' && $to != '') {
-            $data = Booking::select('created_by', DB::raw('SUM(grand_total) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('SUM(grand_total) as total'))
                 ->groupBy('created_by')
                 ->whereBetween('created_at', [date($from), date($to)])
                 ->get();
 
         } else {
-            $data = Booking::select('created_by', DB::raw('SUM(grand_total) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('SUM(grand_total) as total'))
                 ->groupBy('created_by')
                 ->get();
         }
@@ -109,12 +113,16 @@ class ReportController extends Controller
     public function salesCount($from = '', $to = '')
     {
         if($from != '' && $to != '') {
-            $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('COUNT(grand_total) as total'))
                 ->groupBy('created_by')
                 ->whereBetween('created_at', [date($from), date($to)])
                 ->get();
         } else {
-            $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('COUNT(grand_total) as total'))
                 ->groupBy('created_by')
                 ->get();
         }
@@ -136,13 +144,17 @@ class ReportController extends Controller
     public function bookingsCount($from = '', $to = '')
     {
         if($from != '' && $to != '') {
-            $data = Booking::select('created_by', DB::raw('COUNT(id) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('COUNT(id) as total'))
                 ->groupBy('created_by')
                 ->whereBetween('created_at', [date($from), date($to)])
                 ->get();
         } else {
 
-            $data = Booking::select('created_by', DB::raw('COUNT(id) as total'))
+            $data = Booking::query()
+                ->excludeAirline()
+                ->select('created_by', DB::raw('COUNT(id) as total'))
                 ->groupBy('created_by')
                 ->get();
         }
@@ -164,7 +176,7 @@ class ReportController extends Controller
     public function reservationsCount($from = '', $to = '')
     {
 
-        $query = Booking::query();
+        $query = Booking::query()->excludeAirline();
 
         if($from != '' && $to != '') {
             $query->whereBetween('created_at', [date($from), date($to)]);
@@ -237,7 +249,9 @@ class ReportController extends Controller
 
     public function salesData($date)
     {
-        $data = Booking::select('created_by', DB::raw('SUM(grand_total) as total'))
+        $data = Booking::query()
+            ->excludeAirline()
+            ->select('created_by', DB::raw('SUM(grand_total) as total'))
             ->groupBy('created_by')
             ->whereDate('created_at', Carbon::parse($date)->format('Y-m-d'))
             ->get();
@@ -259,7 +273,9 @@ class ReportController extends Controller
     public function salesCountData($date)
     {
 
-        $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+        $data = Booking::query()
+            ->excludeAirline()
+            ->select('created_by', DB::raw('COUNT(grand_total) as total'))
             ->groupBy('created_by')
             ->whereDate('created_at', '=', date($date))
             ->get();
@@ -282,7 +298,9 @@ class ReportController extends Controller
     public function bookingsData($date)
     {
 
-        $data = Booking::select('created_by', DB::raw('COUNT(id) as total'))
+        $data = Booking::query()
+            ->excludeAirline()
+            ->select('created_by', DB::raw('COUNT(id) as total'))
             ->groupBy('created_by')
             ->whereDate('created_at', '=', date($date))
             ->get();
@@ -304,7 +322,7 @@ class ReportController extends Controller
     public function reservationsData($date)
     {
 
-        $query = Booking::query();
+        $query = Booking::query()->excludeAirline();
 
         $query->whereDate('created_at', date($date));
 
@@ -391,7 +409,9 @@ class ReportController extends Controller
     // }
     public function getEachUserSaleCount()
     {
-        $data = Booking::select('created_by', DB::raw('COUNT(grand_total) as total'))
+        $data = Booking::query()
+            ->excludeAirline()
+            ->select('created_by', DB::raw('COUNT(grand_total) as total'))
             ->groupBy('created_by')
             ->get();
 

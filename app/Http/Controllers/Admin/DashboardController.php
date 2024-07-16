@@ -26,6 +26,7 @@ class DashboardController extends Controller
             $dates = explode(',', $request->daterange);
 
             $results = Booking::query()
+                ->excludeAirline()
                 ->whereBetween('booking_date', [$dates[0], $dates[1]])
                 ->groupBy('sold_from')
                 ->select(
@@ -50,6 +51,7 @@ class DashboardController extends Controller
             $dates = explode(',', $request->daterange);
 
             $results = Booking::query()
+                ->excludeAirline()
                 ->whereBetween('booking_date', [$dates[0], $dates[1]])
                 ->groupBy('payment_method')
                 ->select(
@@ -74,6 +76,7 @@ class DashboardController extends Controller
             $dates = explode(',', $request->daterange);
 
             $results = Booking::query()
+                ->excludeAirline()
                 ->whereBetween('booking_date', [$dates[0], $dates[1]])
                 ->groupBy('payment_status')
                 ->select(
@@ -98,6 +101,7 @@ class DashboardController extends Controller
             $dates = explode(',', $request->daterange);
 
             $results = Booking::query()
+                ->excludeAirline()
                 ->join('booking_items', 'bookings.id', 'booking_items.booking_id')
                 ->whereBetween('bookings.booking_date', [$dates[0], $dates[1]])
                 ->select(

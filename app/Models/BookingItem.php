@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\ExcludeProductTypesScope;
 use App\Services\BookingItemDataService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,9 +18,14 @@ class BookingItem extends Model
         'laravel_through_key'
     ];
 
-    protected static function booted()
+    public function scopeExcludeAirline(Builder $query)
     {
-        // static::addGlobalScope(new ExcludeProductTypesScope);
+        $date = '2024-07-16';
+
+        return $query->where(function ($query) use ($date) {
+            $query->where('product_type', '!=', Airline::class)
+                ->orWhereDate('created_at', '<', $date);
+        });
     }
 
     public function product()
