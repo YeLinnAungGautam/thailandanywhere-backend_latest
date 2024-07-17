@@ -193,7 +193,8 @@ class DashboardController extends Controller
                 'sub_total_amount' => $bookings->sum('sub_total'),
                 'grand_total_amount' => $bookings->sum('grand_total'),
                 'total_discount' => $bookings->sum('discount'),
-                'reservations' => $booking_items->sum('amount')
+                'reservation_total' => $booking_items->sum('amount'),
+                'reservations' => $booking_items
             ];
 
             return success($data);
