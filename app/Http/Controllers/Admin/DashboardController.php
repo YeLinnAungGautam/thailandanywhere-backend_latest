@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TopSellingProductResource;
 use App\Http\Resources\UnpaidBookingResource;
 use App\Models\Booking;
+use App\Models\BookingItem;
 use App\Services\ReportService;
 use App\Traits\HttpResponses;
 use Exception;
@@ -171,6 +172,34 @@ class DashboardController extends Controller
             return $this->success(TopSellingProductResource::collection($data), 'Sale count report');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function saleReportByDate(Request $request)
+    {
+        try {
+            if(!$request->created_at) {
+                throw new Exception('Report by date: Invalid date to filter');
+            }
+
+            $bookings = Booking::whereDate('created_at', $request->created_at)->get();
+
+            $booking_items = BookingItem::query()
+                ->select('id', 'product_id', 'product_type', 'amount')
+                ->whereIn('booking_id', $bookings->pluck('id')->toArray())
+                ->get();
+
+            $data = [
+                'sub_total_amount' => $bookings->sum('sub_total'),
+                'grand_total_amount' => $bookings->sum('grand_total'),
+                'total_discount' => $bookings->sum('discount'),
+                'reservations' => $booking_items->sum('amount')
+            ];
+
+            return success($data);
+
+        } catch (Exception $e) {
+            return failedMessage($e->getMessage());
         }
     }
 }

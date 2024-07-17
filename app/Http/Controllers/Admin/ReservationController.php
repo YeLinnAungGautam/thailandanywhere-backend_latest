@@ -68,12 +68,6 @@ class ReservationController extends Controller
                 // });
             })
             ->when($request->booking_date, function ($q) use ($request) {
-                // $q->whereIn('booking_id', function ($q) use ($request) {
-                //     $q->select('id')
-                //         ->from('bookings')
-                //         ->whereDate('created_at', $request->booking_date);
-                // });
-
                 $q->whereDate('booking_items.created_at', $request->booking_date);
             });
 
