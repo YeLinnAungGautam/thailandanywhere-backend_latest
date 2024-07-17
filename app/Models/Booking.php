@@ -119,4 +119,14 @@ class Booking extends Model
 
         return $bookingId;
     }
+
+    public function getAcsrSubTotalAttribute()
+    {
+        return $this->sub_total + $this->exclude_amount;
+    }
+
+    public function getAcsrGrandTotalAttribute()
+    {
+        return $this->grand_total + $this->exclude_amount;
+    }
 }

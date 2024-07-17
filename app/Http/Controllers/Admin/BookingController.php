@@ -456,16 +456,25 @@ class BookingController extends Controller
     public function printReceipt(Request $request, string $id)
     {
         if ($request->query('paid') && $request->query('paid') === 1) {
-            $booking = Booking::where('id', $id)->with(['customer', 'items' => function ($q) {
-                $q->where('payment_status', 'fully_paid')->where('is_inclusive', '0');
-            }, 'createdBy'])->first();
+            $booking = Booking::query()
+                ->where('id', $id)->with(['customer', 'items' => function ($q) {
+                    $q->where('payment_status', 'fully_paid')
+                        ->where('is_inclusive', '0');
+                }, 'createdBy'])
+                ->first();
         } else {
-            $booking = Booking::where('id', $id)->with(['customer', 'items' => function ($q) {
-                $q->where('is_inclusive', '0');
-            }, 'createdBy'])->first();
+            $booking = Booking::query()
+                ->where('id', $id)
+                ->with(['customer', 'items' => function ($q) {
+                    $q->where('is_inclusive', '0');
+                }, 'createdBy'])
+                ->first();
         }
 
-        $data = new BookingResource($booking);
+        $data = $booking;
+        $data->sub_total = $data->acsr_sub_total;
+        $data->grand_total = $data->acsr_grand_total;
+
         $pdf_view = 'pdf.booking_receipt';
 
         if($booking->is_inclusive) {
@@ -474,7 +483,7 @@ class BookingController extends Controller
 
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
-        ])->loadView($pdf_view, compact('data'));
+        ])->loadView($pdf_view, ['data' => $data]);
 
         return $pdf->stream();
     }
