@@ -62,6 +62,7 @@ class BookingItemResource extends JsonResource
             'customer_attachment' => $this->customer_attachment ? config('app.url') . Storage::url('attachments/' . $this->customer_attachment) : null,
             'product_type' => $this->product_type,
             'product_id' => $this->product_id,
+            'is_excluded' => $this->is_excluded,
             'product' => $product,
             'car' => $this->car,
             'room' => $this->room,

@@ -37,6 +37,7 @@ class BookingResource extends JsonResource
             'money_exchange_rate' => $this->money_exchange_rate,
             'sub_total' => $this->sub_total,
             'grand_total' => $this->grand_total,
+            'exclude_amount' => $this->exclude_amount,
             'deposit' => $this->deposit,
             'discount' => $this->discount,
             'comment' => $this->comment,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Jobs\SendSaleDepositUpdateEmailJob;
+use App\Models\Airline;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
@@ -142,6 +143,7 @@ class BookingController extends Controller
                 'money_exchange_rate' => $request->money_exchange_rate,
                 'sub_total' => $request->sub_total,
                 'grand_total' => $request->grand_total,
+                'exclude_amount' => $request->exclude_amount,
                 'deposit' => $request->deposit,
                 'balance_due' => $request->balance_due,
                 'balance_due_date' => $request->balance_due_date,
@@ -174,12 +176,15 @@ class BookingController extends Controller
             foreach ($request->items as $key => $item) {
                 $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
 
+                $is_excluded = ($item['product_type'] == Airline::class) ? true : false;
+
                 $data = [
                     'booking_id' => $save->id,
                     'crm_id' => $save->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
                     'product_type' => $item['product_type'],
                     'room_number' => $item['room_number'] ?? null,
                     'product_id' => $item['product_id'],
+                    'is_excluded' => $is_excluded,
                     'car_id' => isset($item['car_id']) ? $item['car_id'] : null,
                     'room_id' => isset($item['room_id']) ? $item['room_id'] : null,
                     'ticket_id' => isset($item['ticket_id']) ? $item['ticket_id'] : null,
@@ -289,6 +294,7 @@ class BookingController extends Controller
                 'comment' => $request->comment ?? $find->comment,
                 'sub_total' => $request->sub_total ?? $find->sub_total,
                 'grand_total' => $request->grand_total ?? $find->grand_total,
+                'exclude_amount' => $request->exclude_amount ?? $find->exclude_amount,
                 'deposit' => $request->deposit ?? $find->deposit,
                 'balance_due' => $request->balance_due ?? $find->balance_due,
                 'balance_due_date' => $request->balance_due_date ?? $find->balance_due_date,

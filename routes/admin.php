@@ -51,7 +51,6 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
 use App\Models\Booking;
-use App\Models\BookingItem;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -241,27 +240,4 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Report by sale date
     Route::get('sale-report-by-date', [DashboardController::class, 'saleReportByDate']);
-
-    Route::get('test', function () {
-        $bookings = Booking::whereDate('created_at', '2024-07-16')->get();
-
-        $items = BookingItem::whereIn('booking_id', $bookings->pluck('id')->toArray())->get();
-
-        // $items->sum('amount') - 211902
-
-        // $bookings->sum('grand_total') - 235712
-
-        // $bookings->sum('sub_total') - 236752
-
-        $test = [];
-        foreach($bookings as $booking) {
-            $item_total = $booking->items->sum('amount');
-
-            if($booking->grand_total != $item_total) {
-                $test[] = $booking->id;
-            }
-        }
-
-        dd($test);
-    });
 });
