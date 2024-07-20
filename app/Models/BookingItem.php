@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Services\BookingItemDataService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,16 +16,6 @@ class BookingItem extends Model
     protected $hidden = [
         'laravel_through_key'
     ];
-
-    public function scopeExcludeAirline(Builder $query)
-    {
-        $date = '2024-07-16';
-
-        return $query->where(function ($query) use ($date) {
-            $query->where('product_type', '!=', Airline::class)
-                ->orWhereDate('created_at', '<', $date);
-        });
-    }
 
     public function product()
     {

@@ -76,7 +76,7 @@ class BookingItemDataService
         ];
     }
 
-    private function getCostPrice(): int
+    public function getCostPrice(): int
     {
         $cost_price = null;
 

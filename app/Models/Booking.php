@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -20,19 +19,6 @@ class Booking extends Model
         static::creating(function ($model) {
             $model->invoice_number = $model->generateInvoiceNumber();
             $model->crm_id = $model->generateCrmID();
-        });
-    }
-
-    public function scopeExcludeAirline(Builder $query)
-    {
-        $date = '2024-07-16';
-
-        return $query->whereIn('id', function ($query) use ($date) {
-            $query
-                ->select('booking_id')
-                ->from('booking_items')
-                ->where('product_type', '!=', Airline::class)
-                ->orWhereDate('created_at', '<', $date);
         });
     }
 

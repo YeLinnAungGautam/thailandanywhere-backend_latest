@@ -10,6 +10,7 @@ use App\Models\Airline;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
+use App\Models\InclusiveProduct;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -144,7 +145,7 @@ class BookingController extends Controller
                 'sub_total' => $request->sub_total,
                 'grand_total' => $request->grand_total,
                 'exclude_amount' => $request->exclude_amount,
-                'deposit' => $request->deposit,
+                'deposit' => $request->deposit ?? 0,
                 'balance_due' => $request->balance_due,
                 'balance_due_date' => $request->balance_due_date,
                 'discount' => $request->discount,
@@ -241,6 +242,19 @@ class BookingController extends Controller
                 BookingItem::create($data);
             }
 
+            if($save->is_inclusive) {
+                $booking_item_total = $save->items->sum('amount');
+                $inclusive_profit = $save->grand_total - $booking_item_total;
+
+                $save->items()->create([
+                    'crm_id' => $save->crm_id . '_' . str_pad(count($request->items) + 1, 3, '0', STR_PAD_LEFT),
+                    'product_type' => InclusiveProduct::class,
+                    'product_id' => 0,
+                    'is_inclusive' => true,
+                    'amount' => $inclusive_profit,
+                ]);
+            }
+
             DB::commit();
 
             return $this->success(new BookingResource($save), 'Successfully created');
@@ -300,7 +314,7 @@ class BookingController extends Controller
                 'balance_due' => $request->balance_due ?? $find->balance_due,
                 'balance_due_date' => $request->balance_due_date ?? $find->balance_due_date,
                 'discount' => $request->discount ?? $find->discount,
-                "reservation_status" => 'awaiting',
+                'reservation_status' => 'awaiting',
                 'payment_notes' => $request->payment_notes,
 
                 'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : $find->is_inclusive,
@@ -346,7 +360,9 @@ class BookingController extends Controller
                     $d_item->delete();
                 }
 
-                foreach ($request->items as $key => $item) {
+                $booking_items = collect($request->items)->whereNotNull('product_type')->toArray();
+
+                foreach ($booking_items as $key => $item) {
                     $data = [
                         'booking_id' => $find->id,
                         'crm_id' => $find->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
@@ -414,6 +430,19 @@ class BookingController extends Controller
 
                         $booking_item->update($data);
                     }
+                }
+            }
+
+            if($find->is_inclusive) {
+                $booking_item_total = $find->items->where('product_type', '<>', InclusiveProduct::class)->sum('amount');
+                $inclusive_profit = $find->grand_total - $booking_item_total;
+
+                $inclusive_item = $find->items()->where('product_type', InclusiveProduct::class)->first();
+
+                if($inclusive_item) {
+                    $inclusive_item->update([
+                        'amount' => $inclusive_profit,
+                    ]);
                 }
             }
 
