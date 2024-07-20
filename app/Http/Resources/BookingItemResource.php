@@ -80,6 +80,11 @@ class BookingItemResource extends JsonResource
             'payment_status' => $this->payment_status,
             'bank_name' => $this->bank_name,
             'cost' => $this->cost,
+
+            'amount' => $this->amount,
+            'discount' => $this->discount,
+            'is_inclusive' => $this->is_inclusive,
+
             'bank_account_number' => $this->bank_account_number,
             'exchange_rate' => $this->exchange_rate,
             'confirmation_letter' => $this->confirmation_letter ? config('app.url') . Storage::url('files/' . $this->confirmation_letter) : null,

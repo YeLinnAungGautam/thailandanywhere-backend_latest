@@ -201,6 +201,7 @@ class BookingController extends Controller
                     'exchange_rate' => $item['exchange_rate'] ?? null,
                     'comment' => $item['comment'] ?? null,
                     'amount' => $item['amount'] ?? null,
+                    'discount' => $item['discount'] ?? null,
                     'days' => $item['days'] ?? null,
                     'special_request' => isset($item['special_request']) ? $item['special_request'] : null,
                     'route_plan' => isset($item['route_plan']) ? $item['route_plan'] : null,
@@ -211,7 +212,7 @@ class BookingController extends Controller
                     'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
-                    'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
+                    'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
                     'is_driver_collect' => $is_driver_collect
                 ];
 
@@ -368,6 +369,7 @@ class BookingController extends Controller
                         'duration' => $item['duration'] ?? null,
                         'selling_price' => $item['selling_price'] ?? null,
                         'amount' => $item['amount'] ?? null,
+                        'discount' => $item['discount'] ?? null,
                         'cost_price' => $item['cost_price'] ?? null,
                         'payment_method' => $item['payment_method'] ?? null,
                         'payment_status' => $item['payment_status'] ?? 'not_paid',
