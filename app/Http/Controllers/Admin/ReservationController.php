@@ -69,6 +69,13 @@ class ReservationController extends Controller
             })
             ->when($request->booking_date, function ($q) use ($request) {
                 $q->whereDate('booking_items.created_at', $request->booking_date);
+            })
+            ->when($request->booking_daterange, function ($query) use ($request) {
+                $query->whereHas('booking', function ($q) use ($request) {
+                    $dates = explode(',', $request->booking_daterange);
+
+                    $q->whereBetween('bookings.booking_date', $dates);
+                });
             });
 
         if ($serviceDate) {
