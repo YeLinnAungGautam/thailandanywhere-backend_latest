@@ -25,7 +25,7 @@ class CalendarController extends Controller
         $query = BookingItem::query()
             ->with(
                 'booking:id,past_crm_id,payment_status,booking_date',
-                'product:id,name',
+                'product',
                 'car:id,name',
                 'variation:id,name',
                 'room:id,name',
