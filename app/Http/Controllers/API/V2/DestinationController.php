@@ -31,6 +31,11 @@ class DestinationController extends Controller
             ->additional(['result' => 1, 'message' => 'success']);
     }
 
+    public function show(Destination $destination)
+    {
+        return success(new DestinationResource($destination));
+    }
+
     public function getRelatedTours(string $id)
     {
         $destination = Destination::find($id);

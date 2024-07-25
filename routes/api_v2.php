@@ -28,6 +28,7 @@ Route::group([], function () {
 
     # Destination
     Route::get('destinations', [DestinationController::class, 'index']);
+    Route::get('destinations/{destination}', [DestinationController::class, 'show']);
     Route::get('destinations/{id}/related-tours', [DestinationController::class, 'getRelatedTours']);
 
     # City
