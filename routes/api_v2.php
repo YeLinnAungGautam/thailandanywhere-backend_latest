@@ -5,6 +5,7 @@ use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
 use App\Http\Controllers\API\V2\CarController;
 use App\Http\Controllers\API\V2\CityController;
+use App\Http\Controllers\API\V2\DestinationController;
 use App\Http\Controllers\API\V2\EntranceTicketController;
 use App\Http\Controllers\API\V2\EntranceTicketVariationController;
 use App\Http\Controllers\API\V2\FacilityController;
@@ -24,6 +25,10 @@ Route::group([], function () {
 
     # Car
     Route::get('cars', [CarController::class, 'index']);
+
+    # Destination
+    Route::get('destinations', [DestinationController::class, 'index']);
+    Route::get('destinations/{id}/related-tours', [DestinationController::class, 'getRelatedTours']);
 
     # City
     Route::get('cities', [CityController::class, 'index']);

@@ -186,6 +186,7 @@ class ReservationController extends Controller
             ->additional([
                 'meta' => [
                     'total_page' => (int)ceil($data->total() / $data->perPage()),
+                    'total_amount' => $query->sum('booking_items.amount')
                 ],
             ])
             ->response()
