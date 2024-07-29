@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\API\LoginController;
+use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\V2\AirlineController;
 use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
@@ -78,4 +80,11 @@ Route::group([], function () {
 
     # Attraction Activities
     Route::get('attraction-activities', [AttractionActivityController::class, 'index']);
+
+    # Register
+    Route::post('register', [RegisterController::class, 'register']);
+
+    # Login
+    Route::post('login', [LoginController::class, 'login']);
+    Route::post('logout', [LoginController::class, 'logout']);
 });

@@ -6,6 +6,7 @@ use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
 use App\Http\Controllers\API\Frontend\PrivateVantourController;
 use App\Http\Controllers\API\Frontend\ProductCategoryController;
+use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\SocialiteLoginController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
@@ -69,3 +70,5 @@ Route::group([
 # Socialite Login
 Route::post('oauth/{driver}/redirect', [SocialiteLoginController::class, 'redirect']);
 Route::get('oauth/{driver}/callback', [SocialiteLoginController::class, 'callback'])->name('oauth.callback');
+
+
