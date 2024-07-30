@@ -216,6 +216,20 @@ class PrivateVanTourController extends Controller
     public function destroy(string $id)
     {
         $find = PrivateVanTour::find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->delete();
+
+        return $this->success(null, 'Successfully deleted');
+    }
+
+    public function hardDelete(string $id)
+    {
+        $find = PrivateVanTour::onlyTrashed()->find($id);
+
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
@@ -234,8 +248,21 @@ class PrivateVanTourController extends Controller
             $image->delete();
         }
 
-        $find->delete();
+        $find->forceDelete();
 
-        return $this->success(null, 'Successfully deleted');
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = PrivateVanTour::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 }

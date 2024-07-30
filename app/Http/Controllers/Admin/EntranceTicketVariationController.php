@@ -153,15 +153,41 @@ class EntranceTicketVariationController extends Controller
      */
     public function destroy(EntranceTicketVariation $entrance_tickets_variation)
     {
+        $entrance_tickets_variation->delete();
+
+        return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $entrance_tickets_variation = EntranceTicketVariation::onlyTrashed()->find($id);
+
+        if (!$entrance_tickets_variation) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         foreach($entrance_tickets_variation->images as $variation_image) {
             Storage::delete('public/images/' . $variation_image->image);
         }
 
         $entrance_tickets_variation->images()->delete();
 
-        $entrance_tickets_variation->delete();
+        $entrance_tickets_variation->forceDelete();
 
-        return $this->success(null, 'Successfully deleted', 200);
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = EntranceTicketVariation::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteImage(string $entrance_tickets_variation_id, string $product_image_id)

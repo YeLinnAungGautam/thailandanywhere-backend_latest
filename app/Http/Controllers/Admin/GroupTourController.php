@@ -182,6 +182,20 @@ class GroupTourController extends Controller
     public function destroy(string $id)
     {
         $find = GroupTour::find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->delete();
+
+        return $this->success(null, 'Successfully deleted');
+    }
+
+    public function forceDelete(string $id)
+    {
+        $find = GroupTour::onlyTrashed()->find($id);
+
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
@@ -202,5 +216,18 @@ class GroupTourController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = GroupTour::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 }

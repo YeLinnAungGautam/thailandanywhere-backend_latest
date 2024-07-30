@@ -89,4 +89,30 @@ class AirlineTicketController extends Controller
 
         return $this->success(null, 'Successfully deleted', 200);
     }
+
+    public function hardDelete(string $id)
+    {
+        $find = AirlineTicket::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->forceDelete();
+
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = AirlineTicket::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is completely deleted');
+    }
 }

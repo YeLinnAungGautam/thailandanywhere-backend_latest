@@ -242,6 +242,19 @@ class HotelController extends Controller
      */
     public function destroy(Hotel $hotel)
     {
+        $hotel->delete();
+
+        return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $hotel = Hotel::onlyTrashed()->find($id);
+
+        if (!$hotel) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         $hotel_images = HotelImage::where('hotel_id', '=', $hotel->id)->get();
 
         foreach($hotel_images as $hotel_image) {
@@ -255,6 +268,19 @@ class HotelController extends Controller
         $hotel->delete();
 
         return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function restore(string $id)
+    {
+        $hotel = Hotel::onlyTrashed()->find($id);
+
+        if (!$hotel) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $hotel->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteImage(Hotel $hotel, HotelImage $hotel_image)

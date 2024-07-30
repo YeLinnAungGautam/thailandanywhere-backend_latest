@@ -168,6 +168,19 @@ class RoomController extends Controller
      */
     public function destroy(Room $room)
     {
+        $room->delete();
+
+        return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $room = Room::onlyTrashed()->find($id);
+
+        if (!$room) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         $room_images = RoomImage::where('room_id', '=', $room->id)->get();
 
         foreach($room_images as $room_image) {
@@ -176,9 +189,22 @@ class RoomController extends Controller
 
         RoomImage::where('room_id', $room->id)->delete();
 
-        $room->delete();
+        $room->forceDelete();
 
         return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function restore(string $id)
+    {
+        $room = Room::onlyTrashed()->find($id);
+
+        if (!$room) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $room->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteImage(Room $room, RoomImage $room_image)

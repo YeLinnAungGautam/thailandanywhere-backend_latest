@@ -143,14 +143,41 @@ class MealController extends Controller
 
     public function destroy(Meal $meal)
     {
+        $meal->delete();
+
+        return $this->success(null, 'Successfully deleted', 200);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $meal = Meal::onlyTrashed()->find($id);
+
+        if (!$meal) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         foreach($meal->images as $meal_image) {
             Storage::delete('public/images/' . $meal_image->image);
         }
 
         $meal->images()->delete();
-        $meal->delete();
 
-        return $this->success(null, 'Successfully deleted', 200);
+        $meal->forceDelete();
+
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = Meal::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteImage(Meal $meal, ProductImage $product_image)

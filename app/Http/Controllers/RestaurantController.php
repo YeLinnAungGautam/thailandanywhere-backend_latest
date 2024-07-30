@@ -178,14 +178,41 @@ class RestaurantController extends Controller
 
     public function destroy(Restaurant $restaurant)
     {
+        $restaurant->delete();
+
+        return $this->success(null, 'Restaurant is successfully deleted', 200);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $restaurant = Restaurant::onlyTrashed()->find($id);
+
+        if (!$restaurant) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         foreach($restaurant->images as $res_image) {
             Storage::delete('public/images/' . $res_image->image);
         }
 
         $restaurant->images()->delete();
-        $restaurant->delete();
 
-        return $this->success(null, 'Restaurant is successfully deleted', 200);
+        $restaurant->forceDelete();
+
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = Restaurant::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteImage(Restaurant $restaurant, ProductImage $product_image)

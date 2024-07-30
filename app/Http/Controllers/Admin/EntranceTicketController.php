@@ -258,6 +258,18 @@ class EntranceTicketController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
+        $find->delete();
+
+        return $this->success(null, 'Successfully deleted');
+    }
+
+    public function forceDelete(string $id)
+    {
+        $find = EntranceTicket::find($id);
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         $find->activities()->detach();
         $find->tags()->detach();
         $find->categories()->detach();
@@ -273,12 +285,24 @@ class EntranceTicketController extends Controller
         }
 
         foreach ($find->variations as $variation) {
-            $variation->delete();
+            $variation->forceDelete();
         }
 
-        $find->delete();
+        $find->forceDelete();
 
-        return $this->success(null, 'Successfully deleted');
+        return $this->success(null, 'Product is completely deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = EntranceTicket::find($id);
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore();
+
+        return $this->success(null, 'Product is successfully restored');
     }
 
     public function deleteContract(EntranceTicket $entrance_ticket, EntranceTicketContract $entrance_ticket_contract)

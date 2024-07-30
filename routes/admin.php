@@ -119,17 +119,29 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Group Tour
     Route::apiResource('group-tours', GroupTourController::class);
+
+    Route::patch('group-tours/{id}/restore', [GroupTourController::class, 'restore']);
+    Route::delete('group-tours/{id}/force', [GroupTourController::class, 'hardDelete']);
+
     Route::get('group-tours/export/csv', [GroupTourExportImportController::class, 'export']);
     Route::post('group-tours/import/csv', [GroupTourExportImportController::class, 'import']);
 
     # Entrance Ticket
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
+
+    Route::patch('entrance-tickets/{id}/restore', [EntranceTicketController::class, 'restore']);
+    Route::delete('entrance-tickets/{id}/force', [EntranceTicketController::class, 'hardDelete']);
+
     Route::delete('entrance-tickets/{entrance_ticket}/contracts/{entrance_ticket_contract}', [EntranceTicketController::class, 'deleteContract']);
     Route::get('entrance-tickets/export/csv', [EntranceTicketExportImportController::class, 'export']);
     Route::post('entrance-tickets/import/csv', [EntranceTicketExportImportController::class, 'import']);
 
     # Entrance Ticket Variation
     Route::apiResource('entrance-tickets-variations', EntranceTicketVariationController::class);
+
+    Route::patch('entrance-tickets-variations/{id}/restore', [EntranceTicketVariationController::class, 'restore']);
+    Route::delete('entrance-tickets-variations/{id}/force', [EntranceTicketVariationController::class, 'hardDelete']);
+
     Route::delete('entrance-tickets-variations/{entrance_ticket_variation_id}/images/{product_image_id}', [EntranceTicketVariationController::class, 'deleteImage']);
     Route::get('entrance-tickets-variations/export/csv', [EntranceTicketVariationExportImportController::class, 'export']);
     Route::post('entrance-tickets-variations/import/csv', [EntranceTicketVariationExportImportController::class, 'import']);
@@ -167,11 +179,19 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);
+
+    Route::patch('private-van-tours/{id}/restore', [PrivateVanTourController::class, 'restore']);
+    Route::delete('private-van-tours/{id}/force', [PrivateVanTourController::class, 'hardDelete']);
+
     Route::get('private-van-tours/export/csv', [PrivateVanTourExportImportController::class, 'export']);
     Route::post('private-van-tours/import/csv', [PrivateVanTourExportImportController::class, 'import']);
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
+
+    Route::patch('hotels/{id}/restore', [HotelController::class, 'restore']);
+    Route::delete('hotels/{id}/force', [HotelController::class, 'hardDelete']);
+
     Route::get('incomplete-hotels', [HotelController::class, 'incomplete']);
     Route::delete('hotels/{hotel}/images/{hotel_image}', [HotelController::class, 'deleteImage']);
     Route::delete('hotels/{hotel}/contracts/{hotel_contract}', [HotelController::class, 'deleteContract']);
@@ -180,6 +200,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Room
     Route::apiResource('rooms', RoomController::class);
+
+    Route::patch('rooms/{id}/restore', [RoomController::class, 'restore']);
+    Route::delete('rooms/{id}/force', [RoomController::class, 'hardDelete']);
+
     Route::get('incomplete-rooms', [RoomController::class, 'incomplete']);
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
     Route::get('rooms/export/csv', [RoomExportImportController::class, 'export']);
@@ -187,12 +211,20 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Restaurant
     Route::apiResource('restaurants', RestaurantController::class);
+
+    Route::patch('restaurants/{id}/restore', [RestaurantController::class, 'restore']);
+    Route::delete('restaurants/{id}/force', [RestaurantController::class, 'hardDelete']);
+
     Route::delete('restaurants/{restaurant}/images/{product_image}', [RestaurantController::class, 'deleteImage']);
     Route::get('restaurants/export/csv', [RestaurantExportImportController::class, 'export']);
     Route::post('restaurants/import/csv', [RestaurantExportImportController::class, 'import']);
 
     # Meal
     Route::apiResource('meals', MealController::class);
+
+    Route::patch('meals/{id}/restore', [MealController::class, 'restore']);
+    Route::delete('meals/{id}/force', [MealController::class, 'hardDelete']);
+
     Route::delete('meals/{meal}/images/{product_image}', [MealController::class, 'deleteImage']);
     Route::get('meals/export/csv', [MealExportImportController::class, 'export']);
     Route::post('meals/import/csv', [MealExportImportController::class, 'import']);
@@ -208,11 +240,19 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Airline
     Route::apiResource('airlines', AirlineController::class);
+
+    Route::patch('airlines/{id}/restore', [AirlineController::class, 'restore']);
+    Route::delete('airlines/{id}/force', [AirlineController::class, 'hardDelete']);
+
     Route::get('airlines/export/csv', [AirlineExportImportController::class, 'export']);
     Route::post('airlines/import/csv', [AirlineExportImportController::class, 'import']);
 
     # Airline Ticket
     Route::apiResource('airline-tickets', AirlineTicketController::class);
+
+    Route::patch('airline-tickets/{id}/restore', [AirlineTicketController::class, 'restore']);
+    Route::delete('airline-tickets/{id}/force', [AirlineTicketController::class, 'hardDelete']);
+
     Route::get('airline-tickets/export/csv', [AirlineTicketExportImportController::class, 'export']);
     Route::post('airline-tickets/import/csv', [AirlineTicketExportImportController::class, 'import']);
 
