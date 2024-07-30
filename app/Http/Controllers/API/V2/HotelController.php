@@ -13,7 +13,6 @@ class HotelController extends Controller
     {
         $query = Hotel::query()
             ->withCount('bookingItems')
-            ->withCount('bookingItems')
             ->directBooking()
             ->with(
                 'city',

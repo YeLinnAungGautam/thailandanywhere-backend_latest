@@ -14,7 +14,11 @@ class HotelCityController extends Controller
         $cities = City::query()
             ->with('hotels')
             ->whereIn('id', function ($query) {
-                $query->select('city_id')->from('hotels')->groupBy('city_id');
+                $query
+                    ->select('city_id')
+                    ->from('hotels')
+                    ->where('type', 'direct_booking')
+                    ->groupBy('city_id');
             })
             ->paginate($request->limit ?? 20);
 
