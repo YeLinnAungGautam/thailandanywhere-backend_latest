@@ -173,6 +173,7 @@
                         <th style="max-width:140px">DESCRIPTION</th>
                         <th>QTY</th>
                         <th>RATE</th>
+                        <th>DISCOUNT</th>
                         <th>AMOUNT</th>
                     </tr>
                     @foreach ($data->items as $index => $row)
@@ -187,6 +188,7 @@
                         <th style="max-width:140px">DESCRIPTION</th>
                         <th>QTY</th>
                         <th>RATE</th>
+                        <th>DISCOUNT</th>
                         <th>AMOUNT</th>
                     </tr>
                     @endif
@@ -201,6 +203,7 @@
                         <th style="max-width:140px">DESCRIPTION</th>
                         <th>QTY</th>
                         <th>RATE</th>
+                        <th>DISCOUNT</th>
                         <th>AMOUNT</th>
                     </tr>
                     @endif
@@ -215,6 +218,7 @@
                         <th style="max-width:140px">DESCRIPTION</th>
                         <th>QTY</th>
                         <th>RATE</th>
+                        <th>DISCOUNT</th>
                         <th>AMOUNT</th>
                     </tr>
                     @endif
@@ -253,6 +257,7 @@
                         <td style="max-width: 120px">{{ $row->comment }}</td>
                         <td>{{ (int) $row->quantity * (int) ($row->days ? $row->days : 1) }}</td>
                         <td>{{ number_format((float) $row->selling_price) }}</td>
+                        <td>{{ number_format((float) $row->discount) }}</td>
                         <td>{{ number_format($row->amount) }}</td>
                     </tr>
                     @if ($index == 4)
