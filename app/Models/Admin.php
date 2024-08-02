@@ -39,4 +39,9 @@ class Admin extends Authenticatable
     {
         $query->where('role', 'admin');
     }
+
+    public function metas()
+    {
+        return $this->hasMany(AdminMeta::class);
+    }
 }

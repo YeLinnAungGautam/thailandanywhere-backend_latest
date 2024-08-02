@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AdminMetaController;
 use App\Http\Controllers\Admin\AirlineController;
 use App\Http\Controllers\Admin\AirlineTicketController;
 use App\Http\Controllers\Admin\AirportPickupController;
@@ -280,4 +281,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Report by sale date
     Route::get('sale-report-by-date', [DashboardController::class, 'saleReportByDate']);
+
+    # Admin Meta
+    Route::get('admin-metas/sale-targets', [AdminMetaController::class, 'index']);
+    Route::post('admin-metas/sale-targets', [AdminMetaController::class, 'storeSaleTarget']);
 });
