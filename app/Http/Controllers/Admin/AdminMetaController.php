@@ -9,9 +9,13 @@ use Illuminate\Http\Request;
 
 class AdminMetaController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         $meta = AdminMeta::where('meta_key', 'sale_target')->first();
+
+        if(is_null($meta)) {
+            return failedMessage('Admin meta is not found');
+        }
 
         return success(new AdminMetaResource($meta));
     }
