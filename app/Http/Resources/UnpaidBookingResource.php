@@ -19,7 +19,8 @@ class UnpaidBookingResource extends JsonResource
             'agent_name' => $this->createdBy->name,
             'total_booking' => $this->total_booking,
             'total_balance' => $this->total_balance,
-            'booking_infos' => $this->getBookingInfos()
+            'booking_infos' => $this->getBookingInfos(),
+            ''
         ];
     }
 
@@ -35,7 +36,8 @@ class UnpaidBookingResource extends JsonResource
                 'id' => $booking->id,
                 'customer_name' => $booking->customer->name,
                 'crm_id' => $booking->crm_id,
-                'balance_due' => $booking->balance_due
+                'balance_due' => $booking->balance_due,
+                'payment_method' => $booking->payment_method
             ];
         }
 
