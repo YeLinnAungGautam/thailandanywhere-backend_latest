@@ -180,7 +180,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);
-    Route::delete('private-van-tours/{id}/images/{image_id}', [PrivateVanTourController::class, 'deleteImage']);
+    Route::delete('private-van-tours/{id}/delete-cover-image', [PrivateVanTourController::class, 'deleteCoverImage']);
 
     Route::patch('private-van-tours/{id}/restore', [PrivateVanTourController::class, 'restore']);
     Route::delete('private-van-tours/{id}/force', [PrivateVanTourController::class, 'hardDelete']);

@@ -287,4 +287,19 @@ class PrivateVanTourController extends Controller
 
         return failedMessage('Successfully deleted');
     }
+
+    public function deleteCoverImage(string $id)
+    {
+        $find = PrivateVanTour::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        Storage::delete('public/images/' . $find->cover_image);
+
+        $find->update(['cover_image' => null]);
+
+        return failedMessage('Successfully deleted');
+    }
 }
