@@ -268,7 +268,7 @@ class PrivateVanTourController extends Controller
 
     public function deleteImage(string $id, string $image_id)
     {
-        $find = PrivateVanTour::onlyTrashed()->find($id);
+        $find = PrivateVanTour::find($id);
 
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
@@ -290,7 +290,7 @@ class PrivateVanTourController extends Controller
 
     public function deleteCoverImage(string $id)
     {
-        $find = PrivateVanTour::onlyTrashed()->find($id);
+        $find = PrivateVanTour::find($id);
 
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
