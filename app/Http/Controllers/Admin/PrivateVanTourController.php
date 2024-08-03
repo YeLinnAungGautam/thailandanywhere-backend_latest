@@ -265,4 +265,26 @@ class PrivateVanTourController extends Controller
 
         return $this->success(null, 'Product is successfully restored');
     }
+
+    public function deleteImage(string $id, string $image_id)
+    {
+        $find = PrivateVanTour::onlyTrashed()->find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $image = $find->images()->find($image_id);
+
+        if(!$image) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        // Delete the file from storage
+        Storage::delete('public/images/' . $image->image);
+        // Delete the image from the database
+        $image->delete();
+
+        return failedMessage('Successfully deleted');
+    }
 }
