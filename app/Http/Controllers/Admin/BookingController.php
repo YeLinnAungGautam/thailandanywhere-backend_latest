@@ -177,6 +177,10 @@ class BookingController extends Controller
             foreach ($request->items as $key => $item) {
                 $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
 
+                if(isset($item['is_driver_collect'])) {
+                    $is_driver_collect = $item['is_driver_collect'];
+                }
+
                 $is_excluded = ($item['product_type'] == Airline::class) ? true : false;
 
                 $data = [
@@ -394,7 +398,8 @@ class BookingController extends Controller
                         'checkin_date' => isset($item['checkin_date']) ? $item['checkin_date'] : null,
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
-                        'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0" ,
+                        'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
+                        'is_driver_collect' => $item['is_driver_collect']
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
