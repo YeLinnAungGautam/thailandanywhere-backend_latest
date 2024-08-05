@@ -399,7 +399,7 @@ class BookingController extends Controller
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
-                        'is_driver_collect' => $item['is_driver_collect']
+                        'is_driver_collect' => $item['is_driver_collect'] ?? false
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
