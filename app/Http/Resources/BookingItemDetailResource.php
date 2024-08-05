@@ -37,6 +37,10 @@ class BookingItemDetailResource extends JsonResource
             'expense_status' => $this->payment_status,
             'balance_due' => $this->booking->balance_due,
             'total_sale_amount' => $this->booking->sub_total,
+
+            'discount' => $this->discount,
+            'selling_price' => $this->selling_price,
+            'quantity' => $this->quantity,
         ];
 
         if($this->product_type == 'App\Models\Hotel') {
