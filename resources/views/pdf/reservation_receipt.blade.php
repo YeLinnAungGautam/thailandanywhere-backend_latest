@@ -178,10 +178,14 @@
                     <tr>
                         <th style="width:30%;font-size:13px;font-weight:bold;padding-bottom:12px!important">Payment Status:</th>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important;
-    @if ($data->booking->payment_status === 'fully_paid') color: green; @endif
-    @if ($data->booking->payment_status === 'partially_paid') color:#ff5733; @endif
-    @if ($data->booking->payment_status === 'not_paid') color:red; @endif">
-                            {{ ucwords(str_replace('_', ' ', $data->booking->payment_status)) }}
+    @if ($data->payment_status === 'fully_paid') color: green; @endif
+    @if ($data->payment_status === 'partially_paid') color:#ff5733; @endif
+    @if ($data->payment_status === 'not_paid') color:red; @endif">
+                            @if ($data->payment_status == 'not_paid')
+                                Processing
+                            @else
+                                {{ ucwords(str_replace('_', ' ', $data->payment_status)) }}
+                            @endif
                         </td>
 
                     </tr>
