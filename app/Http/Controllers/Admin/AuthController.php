@@ -67,7 +67,7 @@ class AuthController extends Controller
 
     public function logoutAll()
     {
-        PersonalAccessToken::where('tokenable_type', Admin::class)->whereNotIn('tokenable_id', [1])->delete();
+        PersonalAccessToken::where('tokenable_type', Admin::class)->delete();
 
         return $this->success(null, 'Successfully logout for all accounts');
     }
