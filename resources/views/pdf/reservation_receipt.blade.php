@@ -121,7 +121,7 @@
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Customer Name:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->booking->customer->name}}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->booking->customer->name }}</td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Passport No:</td>
@@ -133,23 +133,23 @@
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Attraction Name:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->product->name}}</td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->product->name }}</td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Ticket Name:</td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->variation->name ?? '-' }}
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->variation->name ?? '-' }}
                         </td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Quantity:
                         </td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{$data->quantity}}
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->quantity }}
                         </td>
                     </tr>
                     <tr>
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Service Date:
                         </td>
-                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{Carbon\Carbon::parse($data->service_date)->format('d F Y')}}
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ Carbon\Carbon::parse($data->service_date)->format('d F Y') }}
                         </td>
                     </tr>
                     {{--  --}}
@@ -160,29 +160,29 @@
                         <td style="width:30%;font-size:13px;padding-bottom:12px!important">Agent Name:
                         </td>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">
-                        @if (Str::startsWith($data->crm_id, 'CK'))
-                            ChawKalayar
-                        @elseif (Str::startsWith($data->crm_id, 'SH'))
-                            Sunshine
-                        @elseif (Str::startsWith($data->crm_id, 'HN'))
-                            Hinn
-                        @elseif (Str::startsWith($data->crm_id, 'CS'))
-                            Chit Su
-                        @elseif (Str::startsWith($data->crm_id, 'KN'))
-                            Ko Nay Myo
-                        @elseif (Str::startsWith($data->crm_id, 'EM'))
-                            Ei Myat
-                        @endif
+                            @if (Str::startsWith($data->crm_id, 'CK'))
+                                ChawKalayar
+                            @elseif (Str::startsWith($data->crm_id, 'SH'))
+                                Sunshine
+                            @elseif (Str::startsWith($data->crm_id, 'HN'))
+                                Hinn
+                            @elseif (Str::startsWith($data->crm_id, 'CS'))
+                                Chit Su
+                            @elseif (Str::startsWith($data->crm_id, 'KN'))
+                                Ko Nay Myo
+                            @elseif (Str::startsWith($data->crm_id, 'EM'))
+                                Ei Myat
+                            @endif
                         </td>
                     </tr>
                     <tr>
                         <th style="width:30%;font-size:13px;font-weight:bold;padding-bottom:12px!important">Payment Status:</th>
                         <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important;
-    @if ($data->payment_status === 'fully_paid') color: green; @endif
-    @if ($data->payment_status === 'partially_paid') color:#ff5733; @endif
-    @if ($data->payment_status === 'not_paid') color:red; @endif">
-    {{ ucwords(str_replace('_', ' ', $data->payment_status)) }}
-</td>
+    @if ($data->booking->payment_status === 'fully_paid') color: green; @endif
+    @if ($data->booking->payment_status === 'partially_paid') color:#ff5733; @endif
+    @if ($data->booking->payment_status === 'not_paid') color:red; @endif">
+                            {{ ucwords(str_replace('_', ' ', $data->booking->payment_status)) }}
+                        </td>
 
                     </tr>
                 </tbody>
