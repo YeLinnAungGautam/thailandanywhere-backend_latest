@@ -79,7 +79,9 @@ class ReservationController extends Controller
                 });
             })
             ->when($request->supplier_id, function ($query) use ($request) {
-                $query->whereHas('reservationCarInfo', fn ($q) => $q->where('reservation_car_infos.supplier_id'), $request->supplier_id);
+                $query->whereHas('reservationCarInfo', function ($q) use ($request) {
+                    $q->where('reservation_car_infos.supplier_id', $request->supplier_id);
+                });
             });
 
         if ($serviceDate) {
