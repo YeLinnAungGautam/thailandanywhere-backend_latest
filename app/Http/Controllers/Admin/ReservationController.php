@@ -57,6 +57,7 @@ class ReservationController extends Controller
             ])
             ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
             ->join('customers', 'bookings.customer_id', '=', 'customers.id')
+            ->join('reservation_car_infos', 'booking_items.id', 'reservation_car_infos.booking_item_id')
             ->when($request->sale_daterange, function ($q) use ($request) {
                 $dates = explode(',', $request->sale_daterange);
 
@@ -78,7 +79,7 @@ class ReservationController extends Controller
                 });
             })
             ->when($request->supplier_id, function ($query) use ($request) {
-                $query->whereHas('reservationCarInfo', fn ($q) => $q->where('supplier_id'), $request->supplier_id);
+                $query->whereHas('reservationCarInfo', fn ($q) => $q->where('reservation_car_infos.supplier_id'), $request->supplier_id);
             });
 
         if ($serviceDate) {
