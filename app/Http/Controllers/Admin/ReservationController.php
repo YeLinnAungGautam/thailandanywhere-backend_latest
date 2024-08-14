@@ -76,6 +76,9 @@ class ReservationController extends Controller
 
                     $q->whereBetween('bookings.booking_date', $dates);
                 });
+            })
+            ->when($request->supplier_id, function ($query) use ($request) {
+                $query->whereHas('reservationCarInfo', fn ($q) => $q->where('supplier_id'), $request->supplier_id);
             });
 
         if ($serviceDate) {
