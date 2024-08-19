@@ -38,7 +38,7 @@ class EntranceTicketResource extends JsonResource
             'contacts' => HotelContractResource::collection($this->contracts),
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-            'lowest_variation_price' => $this->variations->sortBy('price')->first()->price ?? 0,
+            'lowest_variation_price' => $this->variations->where('is_add_on', false)->sortBy('price')->first()->price ?? 0,
             'total_booking_count' => $this->bookingItems()->count()
         ];
     }
