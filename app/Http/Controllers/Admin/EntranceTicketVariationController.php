@@ -66,6 +66,8 @@ class EntranceTicketVariationController extends Controller
                 'cost_price' => $request->cost_price,
                 'agent_price' => $request->agent_price,
                 'owner_price' => $request->owner_price,
+                'is_add_on' => $request->is_add_on,
+                'add_on_price' => $request->add_on_price,
                 'entrance_ticket_id' => $request->entrance_ticket_id,
                 'description' => $request->description,
                 'including_services' => $request->including_services ? json_encode($request->including_services) : null,
@@ -123,6 +125,8 @@ class EntranceTicketVariationController extends Controller
                 'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
                 'owner_price' => $request->owner_price ?? $entrance_tickets_variation->owner_price,
                 'description' => $request->description ?? $entrance_tickets_variation->description,
+                'is_add_on' => $request->is_add_on ?? $entrance_tickets_variation->is_add_on,
+                'add_on_price' => $request->add_on_price ?? $entrance_tickets_variation->add_on_price,
                 'including_services' => $request->including_services ? json_encode($request->including_services) : $entrance_tickets_variation->including_services,
             ]);
 

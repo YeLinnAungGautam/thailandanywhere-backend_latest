@@ -23,6 +23,8 @@ class EntranceTicketVariationResource extends JsonResource
             'agent_price' => $this->agent_price ?? 0,
             'owner_price' => $this->owner_price,
             'description' => $this->description,
+            'is_add_on' => $this->is_add_on,
+            'add_on_price' => $this->add_on_price,
             'entrance_ticket' => new EntranceTicketResource($this->entranceTicket),
             'images' => ProductImageResource::collection($this->images),
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),

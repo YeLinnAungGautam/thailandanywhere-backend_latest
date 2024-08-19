@@ -17,6 +17,7 @@ use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
+use App\Notifications\PaymentSlipUpdatedNotification;
 use App\Services\BookingItemDataService;
 use App\Services\ReservationEmailNotifyService;
 use App\Traits\HttpResponses;
@@ -399,6 +400,10 @@ class ReservationController extends Controller
                 }
 
                 HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
+
+                if($bookingItem->reservation_status == 'confirmed') {
+                    Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
+                }
             }
 
             if ($request->customer_passport) {
@@ -435,6 +440,10 @@ class ReservationController extends Controller
                 }
 
                 HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
+
+                if($bookingItem->reservation_status == 'confirmed') {
+                    Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
+                }
             }
         }
 

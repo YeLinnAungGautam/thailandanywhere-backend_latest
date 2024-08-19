@@ -131,6 +131,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Entrance Ticket
     Route::apiResource('entrance-tickets', EntranceTicketController::class);
 
+    Route::delete('entrance-tickets/{image_id}/delete', [EntranceTicketController::class, 'deleteImage']);
+
     Route::patch('entrance-tickets/{id}/restore', [EntranceTicketController::class, 'restore']);
     Route::delete('entrance-tickets/{id}/force', [EntranceTicketController::class, 'hardDelete']);
 

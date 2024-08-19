@@ -28,4 +28,9 @@ class EntranceTicketVariation extends Model
     {
         return $this->morphMany(ProductImage::class, 'ownerable');
     }
+
+    public function scopeNotAddOn($query)
+    {
+        return $query->where('is_add_on', false);
+    }
 }

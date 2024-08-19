@@ -317,4 +317,19 @@ class EntranceTicketController extends Controller
 
         return $this->success(null, 'Entrance ticket contract is successfully deleted');
     }
+
+    public function deleteImage(string $id)
+    {
+        $entrance_ticket_image = EntranceTicketImage::find($id);
+
+        if(!$entrance_ticket_image) {
+            return $this->success(null, 'Entrance ticket image cannot be found');
+        }
+
+        Storage::delete('public/images/' . $entrance_ticket_image->image);
+
+        $entrance_ticket_image->delete();
+
+        return $this->success(null, 'Entrance ticket image is successfully deleted');
+    }
 }

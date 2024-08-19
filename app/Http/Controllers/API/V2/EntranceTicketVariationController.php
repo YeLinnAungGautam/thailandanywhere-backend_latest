@@ -12,6 +12,7 @@ class EntranceTicketVariationController extends Controller
     public function index(Request $request)
     {
         $items = EntranceTicketVariation::query()
+            ->notAddOn()
             ->with('entranceTicket')
             ->when($request->query('search'), function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->query('search')}%");
