@@ -27,7 +27,7 @@ class CarBookingResource extends JsonResource
             'id' => $this->id,
             'crm_id' => $this->crm_id,
             'service_date' => $this->service_date,
-            'product_name' => $this->product->name,
+            'product_name' => $this->product->name ?? '-',
             'variation_name' => $this->acsr_variation_name,
             'reservation_status' => $this->reservation_status,
             'payment_status' => $this->payment_status,
