@@ -30,7 +30,7 @@ return [
 
     // 'allowed_origins' => ['*'],
 
-    'allowed_origins_patCterns' => [],
+    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
