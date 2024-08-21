@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OAuthProvider;
 use App\Models\User;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -20,18 +21,19 @@ class SocialiteLoginController extends Controller
         ]);
     }
 
-    public function callback(string $provider)
+    public function callback(string $provider, Request $request)
     {
         try {
-            $user = Socialite::driver($provider)->stateless()->user();
-
-            Log::info($user->getEmail());
+            $user = Socialite::driver('google')->stateless()->user();
 
             $user = $this->findOrCreateUser($provider, $user);
-            
+            $token = $user->createToken('UserToken')->plainTextToken;
+
             return view('oauth/callback', [
                 'token' => $user->createToken('UserToken')->plainTextToken,
             ]);
+
+            // return redirect()->away("https://thanywhere.com/home?token={$token}");
         } catch (Exception $e) {
             Log::error($e);
 
@@ -64,6 +66,7 @@ class SocialiteLoginController extends Controller
         $user = User::create([
             'name' => $sUser->getName(),
             'first_name' => $sUser->getName(),
+            'last_name' => $sUser->getName(),
             'email' => $sUser->getEmail(),
             'email_verified_at' => now(),
             'password' => bcrypt(Str::random(10)),
