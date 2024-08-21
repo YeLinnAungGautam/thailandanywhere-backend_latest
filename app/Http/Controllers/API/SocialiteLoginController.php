@@ -33,6 +33,8 @@ class SocialiteLoginController extends Controller
 
             info($token);
 
+            info($user->id);
+
             return view('oauth/callback', [
                 'token' => $token,
             ]);
