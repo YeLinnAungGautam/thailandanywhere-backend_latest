@@ -27,12 +27,14 @@ class SocialiteLoginController extends Controller
 
         try {
             $user = Socialite::driver('google')->stateless()->user();
-            info($user);
+
             $user = $this->findOrCreateUser($provider, $user);
             $token = $user->createToken('UserToken')->plainTextToken;
 
+            info($token);
+
             return view('oauth/callback', [
-                'token' => $user->createToken('UserToken')->plainTextToken,
+                'token' => $token,
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
