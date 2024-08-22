@@ -16,6 +16,7 @@ class EntranceTicket extends Model
         'name',
         'description',
         'full_description',
+        'full_description_en',
         'provider',
         'cancellation_policy_id',
         'cover_image',
