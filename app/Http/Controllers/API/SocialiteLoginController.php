@@ -58,7 +58,8 @@ class SocialiteLoginController extends Controller
         }
 
         if (User::where('email', $user->getEmail())->exists()) {
-            throw new EmailTakenException;
+            return User::where('email', $user->getEmail())->first();
+            // throw new EmailTakenException;
         }
 
         return $this->createUser($provider, $user);
