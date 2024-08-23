@@ -24,6 +24,7 @@ return [
         'http://staging-admin.thanywhere.com',
         'https://staging-admin.thanywhere.com',
         'https://mm.thanywhere.com',
+        'https://thanywhere.com',
         'http://localhost:5173',
         'http://localhost:5174'
     ],
