@@ -21,6 +21,10 @@ class ProfileController extends Controller
         $user = User::find(Auth::id());
         $user->name = $request->name ?? $user->name;
         $user->email = $request->email ?? $user->email;
+        $user->phone = $request->phone ?? $user->phone;
+        $user->address = $request->address ?? $user->address;
+        $user->gender = $request->gender ?? $user->gender;
+        $user->dob = $request->dob ?? $user->dob;
 
         if($file = $request->file('profile')) {
             $fileData = $this->uploads($file, 'images/');
@@ -28,6 +32,7 @@ class ProfileController extends Controller
         }
 
         $user->update();
+
         return $this->success(new UserResource($user), 'Successfully updated profile');
     }
 
@@ -47,6 +52,7 @@ class ProfileController extends Controller
         $user->password = Hash::make($request->password);
         $user->update();
         $user->tokens()->delete();
+
         return $this->success($user, 'Successfully changed password');
     }
 }

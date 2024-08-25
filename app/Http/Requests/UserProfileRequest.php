@@ -2,11 +2,9 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateUserRequest extends FormRequest
+class UserProfileRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,11 +21,9 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        $user = Auth::user();
-
         return [
-            'email' => ['email','max:255',Rule::unique('users')->ignore($user)],
             'name' => 'nullable',
+            'email' => 'required|email',
             'first_name' => 'nullable',
             'last_name' => 'nullable',
             'phone' => 'nullable',

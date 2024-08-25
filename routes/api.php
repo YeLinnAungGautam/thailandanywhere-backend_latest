@@ -6,13 +6,13 @@ use App\Http\Controllers\API\Frontend\HotelController;
 use App\Http\Controllers\API\Frontend\PageController;
 use App\Http\Controllers\API\Frontend\PrivateVantourController;
 use App\Http\Controllers\API\Frontend\ProductCategoryController;
-use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\SocialiteLoginController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +41,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Route::middleware('auth:sanctum')->group(function () {
+//     Route::get('profile', [UserProfileController::class, 'profile']);
+// });
 
 # Frontend URI
 Route::group([
@@ -70,5 +73,3 @@ Route::group([
 # Socialite Login
 Route::post('oauth/{driver}/redirect', [SocialiteLoginController::class, 'redirect']);
 Route::get('oauth/{driver}/callback', [SocialiteLoginController::class, 'callback'])->name('oauth.callback');
-
-
