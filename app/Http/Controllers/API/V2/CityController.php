@@ -11,6 +11,10 @@ class CityController extends Controller
 {
     public function index(Request $request)
     {
-        return CityResource::collection(City::query()->paginate($request->limit ?? 10))->additional(['result' => 1, 'message' => 'success']);
+        $data = City::query()
+            ->when($request->search, fn ($query) => $query->where('name', 'LIKE', "%{$request->search}%"))
+            ->paginate($request->limit ?? 10);
+
+        return CityResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
     }
 }
