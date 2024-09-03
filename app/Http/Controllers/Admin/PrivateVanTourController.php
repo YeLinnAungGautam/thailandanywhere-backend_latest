@@ -80,6 +80,8 @@ class PrivateVanTourController extends Controller
             'long_description' => $request->long_description,
             'full_description' => $request->full_description,
             'full_description_en' => $request->full_description_en,
+            'with_ticket' => $request->with_ticket ?? 0,
+            'ticket_price' => $request->ticket_price,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -102,22 +104,19 @@ class PrivateVanTourController extends Controller
             $save->destinations()->sync($request->destination_ids);
         }
 
-
         $prices = $request->prices;
         $agent_prices = $request->agent_prices;
         $data = array_combine($request->car_ids, array_map(function ($price, $agent_price) {
             return ['price' => $price, 'agent_price' => $agent_price];
         }, $prices, $agent_prices));
 
-
         $save->cars()->sync($data);
 
-        if($request->file('images')) {
+        if ($request->file('images')) {
             foreach ($request->file('images') as $image) {
                 $fileData = $this->uploads($image, 'images/');
                 PrivateVanTourImage::create(['private_van_tour_id' => $save->id, 'image' => $fileData['fileName']]);
             };
-
         }
 
         return $this->success(new PrivateVanTourResource($save), 'Successfully created');
@@ -155,6 +154,8 @@ class PrivateVanTourController extends Controller
             'long_description' => $request->long_description ?? $find->long_description,
             'full_description' => $request->full_description ?? $find->full_description,
             'full_description_en' => $request->full_description_en ?? $find->full_description_en,
+            'with_ticket' => $request->with_ticket ?? $find->with_ticket,
+            'ticket_price' => $request->ticket_price ?? $find->ticket_price,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -276,7 +277,7 @@ class PrivateVanTourController extends Controller
 
         $image = $find->images()->find($image_id);
 
-        if(!$image) {
+        if (!$image) {
             return $this->error(null, 'Data not found', 404);
         }
 

@@ -21,10 +21,21 @@ class PrivateVanTourController extends Controller
             })
             ->when($request->car_id, function ($query) use ($request) {
                 $query->whereIn('id', fn ($q) => $q->select('private_van_tour_id')->from('private_van_tour_cars')->where('car_id', $request->car_id));
+            })
+            ->when($request->category_id, function ($query) use ($request) {
+                $query->whereIn('id', function ($q) use ($request) {
+                    $q->select('private_van_tour_id')
+                        ->from('private_van_tour_destinations')
+                        ->whereIn('destination_id', function ($qq) use ($request) {
+                            $qq->select('id')
+                                ->from('destinations')
+                                ->where('category_id', $request->category_id);
+                        });
+                });
             });
 
-        if($request->order_by) {
-            if($request->order_by == 'top_selling_products') {
+        if ($request->order_by) {
+            if ($request->order_by == 'top_selling_products') {
                 $query = $query->orderBy('booking_items_count', 'desc');
             }
         } else {
@@ -38,7 +49,7 @@ class PrivateVanTourController extends Controller
 
     public function show(string|int $private_van_tour_id)
     {
-        if(is_null($private_van_tour = PrivateVanTour::find($private_van_tour_id))) {
+        if (is_null($private_van_tour = PrivateVanTour::find($private_van_tour_id))) {
             return notFoundMessage();
         }
 
