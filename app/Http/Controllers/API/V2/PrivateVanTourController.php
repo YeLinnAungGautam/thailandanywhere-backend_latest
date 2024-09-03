@@ -22,14 +22,20 @@ class PrivateVanTourController extends Controller
             ->when($request->car_id, function ($query) use ($request) {
                 $query->whereIn('id', fn ($q) => $q->select('private_van_tour_id')->from('private_van_tour_cars')->where('car_id', $request->car_id));
             })
-            ->when($request->category_id, function ($query) use ($request) {
+            ->when($request->price_range, function ($query) use ($request) {
+                $prices = explode('-', $request->price_range);
+                $query->whereIn('id', fn ($q) => $q->select('private_van_tour_id')->from('private_van_tour_cars')->where('price', '>=', $prices[0])->where('price', '<=', $prices[1]));
+            })
+            ->when($request->category_ids, function ($query) use ($request) {
                 $query->whereIn('id', function ($q) use ($request) {
                     $q->select('private_van_tour_id')
                         ->from('private_van_tour_destinations')
                         ->whereIn('destination_id', function ($qq) use ($request) {
+                            $category_ids = explode(',', $request->category_ids);
+
                             $qq->select('id')
                                 ->from('destinations')
-                                ->where('category_id', $request->category_id);
+                                ->whereIn('category_id', $category_ids);
                         });
                 });
             });
