@@ -86,7 +86,7 @@ class EntranceTicketController extends Controller
 
         $save = EntranceTicket::create($data);
 
-        if($request->activities) {
+        if ($request->activities) {
             $save->activities()->attach($request->activities);
         }
         if ($request->tag_ids) {
@@ -183,7 +183,7 @@ class EntranceTicketController extends Controller
 
         $find->update($data);
 
-        if($request->activities) {
+        if ($request->activities) {
             $find->activities()->sync($request->activities);
         }
 
@@ -206,14 +206,14 @@ class EntranceTicketController extends Controller
         if ($request->file('images')) {
             foreach ($request->file('images') as $image) {
                 // Delete existing images
-                if (count($find->images) > 0) {
-                    foreach ($find->images as $exImage) {
-                        // Delete the file from storage
-                        Storage::delete('public/images/' . $exImage->image);
-                        // Delete the image from the database
-                        $exImage->delete();
-                    }
-                }
+                // if (count($find->images) > 0) {
+                //     foreach ($find->images as $exImage) {
+                //         // Delete the file from storage
+                //         Storage::delete('public/images/' . $exImage->image);
+                //         // Delete the image from the database
+                //         $exImage->delete();
+                //     }
+                // }
 
                 $fileData = $this->uploads($image, 'images/');
                 EntranceTicketImage::create(['entrance_ticket_id' => $find->id, 'image' => $fileData['fileName']]);
@@ -322,7 +322,7 @@ class EntranceTicketController extends Controller
     {
         $entrance_ticket_image = EntranceTicketImage::find($id);
 
-        if(!$entrance_ticket_image) {
+        if (!$entrance_ticket_image) {
             return $this->success(null, 'Entrance ticket image cannot be found');
         }
 
