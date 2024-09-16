@@ -10,4 +10,9 @@ class ProductCategory extends Model
     use SoftDeletes;
 
     protected $guarded = [];
+
+    public function entranceTickets()
+    {
+        return $this->belongsToMany(EntranceTicket::class, 'entrance_ticket_categories', 'category_id', 'entrance_ticket_id');
+    }
 }

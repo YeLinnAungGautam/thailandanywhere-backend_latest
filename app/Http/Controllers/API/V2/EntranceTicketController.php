@@ -17,6 +17,11 @@ class EntranceTicketController extends Controller
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "%{$request->search}%");
             })
+            ->when($request->category_id, function ($query) use ($request) {
+                $query->whereIn('id', function ($q) use ($request) {
+                    $q->select('entrance_ticket_id')->from('entrance_ticket_categories')->where('category_id', $request->category_id);
+                });
+            })
             ->when($request->query('city_id'), function ($c_query) use ($request) {
                 $c_query->whereIn('id', function ($q) use ($request) {
                     $q->select('entrance_ticket_id')->from('entrance_ticket_cities')->where('city_id', $request->query('city_id'));
@@ -30,8 +35,8 @@ class EntranceTicketController extends Controller
                 });
             });
 
-        if($request->order_by) {
-            if($request->order_by == 'top_selling_products') {
+        if ($request->order_by) {
+            if ($request->order_by == 'top_selling_products') {
                 $query = $query->orderBy('booking_items_count', 'desc');
             }
         } else {
@@ -45,7 +50,7 @@ class EntranceTicketController extends Controller
 
     public function show(string|int $entrance_ticket_id)
     {
-        if(is_null($entrance_ticket = EntranceTicket::find($entrance_ticket_id))) {
+        if (is_null($entrance_ticket = EntranceTicket::find($entrance_ticket_id))) {
             return notFoundMessage();
         }
 
