@@ -40,14 +40,14 @@ class HotelController extends Controller
                 $p_query->where('place', $request->place);
             })
             ->when($request->price_range, function ($q) use ($request) {
-                $q->whereIn('id', function ($q1) use ($request) {
-                    $prices = explode('-', $request->price_range);
+                $prices = explode('-', $request->price_range);
 
+                $q->whereIn('id', function ($q1) use ($request, $prices) {
                     $q1->select('hotel_id')
                         ->from('rooms')
                         ->where('is_extra', 0)
-                        ->where('room_price', '>=', $prices[0])
-                        ->where('room_price', '<=', $prices[1]);
+                        ->groupBy('hotel_id')
+                        ->havingRaw('MIN(room_price) BETWEEN ? AND ?', $prices);
                 });
             })
             ->when($request->rating, fn ($query) => $query->where('rating', $request->rating))
@@ -60,8 +60,8 @@ class HotelController extends Controller
             })
             ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
 
-        if($request->order_by) {
-            if($request->order_by == 'top_selling_products') {
+        if ($request->order_by) {
+            if ($request->order_by == 'top_selling_products') {
                 $query = $query->orderBy('booking_items_count', 'desc');
             }
         } else {
@@ -75,7 +75,7 @@ class HotelController extends Controller
 
     public function show(string|int $hotel_id)
     {
-        if(is_null($hotel = Hotel::find($hotel_id))) {
+        if (is_null($hotel = Hotel::find($hotel_id))) {
             return notFoundMessage();
         }
 
