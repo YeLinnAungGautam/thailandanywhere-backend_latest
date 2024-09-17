@@ -24,6 +24,7 @@ class SupplierResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'email' => $this->email,
             'contact' => $this->contact,
             'logo' => asset('storage/images/supplier/' . $this->logo),
             'bank_name' => $this->bank_name,

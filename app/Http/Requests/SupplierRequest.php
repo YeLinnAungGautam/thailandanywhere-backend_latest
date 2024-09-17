@@ -29,8 +29,13 @@ class SupplierRequest extends FormRequest
             'bank_account_name' => 'required',
         ];
 
-        if($this->method() == 'POST') {
+        if ($this->method() == 'POST') {
             $rules['logo'] = 'required';
+            $rules['email'] = 'required|email|unique:suppliers,email';
+            $rules['password'] = 'required';
+            $rules['password_confirmation'] = 'required|same:password';
+        } else {
+            $rules['email'] = 'required|email|unique:suppliers,email,' . $this->id;
         }
 
         return $rules;

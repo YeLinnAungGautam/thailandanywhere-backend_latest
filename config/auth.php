@@ -46,6 +46,11 @@ return [
             'provider' => 'admins',
         ],
 
+        'supplier' => [
+            'driver' => 'session',
+            'provider' => 'suppliers',
+        ],
+
         'user' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -78,6 +83,11 @@ return [
         'admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
+        ],
+
+        'suppliers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Supplier::class,
         ],
 
         // 'users' => [
@@ -115,6 +125,13 @@ return [
 
         'admins' => [
             'provider' => 'admins',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'suppliers' => [
+            'provider' => 'suppliers',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
