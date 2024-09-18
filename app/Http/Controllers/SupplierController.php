@@ -36,6 +36,7 @@ class SupplierController extends Controller
     {
         try {
             $input = $request->validated();
+            unset($input['password_confirmation']);
 
             if ($request->file('logo')) {
                 $input['logo'] = uploadFile($request->file('logo'), 'images/supplier/');
@@ -55,7 +56,7 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::find($id);
 
-        if(is_null($supplier)) {
+        if (is_null($supplier)) {
             return $this->error(null, 'Supplier not found.');
         }
 
@@ -67,7 +68,7 @@ class SupplierController extends Controller
         try {
             $supplier = Supplier::find($id);
 
-            if(is_null($supplier)) {
+            if (is_null($supplier)) {
                 throw new Exception('Supplier not found');
             }
 
@@ -92,7 +93,7 @@ class SupplierController extends Controller
         try {
             $supplier = Supplier::find($id);
 
-            if(is_null($supplier)) {
+            if (is_null($supplier)) {
                 throw new Exception('Supplier not found');
             }
 
