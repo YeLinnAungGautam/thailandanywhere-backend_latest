@@ -18,7 +18,7 @@ class LoginController extends Controller
 
         $supplier = Supplier::where('email', $request->email)->first();
 
-        if (! $supplier || ! Hash::check($request->password, $supplier->password)) {
+        if (is_null($supplier) || !Hash::check($request->password, $supplier->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
