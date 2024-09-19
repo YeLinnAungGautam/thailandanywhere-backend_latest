@@ -27,13 +27,12 @@ class SupplierRequest extends FormRequest
             'bank_name' => 'required',
             'bank_account_no' => 'required',
             'bank_account_name' => 'required',
+            'password' => 'required'
         ];
 
         if ($this->method() == 'POST') {
             $rules['logo'] = 'required';
             $rules['email'] = 'required|email|unique:suppliers,email';
-            $rules['password'] = 'required';
-            $rules['password_confirmation'] = 'required|same:password';
         } else {
             $rules['email'] = 'required|email|unique:suppliers,email,' . $this->id;
         }
