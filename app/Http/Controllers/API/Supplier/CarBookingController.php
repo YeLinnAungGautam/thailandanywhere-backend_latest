@@ -41,4 +41,15 @@ class CarBookingController extends Controller
                 'message' => 'success',
             ]);
     }
+
+    public function show(string $id)
+    {
+        $booking_item = BookingItem::privateVanTour()->find($id);
+
+        if (is_null($booking_item)) {
+            return failedMessage('Car booking not found');
+        }
+
+        return success(new CarBookingResource($booking_item));
+    }
 }
