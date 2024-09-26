@@ -25,6 +25,11 @@ class Hotel extends Model
         return $this->belongsTo(City::class, 'city_id');
     }
 
+    public function hotelPlace()
+    {
+        return $this->belongsTo(Place::class, 'place_id');
+    }
+
     public function rooms(): HasMany
     {
         return $this->hasMany(Room::class, 'hotel_id');

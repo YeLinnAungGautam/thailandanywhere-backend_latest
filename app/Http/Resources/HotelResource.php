@@ -33,6 +33,7 @@ class HotelResource extends JsonResource
             'bank_account_number' => $this->bank_account_number,
             'city' => new CityResource($this->city),
             'place' => $this->place,
+            'hotel_place' => $this->hotelPlace,
             'rooms' => HotelRoomResource::collection($this->rooms),
             'contacts' => HotelContractResource::collection($this->contracts),
             'images' => HotelImageResource::collection($this->images),
@@ -55,7 +56,7 @@ class HotelResource extends JsonResource
         $places = [];
         $hotel_nearby_places = json_decode($this->nearby_places);
 
-        foreach($hotel_nearby_places as $nearby) {
+        foreach ($hotel_nearby_places as $nearby) {
             $places[] = [
                 'name' => $nearby->name ?? '-',
                 'distance' => $nearby->distance ?? '-',

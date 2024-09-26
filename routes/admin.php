@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
+use App\Http\Controllers\Admin\PlaceController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PrivateVanTourController;
 use App\Http\Controllers\Admin\ProductCategoryController;
@@ -289,4 +290,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Admin Meta
     Route::get('admin-metas/sale-targets', [AdminMetaController::class, 'index']);
     Route::post('admin-metas/sale-targets', [AdminMetaController::class, 'storeSaleTarget']);
+
+    # Place
+    Route::apiResource('places', PlaceController::class);
 });

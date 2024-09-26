@@ -31,7 +31,7 @@ class HotelController extends Controller
         $place = $request->query('place');
 
         $query = Hotel::query()
-            ->with('rooms')
+            ->with('rooms', 'hotelPlace')
             ->when($max_price, function ($q) use ($max_price) {
                 $q->whereIn('id', function ($q1) use ($max_price) {
                     $q1->select('hotel_id')
@@ -79,11 +79,11 @@ class HotelController extends Controller
     public function store(StoreHotelRequest $request)
     {
         $hotel_nearby_places = [];
-        if($request->nearby_places) {
-            foreach($request->nearby_places as $nearby_place) {
+        if ($request->nearby_places) {
+            foreach ($request->nearby_places as $nearby_place) {
                 $file_name = null;
 
-                if(isset($nearby_place['image'])) {
+                if (isset($nearby_place['image'])) {
                     $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
 
                     // $file_name = $nearby_image_data['fileName'];
@@ -111,6 +111,7 @@ class HotelController extends Controller
             'city_id' => $request->city_id,
             'account_name' => $request->account_name,
             'place' => $request->place,
+            'place_id' => $request->place_id,
             'legal_name' => $request->legal_name,
             'contract_due' => $request->contract_due,
             'location_map_title' => $request->location_map_title,
@@ -121,8 +122,8 @@ class HotelController extends Controller
 
         $contractArr = [];
 
-        if($request->file('contracts')) {
-            foreach($request->file('contracts') as $file) {
+        if ($request->file('contracts')) {
+            foreach ($request->file('contracts') as $file) {
                 $fileData = $this->uploads($file, 'contracts/');
                 $contractArr[] = [
                     'hotel_id' => $save->id,
@@ -140,7 +141,7 @@ class HotelController extends Controller
             };
         }
 
-        if($request->facilities) {
+        if ($request->facilities) {
             $save->facilities()->attach($request->facilities);
         }
 
@@ -171,11 +172,11 @@ class HotelController extends Controller
     public function update(UpdateHotelRequest $request, Hotel $hotel)
     {
         $hotel_nearby_places = [];
-        if($request->nearby_places) {
-            foreach($request->nearby_places as $nearby_place) {
+        if ($request->nearby_places) {
+            foreach ($request->nearby_places as $nearby_place) {
                 $file_name = $nearby_place['image'];
 
-                if(isset($nearby_place['image']) && $nearby_place['image'] instanceof \Illuminate\Http\UploadedFile) {
+                if (isset($nearby_place['image']) && $nearby_place['image'] instanceof \Illuminate\Http\UploadedFile) {
                     $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
 
                     // $file_name = $nearby_image_data['fileName'];
@@ -199,6 +200,7 @@ class HotelController extends Controller
             'type' => $request->type ?? $hotel->type,
             'city_id' => $request->city_id ?? $hotel->city_id,
             'place' => $request->place ?? $hotel->place,
+            'place_id' => $request->place_id ?? $hotel->place_id,
             'bank_name' => $request->bank_name ?? $hotel->bank_name,
             'account_name' => $request->account_name,
             'payment_method' => $request->payment_method ?? $hotel->payment_method,
@@ -213,8 +215,8 @@ class HotelController extends Controller
 
         $contractArr = [];
 
-        if($request->file('contracts')) {
-            foreach($request->file('contracts') as $file) {
+        if ($request->file('contracts')) {
+            foreach ($request->file('contracts') as $file) {
                 $fileData = $this->uploads($file, 'contracts/');
                 $contractArr[] = [
                     'hotel_id' => $hotel->id,
@@ -257,7 +259,7 @@ class HotelController extends Controller
 
         $hotel_images = HotelImage::where('hotel_id', '=', $hotel->id)->get();
 
-        foreach($hotel_images as $hotel_image) {
+        foreach ($hotel_images as $hotel_image) {
             Storage::delete('public/images/' . $hotel_image->image);
         }
 
