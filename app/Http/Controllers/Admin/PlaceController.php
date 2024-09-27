@@ -12,9 +12,18 @@ class PlaceController extends Controller
 {
     public function index(Request $request)
     {
-        $places = Place::with('hotels')->paginate($request->limit ?? 10);
+        $places = Place::with('hotels')
+            ->when($request->search, fn ($query) => $query->where('name', 'LIKE', "%{$request->search}%"))
+            ->paginate($request->limit ?? 10);
 
-        return success(new PlaceResource($places));
+        return $this->success(PlaceResource::collection($places)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int) ceil($places->total() / $places->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Place List');
     }
 
     public function store(PlaceRequest $request)
