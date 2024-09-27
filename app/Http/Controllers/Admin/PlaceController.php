@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PlaceRequest;
 use App\Http\Resources\PlaceResource;
 use App\Models\Place;
+use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 
 class PlaceController extends Controller
 {
+    use HttpResponses;
+
     public function index(Request $request)
     {
         $places = Place::with('hotels')
