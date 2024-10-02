@@ -23,6 +23,7 @@ class BookingResource extends JsonResource
             'past_user' => $this->pastUser,
             'past_crm_id' => $this->past_crm_id,
             'customer' => $this->customer,
+            'user' => $this->user,
             'sold_from' => $this->sold_from,
             'payment_currency' => $this->payment_currency,
             'payment_method' => $this->payment_method,

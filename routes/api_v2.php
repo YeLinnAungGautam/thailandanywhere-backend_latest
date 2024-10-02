@@ -5,6 +5,7 @@ use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\V2\AirlineController;
 use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
+use App\Http\Controllers\API\V2\BookingController;
 use App\Http\Controllers\API\V2\CarController;
 use App\Http\Controllers\API\V2\CityController;
 use App\Http\Controllers\API\V2\DestinationController;
@@ -86,5 +87,11 @@ Route::group([], function () {
 
     # Login
     Route::post('login', [LoginController::class, 'login']);
-    Route::post('logout', [LoginController::class, 'logout']);
+
+    Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
+        Route::post('logout', [LoginController::class, 'logout']);
+
+        # Bookings
+        Route::get('bookings', [BookingController::class, 'index']);
+    });
 });

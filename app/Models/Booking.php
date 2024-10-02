@@ -27,6 +27,11 @@ class Booking extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function createdBy()
     {
         return $this->belongsTo(Admin::class, 'created_by');

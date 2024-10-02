@@ -135,6 +135,7 @@ class BookingController extends Controller
         try {
             $data = [
                 'customer_id' => $request->customer_id,
+                'user_id' => $request->user_id,
                 'sold_from' => $request->sold_from,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_status,
@@ -177,7 +178,7 @@ class BookingController extends Controller
             foreach ($request->items as $key => $item) {
                 $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
 
-                if(isset($item['is_driver_collect'])) {
+                if (isset($item['is_driver_collect'])) {
                     $is_driver_collect = $item['is_driver_collect'];
                 }
 
@@ -246,7 +247,7 @@ class BookingController extends Controller
                 BookingItem::create($data);
             }
 
-            if($save->is_inclusive) {
+            if ($save->is_inclusive) {
                 $booking_item_total = $save->items->sum('amount');
                 $inclusive_profit = $save->grand_total - $booking_item_total;
 
@@ -300,6 +301,7 @@ class BookingController extends Controller
 
             $data = [
                 'customer_id' => $request->customer_id ?? $find->customer_id,
+                'user_id' => $request->user_id ?? $find->user_id,
                 'is_past_info' => $request->is_past_info ?? $find->is_past_info,
                 'past_user_id' => $request->past_user_id ?? $find->past_user_id,
                 'past_crm_id' => $request->past_crm_id ?? $find->past_crm_id,
@@ -344,13 +346,13 @@ class BookingController extends Controller
                 $request_item_ids = collect($request->items)->pluck('reservation_id')->toArray();
                 $delete_item_ids = [];
 
-                foreach($booking_item_ids as $booking_item_id) {
-                    if(!in_array($booking_item_id, $request_item_ids)) {
+                foreach ($booking_item_ids as $booking_item_id) {
+                    if (!in_array($booking_item_id, $request_item_ids)) {
                         $delete_item_ids[] = $booking_item_id;
                     }
                 }
 
-                foreach($delete_item_ids as $delete_item) {
+                foreach ($delete_item_ids as $delete_item) {
                     $d_item = BookingItem::find($delete_item);
 
                     if ($d_item->receipt_image) {
@@ -424,7 +426,7 @@ class BookingController extends Controller
                         }
                     }
 
-                    if(
+                    if (
                         !isset($item['reservation_id']) ||
                         $item['reservation_id'] === 'undefined' ||
                         $item['reservation_id'] == 'null'
@@ -438,20 +440,20 @@ class BookingController extends Controller
                 }
             }
 
-            if($find->is_inclusive) {
+            if ($find->is_inclusive) {
                 $booking_item_total = $find->items->where('product_type', '<>', InclusiveProduct::class)->sum('amount');
                 $inclusive_profit = $find->grand_total - $booking_item_total;
 
                 $inclusive_item = $find->items()->where('product_type', InclusiveProduct::class)->first();
 
-                if($inclusive_item) {
+                if ($inclusive_item) {
                     $inclusive_item->update([
                         'amount' => $inclusive_profit,
                     ]);
                 }
             }
 
-            if($find->wasChanged('deposit')) {
+            if ($find->wasChanged('deposit')) {
                 dispatch(new SendSaleDepositUpdateEmailJob($find));
             }
 
@@ -513,7 +515,7 @@ class BookingController extends Controller
 
         $pdf_view = 'pdf.booking_receipt';
 
-        if($booking->is_inclusive) {
+        if ($booking->is_inclusive) {
             $pdf_view = 'pdf.inclusive_booking_receipt';
         }
 

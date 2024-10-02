@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
 use App\Http\Controllers\CalendarController;
@@ -293,4 +294,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Place
     Route::apiResource('places', PlaceController::class);
+
+    # Users
+    Route::get('users', [UserController::class, 'index']);
 });
