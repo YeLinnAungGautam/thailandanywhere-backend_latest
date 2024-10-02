@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->uuid('unique_key')->unique()->after('id');
+            $table->uuid('unique_key')->unique('usr_unique_key_idx')->after('id');
         });
     }
 
