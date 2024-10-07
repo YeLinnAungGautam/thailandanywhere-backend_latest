@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Illuminate\Http\Request;
 use App\Traits\HttpResponses;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
@@ -29,7 +29,7 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         return $this->success([
-            'user' =>  new UserResource($user),
+            'user' => new UserResource($user),
             'token' => $user->createToken('API Token of admin id ' . $user->id, ['user'])->plainTextToken
         ], 'Successfully Login');
     }
@@ -59,7 +59,8 @@ class AuthController extends Controller
     {
         $query = User::query();
         $query->where('id', Auth::id());
-        $data =  $query->first();
+        $data = $query->first();
+
         return $this->success([
             'user' => new UserResource($data),
         ], 'User Account Detail');
@@ -69,6 +70,16 @@ class AuthController extends Controller
     {
         $user = Auth::user();
         $user->currentAccessToken()->delete();
+
         return $this->success(null, 'Successfully Logout');
+    }
+
+    public function deleteAccountPermanent()
+    {
+        $user = Auth::user();
+
+        User::find($user->id)->delete();
+
+        return $this->success(null, 'Successfully deactivated');
     }
 }

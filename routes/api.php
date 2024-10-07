@@ -34,6 +34,8 @@ Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
     Route::post('posts/{id}/comments', [CommentController::class, 'addComment']);
     Route::post('posts/{id}/react', [CommentController::class, 'toggleReact']);
     Route::delete('comments/{id}', [CommentController::class, 'deleteComment']);
+
+    Route::delete("/delete-account-permanent", [AuthController::class, 'deleteAccountPermanent']);
 });
 
 
