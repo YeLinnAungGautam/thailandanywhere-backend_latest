@@ -23,17 +23,11 @@ class SocialiteLoginController extends Controller
 
     public function callback(string $provider, Request $request)
     {
-        info('Google callback success');
-
         try {
             $user = Socialite::driver('google')->stateless()->user();
 
             $user = $this->findOrCreateUser($provider, $user);
             $token = $user->createToken('UserToken')->plainTextToken;
-
-            info($token);
-
-            info($user->id);
 
             return view('oauth/callback', [
                 'token' => $token,
