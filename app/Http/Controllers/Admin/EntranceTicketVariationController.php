@@ -48,7 +48,6 @@ class EntranceTicketVariationController extends Controller
             ->getData(), 'Variation List');
     }
 
-
     /**
      * Store a newly created resource in storage.
      */
@@ -62,10 +61,17 @@ class EntranceTicketVariationController extends Controller
             $save = EntranceTicketVariation::create([
                 'name' => $request->name,
                 'price_name' => $request->price_name,
+
                 'price' => $request->price,
                 'cost_price' => $request->cost_price,
                 'agent_price' => $request->agent_price,
                 'owner_price' => $request->owner_price,
+
+                'child_price' => $request->child_price,
+                'child_cost_price' => $request->child_cost_price,
+                'child_agent_price' => $request->child_agent_price,
+                'child_owner_price' => $request->child_owner_price,
+
                 'is_add_on' => $request->is_add_on,
                 'add_on_price' => $request->add_on_price,
                 'entrance_ticket_id' => $request->entrance_ticket_id,
@@ -85,6 +91,12 @@ class EntranceTicketVariationController extends Controller
                         'image' => $fileData['fileName']
                     ]);
                 };
+            }
+
+            if ($request->periods) {
+                foreach ($request->periods as $period) {
+                    $save->periods()->create($period);
+                }
             }
 
             DB::commit();
@@ -121,10 +133,17 @@ class EntranceTicketVariationController extends Controller
                 'name' => $request->name ?? $entrance_tickets_variation->name,
                 'entrance_ticket_id' => $request->entrance_ticket_id ?? $entrance_tickets_variation->entrance_ticket_id,
                 'price_name' => $request->price_name ?? $entrance_tickets_variation->price_name,
+
                 'price' => $request->price ?? $entrance_tickets_variation->price,
                 'cost_price' => $request->cost_price ?? $entrance_tickets_variation->cost_price,
                 'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
                 'owner_price' => $request->owner_price ?? $entrance_tickets_variation->owner_price,
+
+                'child_price' => $request->child_price ?? $entrance_tickets_variation->child_price,
+                'child_cost_price' => $request->child_cost_price ?? $entrance_tickets_variation->child_cost_price,
+                'child_agent_price' => $request->child_agent_price ?? $entrance_tickets_variation->child_agent_price,
+                'child_owner_price' => $request->child_owner_price ?? $entrance_tickets_variation->child_owner_price,
+
                 'description' => $request->description ?? $entrance_tickets_variation->description,
                 'is_add_on' => $request->is_add_on ?? $entrance_tickets_variation->is_add_on,
                 'add_on_price' => $request->add_on_price ?? $entrance_tickets_variation->add_on_price,
@@ -141,6 +160,26 @@ class EntranceTicketVariationController extends Controller
                         'image' => $fileData['fileName']
                     ]);
                 };
+            }
+
+            if ($request->periods) {
+                $dates = collect($request->periods)->map(function ($period) {
+                    return collect($period)->only(['start_date', 'end_date'])->all();
+                });
+
+                $overlap_dates = $this->checkIfOverlapped($dates);
+
+                $variation_periods = [];
+                foreach ($request->periods as $period) {
+                    $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
+                    $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
+
+                    if (!$sd_exists && !$ed_exists) {
+                        $variation_periods[] = $period;
+                    }
+                }
+
+                $this->syncPeriods($entrance_tickets_variation, $variation_periods);
             }
 
             DB::commit();
@@ -219,5 +258,58 @@ class EntranceTicketVariationController extends Controller
         $product_image->delete();
 
         return $this->success(null, 'Image is successfully deleted');
+    }
+
+    private function checkIfOverlapped($ranges)
+    {
+        $overlaps = [];
+        for ($i = 0; $i < count($ranges); $i++) {
+            for ($j = ($i + 1); $j < count($ranges); $j++) {
+
+                $start = \Carbon\Carbon::parse($ranges[$j]['start_date']);
+                $end = \Carbon\Carbon::parse($ranges[$j]['end_date']);
+
+                $start_first = \Carbon\Carbon::parse($ranges[$i]['start_date']);
+                $end_first = \Carbon\Carbon::parse($ranges[$i]['end_date']);
+
+                if (\Carbon\Carbon::parse($ranges[$i]['start_date'])->between($start, $end) || \Carbon\Carbon::parse($ranges[$i]['end_date'])->between($start, $end)) {
+                    $overlaps[] = $ranges[$j];
+
+                    break;
+                }
+                if (\Carbon\Carbon::parse($ranges[$j]['start_date'])->between($start_first, $end_first) || \Carbon\Carbon::parse($ranges[$j]['end_date'])->between($start_first, $end_first)) {
+                    $overlaps[] = $ranges[$j];
+
+                    break;
+                }
+            }
+        }
+
+        return $overlaps;
+    }
+
+    private function syncPeriods(EntranceTicketVariation $entrance_ticket_variation, array $periods)
+    {
+        $array_of_ids = [];
+
+        foreach ($periods as $period) {
+            $job = $entrance_ticket_variation->periods()->updateOrCreate([
+                'period_name' => $period['period_name'],
+                'period_type' => $period['period_type'],
+                'period' => $period['period'],
+
+                'start_date' => $period['start_date'],
+                'end_date' => $period['end_date'],
+
+                'cost_price' => $period['cost_price'],
+                'owner_price' => $period['owner_price'],
+                'agent_price' => $period['agent_price'] ?? null,
+                'price' => $period['price'] ?? null,
+            ]);
+
+            $array_of_ids[] = $job->id;
+        }
+
+        $entrance_ticket_variation->periods->whereNotIn('id', $array_of_ids)->each->delete();
     }
 }

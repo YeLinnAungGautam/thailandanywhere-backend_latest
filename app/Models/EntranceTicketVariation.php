@@ -33,4 +33,9 @@ class EntranceTicketVariation extends Model
     {
         return $query->where('is_add_on', false);
     }
+
+    public function periods()
+    {
+        return $this->hasMany(EntranceTicketVariationPeriod::class);
+    }
 }

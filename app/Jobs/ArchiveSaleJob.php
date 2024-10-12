@@ -16,7 +16,7 @@ class ArchiveSaleJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public Booking $booking)
+    public function __construct(public Booking $booking, public array $input_data = [])
     {
         //
     }
@@ -32,6 +32,7 @@ class ArchiveSaleJob implements ShouldQueue
         $booking_archive_data = [
             'customer' => $customer,
             'user' => $user,
+            'input_data' => $this->input_data
         ];
 
         $this->booking->update(['archive' => json_encode($booking_archive_data)]);

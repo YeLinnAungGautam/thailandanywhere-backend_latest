@@ -27,7 +27,6 @@ class BookingController extends Controller
     use ImageManager;
     use HttpResponses;
 
-
     /**
      * Display a listing of the resource.
      */
@@ -220,7 +219,8 @@ class BookingController extends Controller
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
-                    'is_driver_collect' => $is_driver_collect
+                    'is_driver_collect' => $is_driver_collect,
+                    'individual_pricing' => json_encode($request->individual_pricing)
                 ];
 
                 if (isset($request->items[$key]['customer_attachment'])) {
@@ -263,7 +263,7 @@ class BookingController extends Controller
 
             DB::commit();
 
-            ArchiveSaleJob::dispatch($save);
+            ArchiveSaleJob::dispatch($save, $request->all());
 
             return $this->success(new BookingResource($save), 'Successfully created');
         } catch (Exception $e) {
@@ -404,7 +404,8 @@ class BookingController extends Controller
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
-                        'is_driver_collect' => $item['is_driver_collect'] ?? false
+                        'is_driver_collect' => $item['is_driver_collect'] ?? false,
+                        'individual_pricing' => $request->individual_pricing ? json_encode($request->individual_pricing) : $item->individual_pricing,
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
@@ -462,7 +463,7 @@ class BookingController extends Controller
 
             DB::commit();
 
-            ArchiveSaleJob::dispatch($find);
+            ArchiveSaleJob::dispatch($find, $request->all());
 
             return $this->success(new BookingResource($find), 'Successfully updated');
         } catch (Exception $e) {
