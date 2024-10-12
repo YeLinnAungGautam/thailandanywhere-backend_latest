@@ -71,6 +71,7 @@ class EntranceTicketVariationController extends Controller
                 'entrance_ticket_id' => $request->entrance_ticket_id,
                 'description' => $request->description,
                 'including_services' => $request->including_services ? json_encode($request->including_services) : null,
+                'meta_data' => $request->meta_data ? json_encode($request->meta_data) : null,
             ]);
 
 
@@ -128,6 +129,7 @@ class EntranceTicketVariationController extends Controller
                 'is_add_on' => $request->is_add_on ?? $entrance_tickets_variation->is_add_on,
                 'add_on_price' => $request->add_on_price ?? $entrance_tickets_variation->add_on_price,
                 'including_services' => $request->including_services ? json_encode($request->including_services) : $entrance_tickets_variation->including_services,
+                'meta_data' => $request->meta_data ? json_encode($request->meta_data) : $entrance_tickets_variation->meta_data,
             ]);
 
             if ($request->file('images')) {
@@ -170,7 +172,7 @@ class EntranceTicketVariationController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach($entrance_tickets_variation->images as $variation_image) {
+        foreach ($entrance_tickets_variation->images as $variation_image) {
             Storage::delete('public/images/' . $variation_image->image);
         }
 
@@ -198,13 +200,13 @@ class EntranceTicketVariationController extends Controller
     {
         $entrance_tickets_variation = EntranceTicketVariation::find($entrance_tickets_variation_id);
 
-        if(!$entrance_tickets_variation) {
+        if (!$entrance_tickets_variation) {
             return $this->error(null, 'Invalid entrance variation', 404);
         }
 
         $product_image = ProductImage::find($product_image_id);
 
-        if(!$product_image) {
+        if (!$product_image) {
             return $this->error(null, 'Invalid image', 404);
         }
 

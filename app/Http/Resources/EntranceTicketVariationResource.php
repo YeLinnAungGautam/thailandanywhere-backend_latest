@@ -30,6 +30,7 @@ class EntranceTicketVariationResource extends JsonResource
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'including_services' => $this->including_services ? json_decode($this->including_services) : $this->including_services,
+            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null
         ];
     }
 }

@@ -77,6 +77,9 @@ class EntranceTicketController extends Controller
             'bank_account_number' => $request->bank_account_number,
             'account_name' => $request->account_name,
             'cancellation_policy_id' => $request->cancellation_policy_id,
+            'youtube_link' => json_encode($request->youtube_link),
+            'location_map_title' => $request->location_map_title,
+            'location_map' => $request->location_map,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -169,6 +172,9 @@ class EntranceTicketController extends Controller
             'bank_account_number' => $request->bank_account_number ?? $find->bank_account_number,
             'account_name' => $request->account_name ?? $find->account_name,
             'cancellation_policy_id' => $request->cancellation_policy_id ?? $find->cancellation_policy_id,
+            'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $find->youtube_link,
+            'location_map_title' => $request->location_map_title ?? $find->location_map_title,
+            'location_map' => $request->location_map ?? $find->location_map,
         ];
 
 

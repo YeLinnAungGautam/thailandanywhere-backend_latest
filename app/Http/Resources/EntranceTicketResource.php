@@ -40,7 +40,8 @@ class EntranceTicketResource extends JsonResource
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'lowest_variation_price' => $this->variations->where('is_add_on', false)->sortBy('price')->first()->price ?? 0,
             'lowest_walk_in_price' => $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
-            'total_booking_count' => $this->bookingItems()->count()
+            'total_booking_count' => $this->bookingItems()->count(),
+            'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
         ];
     }
 
