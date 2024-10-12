@@ -159,23 +159,23 @@ class BookingItem extends Model
 
     public function getAcsrVariationNameAttribute()
     {
-        if($this->product_type === 'App\Models\PrivateVanTour') {
+        if ($this->product_type === 'App\Models\PrivateVanTour') {
             return $this->car->name ?? '-';
         }
 
-        if($this->product_type === 'App\Models\EntranceTicket') {
+        if ($this->product_type === 'App\Models\EntranceTicket') {
             return $this->variation->name ?? '-';
         }
 
-        if($this->product_type === 'App\Models\Hotel') {
+        if ($this->product_type === 'App\Models\Hotel') {
             return $this->room->name ?? '-';
         }
 
-        if($this->product_type === 'App\Models\Airline') {
+        if ($this->product_type === 'App\Models\Airline') {
             return $this->ticket->price ?? '-';
         }
 
-        if($this->product_type === 'App\Models\GroupTour') {
+        if ($this->product_type === 'App\Models\GroupTour') {
             return $this->groupTour->name ?? '-';
         }
 
@@ -190,5 +190,30 @@ class BookingItem extends Model
     public function scopeOnlyEntranceTicket($query)
     {
         $query->where('product_type', EntranceTicket::class);
+    }
+
+    public function getAcsrVariationProductAttribute()
+    {
+        if ($this->product_type === 'App\Models\PrivateVanTour') {
+            return $this->car ?? '-';
+        }
+
+        if ($this->product_type === 'App\Models\EntranceTicket') {
+            return $this->variation ?? '-';
+        }
+
+        if ($this->product_type === 'App\Models\Hotel') {
+            return $this->room ?? '-';
+        }
+
+        if ($this->product_type === 'App\Models\Airline') {
+            return $this->ticket ?? '-';
+        }
+
+        if ($this->product_type === 'App\Models\GroupTour') {
+            return $this->groupTour ?? '-';
+        }
+
+        return '-';
     }
 }

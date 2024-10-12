@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
+use App\Jobs\ArchiveSaleJob;
 use App\Jobs\SendSaleDepositUpdateEmailJob;
 use App\Models\Airline;
 use App\Models\Booking;
@@ -262,6 +263,8 @@ class BookingController extends Controller
 
             DB::commit();
 
+            ArchiveSaleJob::dispatch($save);
+
             return $this->success(new BookingResource($save), 'Successfully created');
         } catch (Exception $e) {
             DB::rollBack();
@@ -458,6 +461,8 @@ class BookingController extends Controller
             }
 
             DB::commit();
+
+            ArchiveSaleJob::dispatch($find);
 
             return $this->success(new BookingResource($find), 'Successfully updated');
         } catch (Exception $e) {

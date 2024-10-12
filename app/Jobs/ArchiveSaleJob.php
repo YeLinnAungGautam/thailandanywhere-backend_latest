@@ -33,5 +33,19 @@ class ArchiveSaleJob implements ShouldQueue
             'customer' => $customer,
             'user' => $user,
         ];
+
+        $this->booking->update(['archive' => json_encode($booking_archive_data)]);
+
+        foreach ($this->booking->items as $booking_item) {
+            $product = $booking_item->product;
+            $variation = $booking_item->acsr_variation_product;
+
+            $booking_item_archive_data = [
+                'product' => $product,
+                'variation' => $variation,
+            ];
+
+            $booking_item->update(['archive' => json_encode($booking_item_archive_data)]);
+        }
     }
 }
