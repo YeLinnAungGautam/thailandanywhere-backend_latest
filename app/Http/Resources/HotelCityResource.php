@@ -18,7 +18,7 @@ class HotelCityResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'image' => $this->image ? config('app.url') . Storage::url('images/' . $this->image) : null,
+            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
             'places' => $this->getPlaces()
         ];
     }

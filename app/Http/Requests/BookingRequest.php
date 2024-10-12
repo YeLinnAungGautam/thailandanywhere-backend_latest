@@ -29,8 +29,8 @@ class BookingRequest extends FormRequest
             'payment_status' => 'required|string',
             'booking_date' => 'required|string',
             'items' => 'required',
-            'sub_total' => 'required',
-            'grand_total' => 'required',
+            'sub_total' => 'required|integer',
+            'grand_total' => 'required|integer',
             'balance_due' => 'required',
             'balance_due_date' => 'required'
         ];

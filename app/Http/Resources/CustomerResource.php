@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -26,13 +25,13 @@ class CustomerResource extends JsonResource
             'dob' => $this->dob,
             'line_id' => $this->line_id,
             'is_corporate_customer' => $this->is_corporate_customer,
-            'photo' => $this->photo ? config('app.url') . Storage::url('images/' . $this->photo) : null,
+            'photo' => $this->photo ? Storage::url('images/' . $this->photo) : null,
             'comment' => $this->comment,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
 
-        if($request->with_sale_record) {
+        if ($request->with_sale_record) {
             $data['sales'] = $this->bookings;
         }
 

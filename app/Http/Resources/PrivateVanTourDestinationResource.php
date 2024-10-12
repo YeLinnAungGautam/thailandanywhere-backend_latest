@@ -29,7 +29,7 @@ class PrivateVanTourDestinationResource extends JsonResource
             'entry_fee' => $this->entry_fee,
 
             'city' => new CityResource($this->city),
-            'feature_img' => $this->feature_img ? config('app.url') . Storage::url('images/destination/' . $this->feature_img) : null,
+            'feature_img' => $this->feature_img ? Storage::url('images/destination/' . $this->feature_img) : null,
             'summary' => $this->summary,
             'detail' => $this->detail,
             'place_id' => $this->place_id,

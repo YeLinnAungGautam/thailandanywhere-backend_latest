@@ -59,7 +59,7 @@ class BookingItemResource extends JsonResource
                 'bank_name' => $this->booking->bank_name,
             ],
             'customer_info' => $this->booking->customer,
-            'customer_attachment' => $this->customer_attachment ? config('app.url') . Storage::url('attachments/' . $this->customer_attachment) : null,
+            'customer_attachment' => $this->customer_attachment ? Storage::url('attachments/' . $this->customer_attachment) : null,
             'product_type' => $this->product_type,
             'product_id' => $this->product_id,
             'is_excluded' => $this->is_excluded,
@@ -87,7 +87,7 @@ class BookingItemResource extends JsonResource
 
             'bank_account_number' => $this->bank_account_number,
             'exchange_rate' => $this->exchange_rate,
-            'confirmation_letter' => $this->confirmation_letter ? config('app.url') . Storage::url('files/' . $this->confirmation_letter) : null,
+            'confirmation_letter' => $this->confirmation_letter ? Storage::url('files/' . $this->confirmation_letter) : null,
             'selling_price' => $this->selling_price,
             'comment' => $this->comment,
             'reservation_status' => $this->reservation_status,
@@ -132,7 +132,7 @@ class BookingItemResource extends JsonResource
             'associated_customer' => AssociatedCustomerResource::collection($this->associatedCustomer),
             'slip_code' => $this->slip_code,
             'is_associated' => $this->is_associated,
-            // 'paid_slip' => $this->paid_slip ? config('app.url') . Storage::url('images/' . $this->paid_slip) : null,
+            // 'paid_slip' => $this->paid_slip ? Storage::url('images/' . $this->paid_slip) : null,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

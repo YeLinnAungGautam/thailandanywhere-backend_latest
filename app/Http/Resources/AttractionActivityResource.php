@@ -18,7 +18,7 @@ class AttractionActivityResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'image' => $this->image ? config('app.url') . Storage::url('images/attraction_activity/' . $this->image) : null,
+            'image' => $this->image ? Storage::url('images/attraction_activity/' . $this->image) : null,
         ];
     }
 }

@@ -9,11 +9,12 @@ trait ImageManager
 {
     public function uploads($file, $path)
     {
-        if($file) {
-            $fileName   = time() . '_' . rand(00000, 99999) . '_' . $file->getClientOriginalName();
-            Storage::disk('public')->put($path . $fileName, File::get($file));
-            $file_type  = $file->getClientOriginalExtension();
-            $filePath   = $path . $fileName;
+        if ($file) {
+            $fileName = time() . '_' . rand(00000, 99999) . '_' . $file->getClientOriginalName();
+            Storage::put($path . $fileName, File::get($file));
+            $file_type = $file->getClientOriginalExtension();
+            $filePath = $path . $fileName;
+
             return $file = [
                 'fileName' => $fileName,
                 'fileType' => $file_type,
@@ -30,7 +31,8 @@ trait ImageManager
         if ($size > 0) {
             $size = (int) $size;
             $base = log($size) / log(1024);
-            $suffixes = array(' bytes', ' KB', ' MB', ' GB', ' TB');
+            $suffixes = [' bytes', ' KB', ' MB', ' GB', ' TB'];
+
             return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
         }
 

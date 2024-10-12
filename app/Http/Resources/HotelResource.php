@@ -61,7 +61,7 @@ class HotelResource extends JsonResource
             $places[] = [
                 'name' => $nearby->name ?? '-',
                 'distance' => $nearby->distance ?? '-',
-                'image' => $nearby->image ? config('app.url') . Storage::url('images/' . $nearby->image) : null,
+                'image' => $nearby->image ? Storage::url('images/' . $nearby->image) : null,
             ];
         }
 

@@ -87,7 +87,7 @@ class HotelController extends Controller
                     $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
 
                     // $file_name = $nearby_image_data['fileName'];
-                    $file_name = config('app.url') . Storage::url('images/' . $nearby_image_data['fileName']);
+                    $file_name = Storage::url('images/' . $nearby_image_data['fileName']);
                 }
 
                 $hotel_nearby_places [] = [
@@ -181,7 +181,7 @@ class HotelController extends Controller
                     $nearby_image_data = $this->uploads($nearby_place['image'], 'images/');
 
                     // $file_name = $nearby_image_data['fileName'];
-                    $file_name = config('app.url') . Storage::url('images/' . $nearby_image_data['fileName']);
+                    $file_name = Storage::url('images/' . $nearby_image_data['fileName']);
                 }
 
                 $hotel_nearby_places [] = [

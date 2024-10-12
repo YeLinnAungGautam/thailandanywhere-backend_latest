@@ -3,8 +3,8 @@
 namespace App\Http\Resources\Frontend;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class VantourResource extends JsonResource
 {
@@ -22,7 +22,7 @@ class VantourResource extends JsonResource
             'description' => $this->description,
             'type' => $this->type,
             'long_description' => $this->long_description,
-            'cover_image' => $this->cover_image ? config('app.url') . Storage::url('images/' . $this->cover_image) : null,
+            'cover_image' => $this->cover_image ? Storage::url('images/' . $this->cover_image) : null,
         ];
     }
 }

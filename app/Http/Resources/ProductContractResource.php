@@ -17,7 +17,7 @@ class ProductContractResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'file' => $this->file ? config('app.url') . Storage::url('contracts/' . $this->file) : null,
+            'file' => $this->file ? Storage::url('contracts/' . $this->file) : null,
         ];
     }
 }

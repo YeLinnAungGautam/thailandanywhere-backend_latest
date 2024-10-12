@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class ReservationSupplierInfoResource extends JsonResource
 {
@@ -19,10 +20,10 @@ class ReservationSupplierInfoResource extends JsonResource
             'booking_item_id' => $this->booking_item_id,
             'supplier_name' => $this->supplier_name,
             'ref_number' => $this->ref_number,
-            'booking_confirm_letter' => $this->booking_confirm_letter ? config('app.url') . Storage::url('images/' . $this->booking_confirm_letter) : null,
-            'deleted_at' =>  $this->deleted_at,
-            'updated_at' =>  $this->updated_at,
-            'created_at' =>  $this->created_at,
+            'booking_confirm_letter' => $this->booking_confirm_letter ? Storage::url('images/' . $this->booking_confirm_letter) : null,
+            'deleted_at' => $this->deleted_at,
+            'updated_at' => $this->updated_at,
+            'created_at' => $this->created_at,
         ];
     }
 }

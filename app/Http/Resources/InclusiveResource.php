@@ -2,10 +2,9 @@
 
 namespace App\Http\Resources;
 
-use App\Models\InclusiveAirlineTicket;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class InclusiveResource extends JsonResource
 {
@@ -26,7 +25,7 @@ class InclusiveResource extends JsonResource
             'day' => $this->day,
             'night' => $this->night,
             'description' => $this->description,
-            'cover_image' => $this->cover_image ? config('app.url') . Storage::url('images/' . $this->cover_image) : null,
+            'cover_image' => $this->cover_image ? Storage::url('images/' . $this->cover_image) : null,
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
             'private_van_tours' => InclusivePrivateVanTourResource::collection($this->privateVanTours),
             'group_tours' => InclusiveGroupTourResource::collection($this->groupTours),

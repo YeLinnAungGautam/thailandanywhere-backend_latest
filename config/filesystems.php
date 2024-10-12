@@ -56,6 +56,18 @@ return [
             'throw' => false,
         ],
 
+        'space' => [
+            'driver' => 's3',
+            'key' => env('DO_SPACES_KEY'),
+            'secret' => env('DO_SPACES_SECRET'),
+            'region' => env('DO_SPACES_REGION'),
+            'bucket' => env('DO_SPACES_BUCKET'),
+            'endpoint' => env('DO_SPACES_ENDPOINT', 'http://127.0.0.1:9005'),
+            'url' => env('DO_SPACES_URL', 'http://127.0.0.1:9005'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            'root' => env('DO_SPACES_ROOT', '')
+        ],
     ],
 
     /*
