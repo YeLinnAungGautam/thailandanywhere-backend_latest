@@ -220,7 +220,7 @@ class BookingController extends Controller
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
                     'is_driver_collect' => $is_driver_collect,
-                    'individual_pricing' => json_encode($request->individual_pricing)
+                    'individual_pricing' => json_encode($item['individual_pricing'])
                 ];
 
                 if (isset($request->items[$key]['customer_attachment'])) {
@@ -405,7 +405,7 @@ class BookingController extends Controller
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
                         'is_driver_collect' => $item['is_driver_collect'] ?? false,
-                        'individual_pricing' => $request->individual_pricing ? json_encode($request->individual_pricing) : $item->individual_pricing,
+                        'individual_pricing' => $item['individual_pricing'] ? json_encode($item['individual_pricing']) : $item['individual_pricing'],
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
