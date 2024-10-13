@@ -263,7 +263,7 @@ class BookingController extends Controller
 
             DB::commit();
 
-            ArchiveSaleJob::dispatch($save, $request->all());
+            ArchiveSaleJob::dispatch($save);
 
             return $this->success(new BookingResource($save), 'Successfully created');
         } catch (Exception $e) {
@@ -463,7 +463,7 @@ class BookingController extends Controller
 
             DB::commit();
 
-            ArchiveSaleJob::dispatch($find, $request->all());
+            ArchiveSaleJob::dispatch($find);
 
             return $this->success(new BookingResource($find), 'Successfully updated');
         } catch (Exception $e) {
