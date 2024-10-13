@@ -21,6 +21,7 @@ return [
 
     'allowed_origins' => [
         'https://sales-admin.thanywhere.com',
+        'http://sales-admin.thanywhere.com',
         'http://staging-admin.thanywhere.com',
         'https://staging-admin.thanywhere.com',
         'https://mm.thanywhere.com',
