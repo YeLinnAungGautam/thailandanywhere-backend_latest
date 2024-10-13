@@ -3,8 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class PostResource extends JsonResource
 {
@@ -18,10 +18,10 @@ class PostResource extends JsonResource
 
         $imagesArr = [];
 
-        if($this->images) {
+        if ($this->images) {
             $postImage = json_decode($this->images);
             foreach ($postImage as $image) {
-                array_push($imagesArr, env('APP_URL') . Storage::url('images/' . $image));
+                array_push($imagesArr, Storage::url('images/' . $image));
             }
         }
 
@@ -31,7 +31,7 @@ class PostResource extends JsonResource
             'title' => $this->title,
             'content' => $this->content,
             'views' => $this->views,
-            'featured_image' => env('APP_URL') . Storage::url('images/' . $this->featured_image),
+            'featured_image' => Storage::url('images/' . $this->featured_image),
             'images' => $imagesArr,
             'category' => new CategoryResource($this->category),
             'tags' => json_decode($this->tags, true),

@@ -20,7 +20,7 @@ class UserResource extends JsonResource
             'unique_key' => $this->unique_key,
             'name' => $this->name,
             'email' => $this->email,
-            'profile' => env('APP_URL') . Storage::url('images/' . $this->profile),
+            'profile' => Storage::url('images/' . $this->profile),
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'phone' => $this->phone,
