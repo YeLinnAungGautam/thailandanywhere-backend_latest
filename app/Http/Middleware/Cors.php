@@ -15,6 +15,8 @@ class Cors
      */
     public function handle(Request $request, Closure $next): Response
     {
+        info('cors middleware here');
+
         $response = $next($request);
         $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Access-Control-Allow-Methods', 'POST, GET, PUT');
