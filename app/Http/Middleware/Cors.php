@@ -20,7 +20,7 @@ class Cors
         $response->headers->set('Access-Control-Allow-Methods', 'POST, GET');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With, Application', 'ip');
 
-        info('cors middleware here');
+        // info('cors middleware here');
 
         return $response;
     }
