@@ -12,21 +12,7 @@ class EntranceTicket extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = [
-        'name',
-        'description',
-        'full_description',
-        'full_description_en',
-        'provider',
-        'cancellation_policy_id',
-        'cover_image',
-        'place',
-        'legal_name',
-        'bank_name',
-        'payment_method',
-        'bank_account_number',
-        'account_name'
-    ];
+    protected $guarded = [];
 
     public function images()
     {
