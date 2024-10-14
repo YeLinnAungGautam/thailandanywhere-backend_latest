@@ -403,7 +403,7 @@ class BookingController extends Controller
                         'checkin_date' => isset($item['checkin_date']) ? $item['checkin_date'] : null,
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
-                        'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
+                        'is_inclusive' => (isset($item['reservation_status']) && $item['reservation_status'] == 'undefined') ? "1" : "0",
                         'is_driver_collect' => $item['is_driver_collect'] ?? false,
                         'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                     ];
