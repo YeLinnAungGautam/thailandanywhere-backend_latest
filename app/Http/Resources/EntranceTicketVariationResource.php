@@ -23,11 +23,13 @@ class EntranceTicketVariationResource extends JsonResource
             'cost_price' => $this->cost_price,
             'agent_price' => $this->agent_price ?? 0,
             'owner_price' => $this->owner_price,
+            'adult_info' => $this->adult_info,
 
             'child_price' => $this->child_price,
             'child_cost_price' => $this->child_cost_price,
             'child_agent_price' => $this->child_agent_price ?? 0,
             'child_owner_price' => $this->child_owner_price,
+            'child_info' => $this->child_info,
 
             'description' => $this->description,
             'is_add_on' => $this->is_add_on,

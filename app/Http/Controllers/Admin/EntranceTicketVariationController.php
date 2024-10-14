@@ -66,11 +66,13 @@ class EntranceTicketVariationController extends Controller
                 'cost_price' => $request->cost_price,
                 'agent_price' => $request->agent_price,
                 'owner_price' => $request->owner_price,
+                'adult_info' => $request->adult_info,
 
                 'child_price' => $request->child_price,
                 'child_cost_price' => $request->child_cost_price,
                 'child_agent_price' => $request->child_agent_price,
                 'child_owner_price' => $request->child_owner_price,
+                'child_info' => $request->child_info,
 
                 'is_add_on' => $request->is_add_on,
                 'add_on_price' => $request->add_on_price,
@@ -138,11 +140,13 @@ class EntranceTicketVariationController extends Controller
                 'cost_price' => $request->cost_price ?? $entrance_tickets_variation->cost_price,
                 'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
                 'owner_price' => $request->owner_price ?? $entrance_tickets_variation->owner_price,
+                'adult_info' => $request->adult_info ?? $entrance_tickets_variation->adult_info,
 
                 'child_price' => $request->child_price ?? $entrance_tickets_variation->child_price,
                 'child_cost_price' => $request->child_cost_price ?? $entrance_tickets_variation->child_cost_price,
                 'child_agent_price' => $request->child_agent_price ?? $entrance_tickets_variation->child_agent_price,
                 'child_owner_price' => $request->child_owner_price ?? $entrance_tickets_variation->child_owner_price,
+                'child_info' => $request->child_info ?? $entrance_tickets_variation->child_info,
 
                 'description' => $request->description ?? $entrance_tickets_variation->description,
                 'is_add_on' => $request->is_add_on ?? $entrance_tickets_variation->is_add_on,
