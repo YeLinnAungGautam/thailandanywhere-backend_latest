@@ -405,7 +405,7 @@ class BookingController extends Controller
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => $item['reservation_status'] == 'undefined' ? "1" : "0",
                         'is_driver_collect' => $item['is_driver_collect'] ?? false,
-                        'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : $item['individual_pricing'],
+                        'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
