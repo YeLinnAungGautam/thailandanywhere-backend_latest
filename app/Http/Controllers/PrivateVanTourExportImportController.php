@@ -16,7 +16,7 @@ class PrivateVanTourExportImportController extends Controller
         try {
             $file_name = "private_van_tour_export_" . date('Y-m-d-H-i-s') . ".csv";
 
-            \Excel::store(new PrivateVantourExport, "public/export/" . $file_name);
+            \Excel::store(new PrivateVantourExport, "export/" . $file_name);
 
             return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
         } catch (Exception $e) {

@@ -80,8 +80,8 @@ class RestaurantController extends Controller
 
             $contractArr = [];
 
-            if($request->file('contracts')) {
-                foreach($request->file('contracts') as $file) {
+            if ($request->file('contracts')) {
+                foreach ($request->file('contracts') as $file) {
                     $fileData = $this->uploads($file, 'contracts/');
                     $contractArr[] = [
                         'ownerable_id' => $save->id,
@@ -141,8 +141,8 @@ class RestaurantController extends Controller
 
             $contractArr = [];
 
-            if($request->file('contracts')) {
-                foreach($request->file('contracts') as $file) {
+            if ($request->file('contracts')) {
+                foreach ($request->file('contracts') as $file) {
                     $fileData = $this->uploads($file, 'contracts/');
                     $contractArr[] = [
                         'ownerable_id' => $restaurant->id,
@@ -191,8 +191,8 @@ class RestaurantController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach($restaurant->images as $res_image) {
-            Storage::delete('public/images/' . $res_image->image);
+        foreach ($restaurant->images as $res_image) {
+            Storage::delete('images/' . $res_image->image);
         }
 
         $restaurant->images()->delete();
@@ -221,7 +221,7 @@ class RestaurantController extends Controller
             return $this->error(null, 'This image is not belongs to this restaurant', 404);
         }
 
-        Storage::delete('public/images/' . $product_image->image);
+        Storage::delete('images/' . $product_image->image);
 
         $product_image->delete();
 

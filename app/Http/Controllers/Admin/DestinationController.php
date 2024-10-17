@@ -103,7 +103,7 @@ class DestinationController extends Controller
             $input['feature_img'] = uploadFile($request->file('feature_img'), 'images/destination/');
 
             if ($find->feature_img) {
-                Storage::delete('public/images/destination/' . $find->feature_img);
+                Storage::delete('images/destination/' . $find->feature_img);
             }
         }
 
@@ -115,7 +115,7 @@ class DestinationController extends Controller
                 if (count($find->images) > 0) {
                     foreach ($find->images as $exImage) {
                         // Delete the file from storage
-                        Storage::delete('public/images/destination/' . $exImage->image);
+                        Storage::delete('images/destination/' . $exImage->image);
                         // Delete the image from the database
                         $exImage->delete();
                     }
@@ -166,7 +166,7 @@ class DestinationController extends Controller
             return $this->error(null, 'Invalid destination image', 404);
         }
 
-        Storage::delete('public/images/destination' . $product_image->image);
+        Storage::delete('images/destination' . $product_image->image);
 
         $product_image->delete();
 

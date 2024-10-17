@@ -140,13 +140,13 @@ class ReservationController extends Controller
             $query->where('booking_items.product_type', 'App\Models\PrivateVanTour')->orWhere('booking_items.product_type', 'App\Models\GroupTour');
         }
 
-        if($search) {
+        if ($search) {
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%");
             });
         }
 
-        if($search_attraction) {
+        if ($search_attraction) {
             $query->whereHas('variation', function ($q) use ($search_attraction) {
                 $q->where('name', 'LIKE', "%{$search_attraction}%");
             });
@@ -236,7 +236,7 @@ class ReservationController extends Controller
 
         $booking = BookingItem::find($id);
 
-        if($booking == '') {
+        if ($booking == '') {
             abort(404);
         }
 
@@ -257,7 +257,7 @@ class ReservationController extends Controller
 
         $booking = BookingItem::find($id);
 
-        if($booking == '') {
+        if ($booking == '') {
             abort(404);
         }
         $data = new BookingItemResource($booking);
@@ -276,7 +276,7 @@ class ReservationController extends Controller
     {
         $booking = BookingItem::find($id);
 
-        if($booking == '') {
+        if ($booking == '') {
             abort(404);
         }
 
@@ -329,7 +329,7 @@ class ReservationController extends Controller
 
         if ($file = $request->file('confirmation_letter')) {
             if ($find->confirmation_letter) {
-                Storage::delete('public/images/' . $find->confirmation_letter);
+                Storage::delete('images/' . $find->confirmation_letter);
             }
 
             $fileData = $this->uploads($file, 'files/');
@@ -401,7 +401,7 @@ class ReservationController extends Controller
 
                 HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
 
-                if($bookingItem->reservation_status == 'confirmed') {
+                if ($bookingItem->reservation_status == 'confirmed') {
                     Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
                 }
             }
@@ -441,7 +441,7 @@ class ReservationController extends Controller
 
                 HotelConfirmationReceiptUploadNotifierJob::dispatch($paid_slip_names, $bookingItem);
 
-                if($bookingItem->reservation_status == 'confirmed') {
+                if ($bookingItem->reservation_status == 'confirmed') {
                     Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
                 }
             }
@@ -482,7 +482,7 @@ class ReservationController extends Controller
 
                 if ($file = $request->file('car_photo')) {
                     if ($findCarInfo->car_photo) {
-                        Storage::delete('public/images/' . $findCarInfo->car_photo);
+                        Storage::delete('images/' . $findCarInfo->car_photo);
                     }
                     $fileData = $this->uploads($file, 'images/');
                     $findCarInfo->car_photo = $fileData['fileName'];
@@ -493,7 +493,7 @@ class ReservationController extends Controller
 
             if ($request->receipt_image) {
                 foreach ($request->receipt_image as $image) {
-                    if(isset($findInfo->booking_item_id)) {
+                    if (isset($findInfo->booking_item_id)) {
                         $fileData = $this->uploads($image, 'images/');
 
                         ReservationExpenseReceipt::create([
@@ -566,8 +566,8 @@ class ReservationController extends Controller
             }
         }
 
-        if($request->is_associated == 1) {
-            if(ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
+        if ($request->is_associated == 1) {
+            if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
                 ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
                     'name' => $request->customer_name,
                     'phone' => $request->customer_phone,
@@ -585,9 +585,9 @@ class ReservationController extends Controller
 
                 BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
             }
-        } elseif($request->is_associated == 0) {
+        } elseif ($request->is_associated == 0) {
 
-            if(isset($findInfo->booking_item_id)) {
+            if (isset($findInfo->booking_item_id)) {
                 ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
 
                 BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
@@ -604,7 +604,7 @@ class ReservationController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        Storage::delete('public/images/' . $find->file);
+        Storage::delete('images/' . $find->file);
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
@@ -618,7 +618,7 @@ class ReservationController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        Storage::delete('public/images/' . $find->file);
+        Storage::delete('images/' . $find->file);
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
@@ -631,7 +631,7 @@ class ReservationController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        Storage::delete('public/files/' . $find->file);
+        Storage::delete('files/' . $find->file);
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');

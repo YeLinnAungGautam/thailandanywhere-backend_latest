@@ -16,7 +16,7 @@ class EntranceTicketExportImportController extends Controller
         try {
             $file_name = "entrance_ticket_export_" . date('Y-m-d-H-i-s') . ".csv";
 
-            \Excel::store(new EntranceTicketExport, "public/export/" . $file_name);
+            \Excel::store(new EntranceTicketExport, "export/" . $file_name);
 
             return $this->success(['download_link' => get_file_link('export', $file_name)], 'success export', 200);
         } catch (Exception $e) {

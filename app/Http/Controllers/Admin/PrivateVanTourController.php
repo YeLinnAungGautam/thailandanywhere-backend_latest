@@ -163,7 +163,7 @@ class PrivateVanTourController extends Controller
             $data['cover_image'] = $fileData['fileName'];
 
             if ($find->cover_image) {
-                Storage::delete('public/images/' . $find->cover_image);
+                Storage::delete('images/' . $find->cover_image);
             }
         }
 
@@ -188,7 +188,7 @@ class PrivateVanTourController extends Controller
                 if (count($find->images) > 0) {
                     foreach ($find->images as $exImage) {
                         // Delete the file from storage
-                        Storage::delete('public/images/' . $exImage->image);
+                        Storage::delete('images/' . $exImage->image);
                         // Delete the image from the database
                         $exImage->delete();
                     }
@@ -240,11 +240,11 @@ class PrivateVanTourController extends Controller
         $find->destinations()->detach();
         $find->cities()->detach();
 
-        Storage::delete('public/images/' . $find->cover_image);
+        Storage::delete('images/' . $find->cover_image);
 
         foreach ($find->images as $image) {
             // Delete the file from storage
-            Storage::delete('public/images/' . $image->image);
+            Storage::delete('images/' . $image->image);
             // Delete the image from the database
             $image->delete();
         }
@@ -282,7 +282,7 @@ class PrivateVanTourController extends Controller
         }
 
         // Delete the file from storage
-        Storage::delete('public/images/' . $image->image);
+        Storage::delete('images/' . $image->image);
         // Delete the image from the database
         $image->delete();
 
@@ -297,7 +297,7 @@ class PrivateVanTourController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        Storage::delete('public/images/' . $find->cover_image);
+        Storage::delete('images/' . $find->cover_image);
 
         $find->update(['cover_image' => null]);
 

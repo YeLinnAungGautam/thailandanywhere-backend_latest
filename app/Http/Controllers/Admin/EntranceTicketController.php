@@ -183,7 +183,7 @@ class EntranceTicketController extends Controller
             $data['cover_image'] = $fileData['fileName'];
 
             if ($find->cover_image) {
-                Storage::delete('public/images/' . $find->cover_image);
+                Storage::delete('images/' . $find->cover_image);
             }
         }
 
@@ -215,7 +215,7 @@ class EntranceTicketController extends Controller
                 // if (count($find->images) > 0) {
                 //     foreach ($find->images as $exImage) {
                 //         // Delete the file from storage
-                //         Storage::delete('public/images/' . $exImage->image);
+                //         Storage::delete('images/' . $exImage->image);
                 //         // Delete the image from the database
                 //         $exImage->delete();
                 //     }
@@ -281,11 +281,11 @@ class EntranceTicketController extends Controller
         $find->categories()->detach();
         $find->cities()->detach();
 
-        Storage::delete('public/images/' . $find->cover_image);
+        Storage::delete('images/' . $find->cover_image);
 
         foreach ($find->images as $image) {
             // Delete the file from storage
-            Storage::delete('public/images/' . $image->image);
+            Storage::delete('images/' . $image->image);
             // Delete the image from the database
             $image->delete();
         }
@@ -317,7 +317,7 @@ class EntranceTicketController extends Controller
             return $this->error(null, 'This contract is not belongs to this attraction', 403);
         }
 
-        Storage::delete('public/contracts/' . $entrance_ticket_contract->file);
+        Storage::delete('contracts/' . $entrance_ticket_contract->file);
 
         $entrance_ticket_contract->delete();
 
@@ -332,7 +332,7 @@ class EntranceTicketController extends Controller
             return $this->success(null, 'Entrance ticket image cannot be found');
         }
 
-        Storage::delete('public/images/' . $entrance_ticket_image->image);
+        Storage::delete('images/' . $entrance_ticket_image->image);
 
         $entrance_ticket_image->delete();
 

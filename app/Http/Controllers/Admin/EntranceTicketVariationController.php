@@ -216,7 +216,7 @@ class EntranceTicketVariationController extends Controller
         }
 
         foreach ($entrance_tickets_variation->images as $variation_image) {
-            Storage::delete('public/images/' . $variation_image->image);
+            Storage::delete('images/' . $variation_image->image);
         }
 
         $entrance_tickets_variation->images()->delete();
@@ -257,7 +257,7 @@ class EntranceTicketVariationController extends Controller
             return $this->error(null, 'This image is not belongs to this variation', 404);
         }
 
-        Storage::delete('public/images/' . $product_image->image);
+        Storage::delete('images/' . $product_image->image);
 
         $product_image->delete();
 

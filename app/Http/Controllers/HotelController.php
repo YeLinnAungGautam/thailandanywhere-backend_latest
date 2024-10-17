@@ -262,7 +262,7 @@ class HotelController extends Controller
         $hotel_images = HotelImage::where('hotel_id', '=', $hotel->id)->get();
 
         foreach ($hotel_images as $hotel_image) {
-            Storage::delete('public/images/' . $hotel_image->image);
+            Storage::delete('images/' . $hotel_image->image);
         }
 
         $hotel->facilities()->detach();
@@ -293,7 +293,7 @@ class HotelController extends Controller
             return $this->error(null, 'This image is not belongs to the hotel', 404);
         }
 
-        Storage::delete('public/images/' . $hotel_image->image);
+        Storage::delete('images/' . $hotel_image->image);
 
         $hotel_image->delete();
 
@@ -306,7 +306,7 @@ class HotelController extends Controller
             return $this->error(null, 'This contract is not belongs to the hotel', 403);
         }
 
-        Storage::delete('public/contracts/' . $hotel_contract->file);
+        Storage::delete('contracts/' . $hotel_contract->file);
 
         $hotel_contract->delete();
 

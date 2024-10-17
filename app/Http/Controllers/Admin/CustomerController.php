@@ -114,7 +114,7 @@ class CustomerController extends Controller
         if ($file = $request->file('photo')) {
 
             if ($find->photo) {
-                Storage::delete('public/images/' . $find->photo);
+                Storage::delete('images/' . $find->photo);
             }
 
             $fileData = $this->uploads($file, 'images/');
@@ -137,7 +137,7 @@ class CustomerController extends Controller
         }
 
         if ($find->photo) {
-            Storage::delete('public/images/' . $find->photo);
+            Storage::delete('images/' . $find->photo);
         }
 
         $find->delete();

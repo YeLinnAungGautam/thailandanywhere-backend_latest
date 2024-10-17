@@ -16,7 +16,7 @@ class GroupTourExportImportController extends Controller
         try {
             $file_name = "group_tour_export_" . date('Y-m-d-H-i-s') . ".csv";
 
-            \Excel::store(new GroupTourExport(), "public/export/" . $file_name);
+            \Excel::store(new GroupTourExport(), "export/" . $file_name);
 
             return $this->success(['download_link' => get_file_link('export', $file_name)], 'success group tour export', 200);
         } catch (Exception $e) {

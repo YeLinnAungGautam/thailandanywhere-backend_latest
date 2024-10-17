@@ -99,7 +99,7 @@ class AirportPickupController extends Controller
         $save->cars()->sync($data);
 
 
-        if($request->images) {
+        if ($request->images) {
             foreach ($request->file('images') as $image) {
                 $fileData = $this->uploads($image, 'images/');
                 AirportPickupImage::create(['airport_pickup_id' => $save->id, 'image' => $fileData['fileName']]);
@@ -145,7 +145,7 @@ class AirportPickupController extends Controller
             $data['cover_image'] = $fileData['fileName'];
 
             if ($find->cover_image) {
-                Storage::delete('public/images/' . $find->cover_image);
+                Storage::delete('images/' . $find->cover_image);
             }
         }
 
@@ -170,7 +170,7 @@ class AirportPickupController extends Controller
                 if (count($find->images) > 0) {
                     foreach ($find->images as $exImage) {
                         // Delete the file from storage
-                        Storage::delete('public/images/' . $exImage->image);
+                        Storage::delete('images/' . $exImage->image);
                         // Delete the image from the database
                         $exImage->delete();
                     }
@@ -210,11 +210,11 @@ class AirportPickupController extends Controller
         $find->destinations()->detach();
         $find->cities()->detach();
 
-        Storage::delete('public/images/' . $find->cover_image);
+        Storage::delete('images/' . $find->cover_image);
 
         foreach ($find->images as $image) {
             // Delete the file from storage
-            Storage::delete('public/images/' . $image->image);
+            Storage::delete('images/' . $image->image);
             // Delete the image from the database
             $image->delete();
         }

@@ -16,7 +16,7 @@ class HotelExportImportController extends Controller
         try {
             $file_name = "hotel_export_" . date('Y-m-d-H-i-s') . ".csv";
 
-            \Excel::store(new HotelExport(), "public/export/" . $file_name);
+            \Excel::store(new HotelExport(), "export/" . $file_name);
 
             return $this->success(['download_link' => get_file_link('export', $file_name)], 'CSV export is successful', 200);
         } catch (Exception $e) {

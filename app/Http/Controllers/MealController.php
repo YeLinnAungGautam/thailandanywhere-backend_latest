@@ -27,10 +27,10 @@ class MealController extends Controller
 
         $query = Meal::query()->with('images', 'restaurant');
 
-        if($order_by_price) {
-            if($order_by_price == 'low_to_high') {
+        if ($order_by_price) {
+            if ($order_by_price == 'low_to_high') {
                 $query->orderBy('meal_price');
-            } elseif($order_by_price == 'high_to_low') {
+            } elseif ($order_by_price == 'high_to_low') {
                 $query->orderByDesc('meal_price');
             }
         }
@@ -60,7 +60,7 @@ class MealController extends Controller
         DB::beginTransaction();
 
         try {
-            if(false == Restaurant::where('id', $request->restaurant_id)->exists()) {
+            if (false == Restaurant::where('id', $request->restaurant_id)->exists()) {
                 return $this->error(null, "Restaurant not found", 500);
             }
 
@@ -156,8 +156,8 @@ class MealController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach($meal->images as $meal_image) {
-            Storage::delete('public/images/' . $meal_image->image);
+        foreach ($meal->images as $meal_image) {
+            Storage::delete('images/' . $meal_image->image);
         }
 
         $meal->images()->delete();
@@ -186,7 +186,7 @@ class MealController extends Controller
             return $this->error(null, 'This image is not belongs to this meal', 404);
         }
 
-        Storage::delete('public/images/' . $product_image->image);
+        Storage::delete('images/' . $product_image->image);
 
         $product_image->delete();
 

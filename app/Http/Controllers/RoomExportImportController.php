@@ -16,7 +16,7 @@ class RoomExportImportController extends Controller
         try {
             $file_name = "room_export_" . date('Y-m-d-H-i-s') . ".csv";
 
-            \Excel::store(new RoomExport(), "public/export/" . $file_name);
+            \Excel::store(new RoomExport(), "export/" . $file_name);
 
             return $this->success(['download_link' => get_file_link('export', $file_name)], 'Success Room Export', 200);
         } catch (Exception $e) {

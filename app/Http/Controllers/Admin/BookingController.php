@@ -360,11 +360,11 @@ class BookingController extends Controller
                     $d_item = BookingItem::find($delete_item);
 
                     if ($d_item->receipt_image) {
-                        Storage::delete('public/images/' . $d_item->receipt_image);
+                        Storage::delete('images/' . $d_item->receipt_image);
                     }
 
                     if ($d_item->confirmation_letter) {
-                        Storage::delete('public/files/' . $d_item->confirmation_letter);
+                        Storage::delete('files/' . $d_item->confirmation_letter);
                     }
 
                     $d_item->delete();
@@ -488,7 +488,7 @@ class BookingController extends Controller
 
         foreach ($find->items as $item) {
             if ($item->receipt_image) {
-                Storage::delete('public/images/' . $item->receipt_image);
+                Storage::delete('images/' . $item->receipt_image);
             }
         }
 
@@ -541,7 +541,7 @@ class BookingController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        Storage::delete('public/images/' . $find->image);
+        Storage::delete('images/' . $find->image);
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');

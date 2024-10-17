@@ -59,7 +59,7 @@ class SendSaleReportMail extends Mailable
     {
         $file_name = "reservation_report_" . date('Y-m-d-H-i-s') . ".csv";
 
-        Excel::store(new ReservationReportExport($this->daterange), "public/attachments/" . $file_name);
+        Excel::store(new ReservationReportExport($this->daterange), "attachments/" . $file_name);
 
         return [
             Attachment::fromPath(public_path('/storage/attachments/' . $file_name))

@@ -29,10 +29,10 @@ class RoomController extends Controller
 
         $query = Room::query()->with('periods', 'images', 'hotel');
 
-        if($order_by_price) {
-            if($order_by_price == 'low_to_high') {
+        if ($order_by_price) {
+            if ($order_by_price == 'low_to_high') {
                 $query->orderBy('room_price');
-            } elseif($order_by_price == 'high_to_low') {
+            } elseif ($order_by_price == 'high_to_low') {
                 $query->orderByDesc('room_price');
             }
         }
@@ -84,7 +84,7 @@ class RoomController extends Controller
             };
         }
 
-        if($request->periods) {
+        if ($request->periods) {
             foreach ($request->periods as $period) {
                 $save->periods()->create($period);
             }
@@ -132,7 +132,7 @@ class RoomController extends Controller
                 };
             }
 
-            if($request->periods) {
+            if ($request->periods) {
                 $dates = collect($request->periods)->map(function ($period) {
                     return collect($period)->only(['start_date', 'end_date'])->all();
                 });
@@ -140,11 +140,11 @@ class RoomController extends Controller
                 $overlap_dates = $this->checkIfOverlapped($dates);
 
                 $room_periods = [];
-                foreach($request->periods as $period) {
+                foreach ($request->periods as $period) {
                     $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
                     $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
 
-                    if(!$sd_exists && !$ed_exists) {
+                    if (!$sd_exists && !$ed_exists) {
                         $room_periods[] = $period;
                     }
                 }
@@ -183,8 +183,8 @@ class RoomController extends Controller
 
         $room_images = RoomImage::where('room_id', '=', $room->id)->get();
 
-        foreach($room_images as $room_image) {
-            Storage::delete('public/images/' . $room_image->image);
+        foreach ($room_images as $room_image) {
+            Storage::delete('images/' . $room_image->image);
         }
 
         RoomImage::where('room_id', $room->id)->delete();
@@ -213,7 +213,7 @@ class RoomController extends Controller
             return $this->error(null, 'This image is not belongs to the room', 404);
         }
 
-        Storage::delete('public/images/' . $room_image->image);
+        Storage::delete('images/' . $room_image->image);
 
         $room_image->delete();
 
@@ -243,8 +243,8 @@ class RoomController extends Controller
     private function checkIfOverlapped($ranges)
     {
         $overlaps = [];
-        for($i = 0; $i < count($ranges); $i++) {
-            for($j = ($i + 1); $j < count($ranges); $j++) {
+        for ($i = 0; $i < count($ranges); $i++) {
+            for ($j = ($i + 1); $j < count($ranges); $j++) {
 
                 $start = \Carbon\Carbon::parse($ranges[$j]['start_date']);
                 $end = \Carbon\Carbon::parse($ranges[$j]['end_date']);
@@ -252,12 +252,12 @@ class RoomController extends Controller
                 $start_first = \Carbon\Carbon::parse($ranges[$i]['start_date']);
                 $end_first = \Carbon\Carbon::parse($ranges[$i]['end_date']);
 
-                if(\Carbon\Carbon::parse($ranges[$i]['start_date'])->between($start, $end) || \Carbon\Carbon::parse($ranges[$i]['end_date'])->between($start, $end)) {
+                if (\Carbon\Carbon::parse($ranges[$i]['start_date'])->between($start, $end) || \Carbon\Carbon::parse($ranges[$i]['end_date'])->between($start, $end)) {
                     $overlaps[] = $ranges[$j];
 
                     break;
                 }
-                if(\Carbon\Carbon::parse($ranges[$j]['start_date'])->between($start_first, $end_first) || \Carbon\Carbon::parse($ranges[$j]['end_date'])->between($start_first, $end_first)) {
+                if (\Carbon\Carbon::parse($ranges[$j]['start_date'])->between($start_first, $end_first) || \Carbon\Carbon::parse($ranges[$j]['end_date'])->between($start_first, $end_first)) {
                     $overlaps[] = $ranges[$j];
 
                     break;

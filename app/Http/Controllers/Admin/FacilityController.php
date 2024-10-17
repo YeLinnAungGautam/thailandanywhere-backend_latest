@@ -89,7 +89,7 @@ class FacilityController extends Controller
             $image = uploadFile($request->file('image'), 'images/facility/');
 
             if ($find->image) {
-                Storage::delete('public/images/facility/' . $find->image);
+                Storage::delete('images/facility/' . $find->image);
             }
         }
 
@@ -114,7 +114,7 @@ class FacilityController extends Controller
         }
 
         if ($find->image) {
-            Storage::delete('public/images/facility/' . $find->image);
+            Storage::delete('images/facility/' . $find->image);
         }
 
         $find->delete();

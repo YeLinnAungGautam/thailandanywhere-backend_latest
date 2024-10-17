@@ -2,26 +2,21 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\GroupTour;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreInclusiveRequest;
+use App\Http\Resources\InclusiveResource;
 use App\Models\Inclusive;
 use App\Models\InclusiveAirlineTicket;
-use App\Models\InclusiveHotel;
-use App\Traits\ImageManager;
-use Illuminate\Http\Request;
-use App\Models\AirportPickup;
-use App\Traits\HttpResponses;
-use App\Models\EntranceTicket;
-use App\Models\InclusiveImage;
-use App\Models\PrivateVanTour;
-use App\Models\InclusiveProduct;
-use App\Models\InclusiveGroupTour;
-use App\Http\Controllers\Controller;
 use App\Models\InclusiveAirportPickup;
 use App\Models\InclusiveEntranceTicket;
+use App\Models\InclusiveGroupTour;
+use App\Models\InclusiveHotel;
+use App\Models\InclusiveImage;
 use App\Models\InclusivePrivateVanTour;
+use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Resources\InclusiveResource;
-use App\Http\Requests\StoreInclusiveRequest;
 
 class InclusiveController extends Controller
 {
@@ -49,7 +44,7 @@ class InclusiveController extends Controller
 
         $data = $query->paginate($limit);
 
-//        return $data;
+        //        return $data;
         return $this->success(InclusiveResource::collection($data)
             ->additional([
                 'meta' => [
@@ -87,16 +82,16 @@ class InclusiveController extends Controller
         if ($request->file('cover_image')) {
 
             $request->validate([
-                'cover_image'=>'nullable|mimes:pdf'
+                'cover_image' => 'nullable|mimes:pdf'
             ]);
-    
+
             if ($file = $request->file('cover_image')) {
                 $fileData = $this->uploads($file, 'pdfs/');
                 $data['cover_image'] = $fileData['fileName'];
             }
         }
 
-      
+
         $save = Inclusive::create($data);
 
         if ($request->file('images')) {
@@ -186,6 +181,7 @@ class InclusiveController extends Controller
 
             }
         }
+
         return $this->success(new InclusiveResource($save), 'Successfully created');
     }
 
@@ -224,12 +220,12 @@ class InclusiveController extends Controller
         if ($request->file('cover_image')) {
 
             $request->validate([
-                'cover_image'=>'nullable|mimes:pdf'
+                'cover_image' => 'nullable|mimes:pdf'
             ]);
-    
+
             if ($file = $request->file('cover_image')) {
 
-                Storage::delete('public/pdfs/' . $find->cover_image);
+                Storage::delete('pdfs/' . $find->cover_image);
 
                 $fileData = $this->uploads($file, 'pdfs/');
                 $find->cover_image = $fileData['fileName'];
@@ -239,7 +235,7 @@ class InclusiveController extends Controller
         if ($request->file('images')) {
             // foreach ($find->images as $image) {
             //     // Delete the file from storage
-            //     Storage::delete('public/images/' . $image->image);
+            //     Storage::delete('images/' . $image->image);
             //     // Delete the image from the database
             //     $image->delete();
             // }
@@ -357,6 +353,7 @@ class InclusiveController extends Controller
         InclusiveImage::where('inclusive_id', $id)->delete();
 
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 }
