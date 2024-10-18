@@ -10,6 +10,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class SendSaleReportMail extends Mailable
 {
@@ -62,7 +63,7 @@ class SendSaleReportMail extends Mailable
         Excel::store(new ReservationReportExport($this->daterange), "attachments/" . $file_name);
 
         return [
-            Attachment::fromPath(public_path('/storage/attachments/' . $file_name))
+            Attachment::fromPath(Storage::url('attachments/' . $file_name))
         ];
     }
 }

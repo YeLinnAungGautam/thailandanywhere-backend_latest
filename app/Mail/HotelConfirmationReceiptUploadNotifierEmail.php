@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class HotelConfirmationReceiptUploadNotifierEmail extends Mailable
 {
@@ -50,8 +51,8 @@ class HotelConfirmationReceiptUploadNotifierEmail extends Mailable
     {
         $attachments = [];
 
-        foreach($this->paid_slip_names as $paid_slip_name) {
-            $attachments[] = Attachment::fromPath(public_path('/storage/images/' . $paid_slip_name));
+        foreach ($this->paid_slip_names as $paid_slip_name) {
+            $attachments[] = Attachment::fromPath(Storage::url('images/' . $paid_slip_name));
         }
 
         return $attachments;

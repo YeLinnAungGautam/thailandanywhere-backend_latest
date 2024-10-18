@@ -68,7 +68,6 @@ class ReservationNotifyEmail extends Mailable
         if ($passports->count()) {
             foreach ($passports as $passport) {
                 if (Storage::exists('passport/' . $passport->file)) {
-                    // $files[] = Attachment::fromPath(public_path('/storage/passport/' . $passport->file));
                     $files[] = Attachment::fromPath(Storage::url('passport/' . $passport->file));
                 }
             }
@@ -77,7 +76,6 @@ class ReservationNotifyEmail extends Mailable
         if ($expense_receipts->count()) {
             foreach ($expense_receipts as $paid_slip) {
                 if (Storage::exists('images/' . $paid_slip->file)) {
-                    // $files[] = Attachment::fromPath(public_path('/storage/images/' . $paid_slip->file));
                     $files[] = Attachment::fromPath(Storage::url('images/' . $paid_slip->file));
                 }
             }
@@ -85,7 +83,6 @@ class ReservationNotifyEmail extends Mailable
 
         if (isset($this->attach_files) && count($this->attach_files) > 0) {
             foreach ($this->attach_files as $attach_file) {
-                // $files[] = Attachment::fromPath(public_path('/storage/temp_files/attachments/' . $attach_file));
                 $files[] = Attachment::fromPath(Storage::url('temp_files/attachments/' . $attach_file));
             }
         }
