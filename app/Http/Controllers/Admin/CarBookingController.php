@@ -38,8 +38,8 @@ class CarBookingController extends Controller
                 $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->agent_id));
             });
 
-        if($request->supplier_id) {
-            if($request->supplier_id === 'unassigned') {
+        if ($request->supplier_id) {
+            if ($request->supplier_id === 'unassigned') {
                 $booking_item_query = $booking_item_query->whereDoesntHave('reservationCarInfo')
                     ->orWhereIn('id', function ($query) {
                         $query->select('booking_item_id')->from('reservation_car_infos')->whereNull('supplier_id');
@@ -52,7 +52,10 @@ class CarBookingController extends Controller
             } else {
                 $booking_item_query = $booking_item_query
                     ->whereIn('id', function ($query) use ($request) {
-                        $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
+                        // $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
+                        $query->whereHas('reservationCarInfo', function ($q) use ($request) {
+                            $q->where('supplier_id', $request->supplier_id);
+                        });
                     });
             }
         }
@@ -71,7 +74,7 @@ class CarBookingController extends Controller
     {
         $booking_item = BookingItem::privateVanTour()->find($booking_item_id);
 
-        if(is_null($booking_item)) {
+        if (is_null($booking_item)) {
             return $this->error(null, "Car booking not found", 404);
         }
 
@@ -83,7 +86,7 @@ class CarBookingController extends Controller
         try {
             $booking_item = BookingItem::privateVanTour()->find($booking_item_id);
 
-            if(is_null($booking_item)) {
+            if (is_null($booking_item)) {
                 throw new Exception('Car booking not found');
             }
 
@@ -120,7 +123,7 @@ class CarBookingController extends Controller
                     $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
                 });
 
-            if($auth_user->role != 'super_admin') {
+            if ($auth_user->role != 'super_admin') {
                 $query->whereHas('booking', fn ($q) => $q->where('created_by', $auth_user->id));
             }
 
@@ -129,12 +132,12 @@ class CarBookingController extends Controller
             $sale_needed = 0;
             $reservation_needed = 0;
 
-            foreach($query->cursor() as $booking_item) {
+            foreach ($query->cursor() as $booking_item) {
                 $admin = [];
                 $sale = [];
                 $reservation = [];
 
-                if(
+                if (
                     is_null($booking_item->reservationCarInfo) ||
                     is_null($booking_item->reservationCarInfo->supplier) ||
                     is_null($booking_item->reservationCarInfo->driverInfo) ||
@@ -147,7 +150,7 @@ class CarBookingController extends Controller
                     $reservation[] = 1;
                 }
 
-                if(
+                if (
                     is_null($booking_item->pickup_time) ||
                     is_null($booking_item->route_plan) ||
                     is_null($booking_item->special_request)
@@ -156,20 +159,20 @@ class CarBookingController extends Controller
                     $sale[] = 1;
                 }
 
-                if($booking_item->is_driver_collect && is_null($booking_item->extra_collect_amount)) {
+                if ($booking_item->is_driver_collect && is_null($booking_item->extra_collect_amount)) {
                     $admin[] = 1;
                     $sale[] = 1;
                 }
 
-                if(!empty($admin)) {
+                if (!empty($admin)) {
                     $admin_needed += 1;
                 }
 
-                if(!empty($sale)) {
+                if (!empty($sale)) {
                     $sale_needed += 1;
                 }
 
-                if(!empty($reservation)) {
+                if (!empty($reservation)) {
                     $reservation_needed += 1;
                 }
             }
