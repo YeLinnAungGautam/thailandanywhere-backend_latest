@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
+use App\Models\OAuthProvider;
 use App\Models\User;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
@@ -78,8 +79,15 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
-        User::find($user->id)->delete();
+        if ($user) {
+            OAuthProvider::where('user_id', $user->id)->delete();
 
-        return $this->success(null, 'Successfully deactivated');
+            $user->tokens()->delete();
+            $user->delete();
+
+            return $this->success(null, 'Account deleted permanently');
+        }
+
+        return $this->error(null, 'User not found', 404);
     }
 }
