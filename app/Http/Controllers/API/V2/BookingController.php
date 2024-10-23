@@ -17,4 +17,15 @@ class BookingController extends Controller
 
         return BookingResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
+
+    public function show(string $id)
+    {
+        $find = Booking::find($id);
+
+        if (!$find) {
+            return failedMessage('Data not found');
+        }
+
+        return success(new BookingResource($find), 'Booking Detail');
+    }
 }
