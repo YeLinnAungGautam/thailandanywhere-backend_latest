@@ -13,7 +13,8 @@ class UserUUIDSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (User::all() as $user) {
+        $users = User::whereNull('unique_key')->get();
+        foreach ($users as $user) {
             $user->unique_key = Str::uuid();
             $user->save();
         }
