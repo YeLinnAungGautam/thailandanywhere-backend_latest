@@ -52,6 +52,18 @@ class PrivateVanTourController extends Controller
             ->when($request->type, function ($q) use ($request) {
                 $q->where('type', $request->type);
             })
+            ->when($request->query('category_ids'), function ($q) use ($request) {
+                $category_ids = explode(',', $request->query('category_ids'));
+                $q->whereIn('id', function ($qq) use ($category_ids) {
+                    $qq->select('private_van_tour_id')
+                       ->from('private_van_tour_destinations')
+                       ->whereIn('destination_id', function ($q1) use ($category_ids) {
+                           $q1->select('id')
+                              ->from('destinations')
+                              ->whereIn('category_id', $category_ids);
+                       });
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
