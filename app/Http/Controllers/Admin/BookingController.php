@@ -527,11 +527,11 @@ class BookingController extends Controller
         if ($booking->is_inclusive) {
             $pdf_view = 'pdf.inclusive_booking_receipt';
         }
-
+        info($pdf_view);
         $pdf = Pdf::setOption([
             'fontDir' => public_path('/fonts')
         ])->loadView($pdf_view, ['data' => $data]);
-        info($pdf);
+
         return $pdf->stream();
     }
 
