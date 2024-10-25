@@ -501,21 +501,23 @@ class BookingController extends Controller
 
     public function printReceipt(Request $request, string $id)
     {
+        set_time_limit(300); // Increase the maximum execution time to 300 seconds
+
         if ($request->query('paid') && $request->query('paid') === 1) {
             $booking = Booking::query()
-                ->where('id', $id)
-                ->with(['customer', 'items' => function ($q) {
-                    $q->where('payment_status', 'fully_paid')
-                        ->where('is_inclusive', '0');
-                }, 'createdBy'])
-                ->first();
+            ->where('id', $id)
+            ->with(['customer', 'items' => function ($q) {
+                $q->where('payment_status', 'fully_paid')
+                ->where('is_inclusive', '0');
+            }, 'createdBy'])
+            ->first();
         } else {
             $booking = Booking::query()
-                ->where('id', $id)
-                ->with(['customer', 'items' => function ($q) {
-                    $q->where('is_inclusive', '0');
-                }, 'createdBy'])
-                ->first();
+            ->where('id', $id)
+            ->with(['customer', 'items' => function ($q) {
+                $q->where('is_inclusive', '0');
+            }, 'createdBy'])
+            ->first();
         }
 
         $data = $booking;
@@ -532,8 +534,7 @@ class BookingController extends Controller
             'fontDir' => public_path('/fonts')
         ])->loadView($pdf_view, ['data' => $data]);
 
-        // return $pdf->stream();
-        return $pdf->download('booking_receipt.pdf');
+        return $pdf->stream();
     }
 
     public function deleteReceipt($id)
