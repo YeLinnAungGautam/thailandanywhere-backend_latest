@@ -523,7 +523,7 @@ class BookingController extends Controller
         $data->grand_total = $data->acsr_grand_total;
 
         $pdf_view = 'pdf.booking_receipt';
-        info($data);
+        info($pdf_view);
         if ($booking->is_inclusive) {
             $pdf_view = 'pdf.inclusive_booking_receipt';
         }
