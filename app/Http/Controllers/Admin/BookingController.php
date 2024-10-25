@@ -503,7 +503,8 @@ class BookingController extends Controller
     {
         if ($request->query('paid') && $request->query('paid') === 1) {
             $booking = Booking::query()
-                ->where('id', $id)->with(['customer', 'items' => function ($q) {
+                ->where('id', $id)
+                ->with(['customer', 'items' => function ($q) {
                     $q->where('payment_status', 'fully_paid')
                         ->where('is_inclusive', '0');
                 }, 'createdBy'])
@@ -522,7 +523,7 @@ class BookingController extends Controller
         $data->grand_total = $data->acsr_grand_total;
 
         $pdf_view = 'pdf.booking_receipt';
-
+        info($data);
         if ($booking->is_inclusive) {
             $pdf_view = 'pdf.inclusive_booking_receipt';
         }
