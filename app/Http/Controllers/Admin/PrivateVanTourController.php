@@ -64,6 +64,14 @@ class PrivateVanTourController extends Controller
                        });
                 });
             })
+            ->when($request->query('destination_ids'), function ($q) use ($request) {
+                $destination_ids = explode(',', $request->query('destination_ids'));
+                $q->whereIn('id', function ($qq) use ($destination_ids) {
+                    $qq->select('private_van_tour_id')
+                       ->from('private_van_tour_destinations')
+                       ->whereIn('destination_id', $destination_ids);
+                });
+            })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
