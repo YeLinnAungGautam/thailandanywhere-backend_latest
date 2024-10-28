@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
+use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
@@ -73,7 +74,6 @@ Route::get('/super', function () {
 
 
 Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
-
     # Dashboard
     Route::get('/sales-report', [ReportController::class, 'salesAmount']);
     Route::get('/sales-count', [ReportController::class, 'salesCount']);
@@ -208,6 +208,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Room
     Route::apiResource('rooms', RoomController::class);
 
+    Route::get('rooms/{room}/price', [RoomPeriodController::class, 'index']);
+
     Route::patch('rooms/{id}/restore', [RoomController::class, 'restore']);
     Route::delete('rooms/{id}/force', [RoomController::class, 'hardDelete']);
 
@@ -297,4 +299,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Users
     Route::get('users', [UserController::class, 'index']);
+
+    require __DIR__ . '/sub_routes/admin_v2.php';
 });
