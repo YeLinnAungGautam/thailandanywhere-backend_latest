@@ -11,13 +11,16 @@ class RoomPeriodController extends Controller
     public function index(Room $room, Request $request)
     {
         $request->validate([
-            'service_date' => 'required|date',
+            'checkin_date' => 'required|date',
+            'checkout_date' => 'required|date',
         ]);
+
+        $period = $request->checkin_date . ' , ' . $request->checkout_date;
 
         $data = [
             'room' => $room,
             'service_date' => $request->service_date,
-            'room_price' => (new RoomService($room))->getRoomPriceBy($request->service_date),
+            'room_price' => (new RoomService($room))->getRoomPrice($period),
         ];
 
         return success($data);
