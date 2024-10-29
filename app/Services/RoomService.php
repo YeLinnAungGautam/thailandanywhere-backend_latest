@@ -16,22 +16,6 @@ class RoomService
         return $this->room->periods()->get();
     }
 
-    // public function getRoomPriceBy($service_date)
-    // {
-    //     $room_prices = [];
-    //     $query = $this->room->periods()
-    //         ->where('start_date', '<=', $service_date)
-    //         ->where('end_date', '>=', $service_date);
-
-    //     if ($query->exists()) {
-    //         $room_prices[] = $query->sum('sale_price');
-    //     } else {
-    //         $room_prices[] = $this->room->room_price;
-    //     }
-
-    //     return array_sum($room_prices);
-    // }
-
     public function getRoomPrice($period = null)
     {
         if (is_null($period)) {
@@ -39,6 +23,24 @@ class RoomService
         }
 
         $dates = $this->getTotalDates($period);
+
+        if (empty($dates)) {
+            $date = explode(' , ', $period)[0];
+
+            $periodMatch = $this->room->periods()
+                ->where('start_date', '<=', $date)
+                ->where('end_date', '>=', $date)
+                ->exists();
+
+            if ($periodMatch) {
+                return $this->room->periods()
+                    ->where('start_date', '<=', $date)
+                    ->where('end_date', '>=', $date)
+                    ->sum('sale_price');
+            } else {
+                return $this->room->room_price;
+            }
+        }
 
         $room_prices = [];
         foreach ($dates as $date) {
