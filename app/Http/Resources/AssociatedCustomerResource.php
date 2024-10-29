@@ -17,6 +17,7 @@ class AssociatedCustomerResource extends JsonResource
         return [
             'id' => $this->id,
             'booking_item_id' => $this->booking_item_id,
+            'email' => $this->email,
             'name' => $this->name,
             'phone' => $this->phone,
             'passport' => $this->passport,
