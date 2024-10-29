@@ -22,6 +22,7 @@ class CustomerInformationController extends Controller
                 'email' => 'required|email',
                 'phone' => 'required',
                 'passport' => 'required',
+                'customer_passport.*' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048',
             ]);
 
             $associatedCustomer = ReservationAssociatedCustomer::updateOrCreate(
