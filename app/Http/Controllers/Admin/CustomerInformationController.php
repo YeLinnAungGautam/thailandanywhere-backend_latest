@@ -6,7 +6,9 @@ use App\Models\BookingItem;
 use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationCustomerPassport;
 use App\Traits\ImageManager;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CustomerInformationController extends Controller
 {
@@ -14,30 +16,36 @@ class CustomerInformationController extends Controller
 
     public function store(BookingItem $bookingItem, Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email',
-            'phone' => 'required',
-            'passport' => 'required',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required',
+                'email' => 'required|email',
+                'phone' => 'required',
+                'passport' => 'required',
+            ]);
 
-        $associatedCustomer = ReservationAssociatedCustomer::updateOrCreate(
-            ['booking_item_id' => $bookingItem->id],
-            [
-                'name' => $request->customer_name,
-                'email' => $request->customer_email,
-                'phone' => $request->customer_phone,
-                'passport' => $request->customer_passport_number,
-            ]
-        );
+            $associatedCustomer = ReservationAssociatedCustomer::updateOrCreate(
+                ['booking_item_id' => $bookingItem->id],
+                [
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'phone' => $request->phone,
+                    'passport' => $request->passport,
+                ]
+            );
 
-        if ($request->customer_passport) {
-            foreach ($request->customer_passport as $passport) {
-                $fileData = $this->uploads($passport, 'passport/');
-                ReservationCustomerPassport::create(['booking_item_id' => $bookingItem->id, 'file' => $fileData['fileName']]);
+            if ($request->customer_passport) {
+                foreach ($request->customer_passport as $passport) {
+                    $fileData = $this->uploads($passport, 'passport/');
+                    ReservationCustomerPassport::create(['booking_item_id' => $bookingItem->id, 'file' => $fileData['fileName']]);
+                }
             }
-        }
 
-        return success($associatedCustomer);
+            return success($associatedCustomer);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+
+            return failedMessage($e->getMessage());
+        }
     }
 }
