@@ -38,6 +38,7 @@ class CustomerInformationController extends Controller
             if ($request->customer_passport) {
                 foreach ($request->customer_passport as $passport) {
                     $fileData = $this->uploads($passport, 'passport/');
+
                     ReservationCustomerPassport::create(['booking_item_id' => $bookingItem->id, 'file' => $fileData['fileName']]);
                 }
             }
