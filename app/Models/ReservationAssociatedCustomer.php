@@ -9,6 +9,5 @@ class ReservationAssociatedCustomer extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['booking_item_id', 'name','phone','passport'];
-
+    protected $guarded = [];
 }
