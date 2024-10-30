@@ -69,7 +69,9 @@ class PrivateVanTourController extends Controller
                 $q->whereIn('id', function ($qq) use ($destination_ids) {
                     $qq->select('private_van_tour_id')
                        ->from('private_van_tour_destinations')
-                       ->whereIn('destination_id', $destination_ids);
+                    ->whereIn('destination_id', $destination_ids)
+                    ->groupBy('private_van_tour_id')
+                    ->havingRaw('COUNT(DISTINCT destination_id) = ?', [count($destination_ids)]);
                 });
             })
             ->orderBy('created_at', 'desc');

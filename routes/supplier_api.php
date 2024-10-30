@@ -2,6 +2,7 @@
 use App\Http\Controllers\API\Supplier\CarBookingController;
 use App\Http\Controllers\API\Supplier\LoginController;
 use App\Http\Controllers\API\Supplier\ProfileController;
+use App\Http\Controllers\API\Supplier\DriverController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('supplier')->group(function () {
@@ -16,5 +17,8 @@ Route::prefix('supplier')->group(function () {
 
         Route::get('car-bookings', [CarBookingController::class, 'index']);
         Route::get('car-bookings/{id}', [CarBookingController::class, 'show']);
+
+        // driver part
+        Route::apiResource('drivers', DriverController::class);
     });
 });

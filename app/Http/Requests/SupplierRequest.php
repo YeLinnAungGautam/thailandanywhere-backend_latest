@@ -21,6 +21,8 @@ class SupplierRequest extends FormRequest
      */
     public function rules(): array
     {
+        // $supplierId = $this->route('supplier');
+
         $rules = [
             'name' => 'required',
             'contact' => 'required',
@@ -35,6 +37,9 @@ class SupplierRequest extends FormRequest
             $rules['email'] = 'required|email|unique:suppliers,email';
         } else {
             $rules['email'] = 'required|email|unique:suppliers,email,' . $this->id;
+
+            // solution 2 for unique email validation
+            // $rules['email'] = 'required|email|unique:suppliers,email,{$supplierId}';
         }
 
         return $rules;
