@@ -15,6 +15,8 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             'Product ID',
             'Name',
             'Description',
+            'Full Description',
+            'Full Description (EN)',
             'Type',
             'City',
             'Place',
@@ -23,7 +25,10 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             'Payment Method',
             'Bank Name',
             'Bank Account Number',
-            'Bank Account Name',
+            'Account Name',
+            'Location Map Title',
+            'Location Map',
+            'Rating',
         ];
     }
 
@@ -38,6 +43,8 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             $hotel->id,
             $hotel->name,
             $hotel->description,
+            $hotel->full_description,
+            $hotel->full_description_en,
             Hotel::TYPES[$hotel->type],
             $hotel->city->name ?? '-',
             $hotel->place,
@@ -47,6 +54,9 @@ class HotelExport implements FromCollection, WithHeadings, WithMapping
             $hotel->bank_name,
             $hotel->bank_account_number,
             $hotel->account_name,
+            $hotel->location_map_title,
+            $hotel->location_map,
+            $hotel->rating
         ];
     }
 }
