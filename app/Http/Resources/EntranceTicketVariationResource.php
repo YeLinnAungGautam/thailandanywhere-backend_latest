@@ -25,11 +25,11 @@ class EntranceTicketVariationResource extends JsonResource
             'owner_price' => $this->owner_price,
             'adult_info' => $this->adult_info,
 
-            'child_price' => $this->child_price,
-            'child_cost_price' => $this->child_cost_price,
-            'child_agent_price' => $this->child_agent_price ?? 0,
-            'child_owner_price' => $this->child_owner_price,
-            'child_info' => $this->child_info,
+            // 'child_price' => $this->child_price,
+            // 'child_cost_price' => $this->child_cost_price,
+            // 'child_agent_price' => $this->child_agent_price ?? 0,
+            // 'child_owner_price' => $this->child_owner_price,
+            // 'child_info' => $this->child_info,
 
             'description' => $this->description,
             'is_add_on' => $this->is_add_on,
@@ -39,7 +39,8 @@ class EntranceTicketVariationResource extends JsonResource
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'including_services' => $this->including_services ? json_decode($this->including_services) : $this->including_services,
-            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null
+            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
+            'child_info' => $this->child_info ? json_decode($this->child_info) : null,
         ];
     }
 }
