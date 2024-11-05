@@ -232,21 +232,25 @@
                                         <span style="font-size:7px;">{{ $pvt->product->name }}</span> </br>
                                     @endforeach
                                 @endif
+
                                 @if ($row->product->groupTours)
                                     @foreach ($row->product->groupTours as $gt)
                                         <span style="font-size:7px;">{{ $gt->product->name }}</span> </br>
                                     @endforeach
                                 @endif
+
                                 @if ($row->product->airportPickups)
                                     @foreach ($row->product->airportPickups as $ap)
                                         <span style="font-size:7px;">{{ $ap->product->name }}</span> </br>
                                     @endforeach
                                 @endif
+
                                 @if ($row->product->entranceTickets)
                                     @foreach ($row->product->entranceTickets as $et)
-                                        <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
+                                        <span style="font-size:7px;">{{ $et->name }}</span> </br>
                                     @endforeach
                                 @endif
+
                                 @if ($row->product->hotels)
                                     @foreach ($row->product->hotels as $et)
                                         <span style="font-size:7px;">{{ $et->product->name }}</span> </br>

@@ -68,10 +68,10 @@ class EntranceTicketVariationController extends Controller
                 'owner_price' => $request->owner_price,
                 'adult_info' => $request->adult_info,
 
-                'child_price' => $request->child_price,
-                'child_cost_price' => $request->child_cost_price,
-                'child_agent_price' => $request->child_agent_price,
-                'child_owner_price' => $request->child_owner_price,
+                // 'child_price' => $request->child_price,
+                // 'child_cost_price' => $request->child_cost_price,
+                // 'child_agent_price' => $request->child_agent_price,
+                // 'child_owner_price' => $request->child_owner_price,
                 'child_info' => $request->child_info,
 
                 'is_add_on' => $request->is_add_on,
