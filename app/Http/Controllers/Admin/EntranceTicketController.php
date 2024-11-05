@@ -80,6 +80,7 @@ class EntranceTicketController extends Controller
             'youtube_link' => json_encode($request->youtube_link),
             'location_map_title' => $request->location_map_title,
             'location_map' => $request->location_map,
+            'meta_data' => $request->meta_data ? json_encode($request->meta_data) : null,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -175,6 +176,7 @@ class EntranceTicketController extends Controller
             'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $find->youtube_link,
             'location_map_title' => $request->location_map_title ?? $find->location_map_title,
             'location_map' => $request->location_map ?? $find->location_map,
+            'meta_data' => $request->meta_data ? json_encode($request->meta_data) : $find->meta_data,
         ];
 
 

@@ -1,8 +1,8 @@
 <?php
 use App\Http\Controllers\API\Supplier\CarBookingController;
+use App\Http\Controllers\API\Supplier\DriverController;
 use App\Http\Controllers\API\Supplier\LoginController;
 use App\Http\Controllers\API\Supplier\ProfileController;
-use App\Http\Controllers\API\Supplier\DriverController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('supplier')->group(function () {
@@ -18,7 +18,8 @@ Route::prefix('supplier')->group(function () {
         Route::get('car-bookings', [CarBookingController::class, 'index']);
         Route::get('car-bookings/{id}', [CarBookingController::class, 'show']);
 
-        // driver part
+        # Driver
         Route::apiResource('drivers', DriverController::class);
+        Route::post('drivers/{driver_id}/assign/{booking_item_id}', [DriverController::class, 'assign']);
     });
 });

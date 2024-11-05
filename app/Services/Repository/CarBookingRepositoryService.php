@@ -2,6 +2,7 @@
 namespace App\Services\Repository;
 
 use App\Models\BookingItem;
+use App\Models\Driver;
 use App\Models\ReservationCarInfo;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -9,6 +10,32 @@ use Illuminate\Support\Facades\Log;
 
 class CarBookingRepositoryService
 {
+    public static function assignToDriver(BookingItem $bookingItem, Driver $driver)
+    {
+        DB::beginTransaction();
+
+        try {
+            $bookingItem->reservationCarInfo()->updateOrCreate(
+                ['booking_item_id' => $bookingItem->id],
+                [
+                    'driver_id' => $driver->id,
+                    'driver_info_id' => $driver->driverInfos->first()->id,
+                    'driver_contact' => $driver->contact,
+                    'car_number' => $driver->driverInfos->first()->car_number,
+                ]
+            );
+
+            DB::commit();
+
+            return self::getCarBooking($bookingItem);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e);
+
+            throw new Exception($e->getMessage());
+        }
+    }
+
     public static function updateBooking(BookingItem $booking_item, $request)
     {
         DB::beginTransaction();
@@ -24,7 +51,7 @@ class CarBookingRepositoryService
                 'pickup_time' => $request->pickup_time,
             ];
 
-            if($request->is_driver_collect) {
+            if ($request->is_driver_collect) {
                 $booking_item_data['is_driver_collect'] = true;
                 $booking_item_data['extra_collect_amount'] = $request->extra_collect_amount;
             }

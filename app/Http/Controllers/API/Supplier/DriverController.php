@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\API\Supplier;
 
+use Exception;
+use App\Models\Driver;
+use App\Models\BookingItem;
+use Illuminate\Http\Request;
+use App\Traits\HttpResponses;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DriverRequest;
 use App\Http\Resources\DriverResource;
-use App\Models\Driver;
-use App\Traits\HttpResponses;
-use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Services\Repository\CarBookingRepositoryService;
 
 class DriverController extends Controller
 {
@@ -71,7 +73,7 @@ class DriverController extends Controller
     {
         $driver = Driver::with('supplier', 'driverInfos')->find($id);
 
-        if(is_null($driver)) {
+        if (is_null($driver)) {
             return $this->error(null, 'Driver not found.');
         }
 
@@ -86,7 +88,7 @@ class DriverController extends Controller
         try {
             $driver = Driver::find($id);
 
-            if(is_null($driver)) {
+            if (is_null($driver)) {
                 throw new Exception('Driver not found');
             }
 
@@ -118,13 +120,38 @@ class DriverController extends Controller
         try {
             $driver = Driver::find($id);
 
-            if(is_null($driver)) {
+            if (is_null($driver)) {
                 throw new Exception('Driver not found');
             }
 
             $driver->delete();
 
             return $this->success(null, 'Successfully deleted', 200);
+        } catch (Exception $e) {
+            Log::error($e);
+
+            return $this->error(null, $e->getMessage());
+        }
+    }
+
+    public function assign(string $driver_id, string $booking_item_id)
+    {
+        try {
+            $driver = Driver::find($driver_id);
+
+            if (is_null($driver)) {
+                throw new Exception('Driver not found');
+            }
+
+            $booking_item = BookingItem::find($booking_item_id);
+
+            if (is_null($booking_item)) {
+                throw new Exception('Reservation not found');
+            }
+
+            $data = CarBookingRepositoryService::updateBooking($booking_item, $request);
+
+            return $this->success(null, 'Successfully assigned', 200);
         } catch (Exception $e) {
             Log::error($e);
 

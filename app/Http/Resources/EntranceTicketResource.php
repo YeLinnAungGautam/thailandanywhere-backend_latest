@@ -44,6 +44,7 @@ class EntranceTicketResource extends JsonResource
             'lowest_walk_in_price' => $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
             'total_booking_count' => $this->bookingItems()->count(),
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
+            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null
         ];
     }
 
