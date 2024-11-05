@@ -247,7 +247,7 @@
 
                                 @if ($row->product->entranceTickets)
                                     @foreach ($row->product->entranceTickets as $et)
-                                        <span style="font-size:7px;">{{ $et->name }}</span> </br>
+                                        <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
                                     @endforeach
                                 @endif
 
