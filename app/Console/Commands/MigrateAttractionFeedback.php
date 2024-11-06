@@ -2,8 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\EntranceTicket;
-use App\Models\EntranceTicketVariation;
+use App\Models\EntranceVariation;
 use Illuminate\Console\Command;
 
 class MigrateAttractionFeedback extends Command
@@ -27,18 +26,15 @@ class MigrateAttractionFeedback extends Command
      */
     public function handle()
     {
-        // Nong Nooch Pattaya: A4 Adult Ticket(Admission Fee +Sighting-seeing Bus + Show)
-        // remove text in front of : in above text
+        $records = EntranceVariation::all();
 
-        EntranceTicketVariation::chunk(100, function ($entranceTicketVariations) {
-            foreach ($entranceTicketVariations as $entranceTicketVariation) {
-                $name = $entranceTicketVariation->name;
-                $name = explode(':', $name);
-                $name = end($name);
-                $name = trim($name);
-                $entranceTicketVariation->name = $name;
-                $entranceTicketVariation->save();
-            }
-        });
+        foreach ($records as $entranceTicketVariation) {
+            $name = $entranceTicketVariation->name;
+            $name = explode(':', $name);
+            $name = end($name);
+            $name = trim($name);
+            $entranceTicketVariation->name = $name;
+            $entranceTicketVariation->save();
+        }
     }
 }
