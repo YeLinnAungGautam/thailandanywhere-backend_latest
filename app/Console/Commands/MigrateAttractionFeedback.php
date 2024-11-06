@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\EntranceVariation;
+use App\Models\EntranceTicket;
 use Illuminate\Console\Command;
 
 class MigrateAttractionFeedback extends Command
@@ -26,15 +26,14 @@ class MigrateAttractionFeedback extends Command
      */
     public function handle()
     {
-        $records = EntranceVariation::all();
+        $records = EntranceTicket::all();
 
-        foreach ($records as $entranceTicketVariation) {
-            $name = $entranceTicketVariation->name;
-            $name = explode(':', $name);
-            $name = end($name);
-            $name = trim($name);
-            $entranceTicketVariation->name = $name;
-            $entranceTicketVariation->save();
+        foreach ($records as $entranceTicket) {
+            $meta_data = ['is_show' => 1];
+
+            $entranceTicket->update([
+                'meta_data' => json_encode($meta_data),
+            ]);
         }
     }
 }
