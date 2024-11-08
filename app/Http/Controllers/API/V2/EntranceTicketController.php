@@ -33,6 +33,9 @@ class EntranceTicketController extends Controller
                         ->from('activity_entrance_ticket')
                         ->whereIn('attraction_activity_id', explode(',', $request->activities));
                 });
+            })
+            ->when($request->show_only, function ($query) use ($request) {
+                $query->where('meta_data', 'LIKE', '%"is_show":' . $request->show_only . '%');
             });
 
         if ($request->order_by) {
