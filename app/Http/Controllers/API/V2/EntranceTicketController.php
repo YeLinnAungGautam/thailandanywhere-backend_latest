@@ -35,7 +35,10 @@ class EntranceTicketController extends Controller
                 });
             })
             ->when($request->show_only, function ($query) {
-                $query->where('meta_data', 'LIKE', '%"is_show":' . 1 . '%');
+                $query->where(function ($query) {
+                    $query->where('meta_data', 'LIKE', '%"is_show":1%')
+                        ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%');
+                });
             });
 
         if ($request->order_by) {
