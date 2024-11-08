@@ -45,7 +45,7 @@ class EntranceTicketController extends Controller
                 });
             })
             ->when($request->show_only, function ($query) use ($request) {
-                $query->where('meta_data', 'LIKE', '%"is_show":' . 1 . '%');
+                $query->where('meta_data', 'LIKE', '%"is_show":' . $request->show_only . '%');
             })
             ->orderBy('created_at', 'desc');
 
