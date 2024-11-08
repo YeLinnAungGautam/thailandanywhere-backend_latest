@@ -65,11 +65,11 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
             $booking_item->booking->customer->name,
 
             $booking_item->acsr_product_type_name,
-            $booking_item->product->name ?? '',
+            $booking_item->product->name ?? '-',
             $booking_item->acsr_variation_name,
 
             make_title($booking_item->booking->payment_status),
-            $booking_item->booking->sub_total,
+            $booking_item->selling_price,
 
             make_title($booking_item->payment_status),
             $booking_item->cost_price,
