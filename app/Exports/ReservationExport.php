@@ -43,7 +43,8 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
                 'Variation Name',
 
                 'Sale Payment Status',
-                'Sale Amount',
+                'Unit Sale Amount',
+                'Total Sale Amount',
 
                 'Reservation Payment Status',
                 'Expense Unit Cost',
@@ -70,6 +71,7 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
 
             make_title($booking_item->booking->payment_status),
             $booking_item->selling_price,
+            (new BookingItemDataService($booking_item))->getSalePrice(),
 
             make_title($booking_item->payment_status),
             $booking_item->cost_price,
@@ -114,6 +116,10 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
 
     private function getQueryByProductType()
     {
+        // $test = BookingItem::find(18273);
+
+        // dd($test->product);
+
         switch ($this->product) {
             case 'hotel':
                 return BookingItem::query()->where('product_type', Hotel::class);
