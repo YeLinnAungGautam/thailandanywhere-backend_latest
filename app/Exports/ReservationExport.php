@@ -94,11 +94,11 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
         $dates = explode(',', $this->daterange);
 
         $query = $this->getQueryByProductType()
-            ->with(
-                'booking:id,customer_id,booking_date,payment_method,payment_status',
+            ->with([
+                'booking',
                 'booking.customer:id,name',
                 'product'
-            );
+            ]);
 
         if ($this->filter_type == 'sale_date') {
             $query = $query->whereIn('booking_id', function ($q) use ($dates) {
@@ -116,10 +116,6 @@ class ReservationExport implements FromCollection, WithHeadings, WithMapping
 
     private function getQueryByProductType()
     {
-        // $test = BookingItem::find(18273);
-
-        // dd($test->product);
-
         switch ($this->product) {
             case 'hotel':
                 return BookingItem::query()->where('product_type', Hotel::class);

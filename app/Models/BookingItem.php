@@ -19,7 +19,7 @@ class BookingItem extends Model
 
     public function product()
     {
-        return $this->morphTo();
+        return $this->morphTo()->withTrashed();
     }
 
     public function car()
@@ -160,23 +160,23 @@ class BookingItem extends Model
     public function getAcsrVariationNameAttribute()
     {
         if ($this->product_type === 'App\Models\PrivateVanTour') {
-            return $this->car->name ?? '-';
+            return $this->car()->withTrashed()->first()->name ?? '-';
         }
 
         if ($this->product_type === 'App\Models\EntranceTicket') {
-            return $this->variation->name ?? '-';
+            return $this->variation()->withTrashed()->first()->name ?? '-';
         }
 
         if ($this->product_type === 'App\Models\Hotel') {
-            return $this->room->name ?? '-';
+            return $this->room()->withTrashed()->first()->name ?? '-';
         }
 
         if ($this->product_type === 'App\Models\Airline') {
-            return $this->ticket->price ?? '-';
+            return $this->ticket()->withTrashed()->first()->price ?? '-';
         }
 
         if ($this->product_type === 'App\Models\GroupTour') {
-            return $this->groupTour->name ?? '-';
+            return $this->groupTour()->withTrashed()->first()->name ?? '-';
         }
 
         return '-';
