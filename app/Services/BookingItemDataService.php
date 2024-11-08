@@ -30,7 +30,7 @@ class BookingItemDataService
 
     public function calcBalanceAmount(string $payment_method, $total_cost, $selling_price, $extra_collect_amount)
     {
-        if($this->booking_item->is_driver_collect) {
+        if ($this->booking_item->is_driver_collect) {
             return ($selling_price + $extra_collect_amount) - $total_cost;
         }  {
             return $total_cost * (-1);
@@ -57,7 +57,7 @@ class BookingItemDataService
             ->get();
 
         $total_balance = 0;
-        foreach($booking_items as $booking_item) {
+        foreach ($booking_items as $booking_item) {
             $self = new static($booking_item);
 
             $total_balance += $self->calcBalanceAmount(
@@ -82,16 +82,16 @@ class BookingItemDataService
 
         $booking_item = $this->booking_item;
 
-        if($booking_item->cost_price == null || $booking_item->cost_price == 0) {
-            if($booking_item->room) {
+        if ($booking_item->cost_price == null || $booking_item->cost_price == 0) {
+            if ($booking_item->room) {
                 $cost_price = $booking_item->room->cost ?? 0;
             }
 
-            if($booking_item->variation) {
+            if ($booking_item->variation) {
                 $cost_price = $booking_item->variation->cost_price ?? 0;
             }
 
-            if($booking_item->car || $booking_item->product_type == "App\Models\GroupTour" || $booking_item->product_type == "App\Models\Airline") {
+            if ($booking_item->car || $booking_item->product_type == "App\Models\GroupTour" || $booking_item->product_type == "App\Models\Airline") {
                 $cost_price = 0;
             }
         } else {
@@ -101,9 +101,9 @@ class BookingItemDataService
         return (int) $cost_price;
     }
 
-    private function getQuantity(): int
+    public function getQuantity(): int
     {
-        if($this->booking_item->product_type == 'App\Models\Hotel') {
+        if ($this->booking_item->product_type == 'App\Models\Hotel') {
             return $this->booking_item->quantity * $this->getNights($this->booking_item->checkin_date, $this->booking_item->checkout_date);
         }
 

@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
+use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserController;
@@ -182,6 +183,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
+    Route::get('reservations/export/excel', [ReservationListExportController::class, 'export']);
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);
