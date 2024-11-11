@@ -47,7 +47,7 @@ class EntranceTicketController extends Controller
             ->when($request->show_only, function ($query) {
                 $query->where(function ($query) {
                     $query->where('meta_data', 'LIKE', '%"is_show":1%')
-                          ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%');
+                        ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%');
                 });
             })
             ->orderBy('created_at', 'desc');
@@ -86,6 +86,7 @@ class EntranceTicketController extends Controller
             'youtube_link' => json_encode($request->youtube_link),
             'location_map_title' => $request->location_map_title,
             'location_map' => $request->location_map,
+            'vat_inclusion' => $request->vat_inclusion,
             'meta_data' => $request->meta_data ? json_encode($request->meta_data) : null,
         ];
 
@@ -182,6 +183,7 @@ class EntranceTicketController extends Controller
             'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $find->youtube_link,
             'location_map_title' => $request->location_map_title ?? $find->location_map_title,
             'location_map' => $request->location_map ?? $find->location_map,
+            'vat_inclusion' => $request->vat_inclusion ?? $find->vat_inclusion,
             'meta_data' => $request->meta_data ? json_encode($request->meta_data) : $find->meta_data,
         ];
 
