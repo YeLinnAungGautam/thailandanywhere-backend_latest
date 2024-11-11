@@ -36,7 +36,8 @@ class UpdatePrivateVanTourRequest extends FormRequest
                     $fail($attribute . ' and cars must have the same number of elements.');
                 }
             }],
-            'sku_code' => 'sometimes|' . Rule::unique('private_van_tours')->ignore($this->private_van_tour),
+            // 'sku_code' => 'sometimes|' . Rule::unique('private_van_tours')->ignore($this->private_van_tour),
+            'sku_code' => 'unique:private_van_tours,sku_code,' . $this->private_van_tour,
         ];
     }
 
