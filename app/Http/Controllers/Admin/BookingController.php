@@ -467,7 +467,9 @@ class BookingController extends Controller
 
             DB::commit();
 
-            ArchiveSaleJob::dispatch($find);
+            if (Auth::user()->role === 'super_admin' && $request->required_archive) {
+                ArchiveSaleJob::dispatch($find);
+            }
 
             return $this->success(new BookingResource($find), 'Successfully updated');
         } catch (Exception $e) {
