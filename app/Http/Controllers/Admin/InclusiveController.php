@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreInclusiveRequest;
+use App\Http\Resources\InclusiveDetailResource;
 use App\Http\Resources\InclusiveResource;
 use App\Models\Inclusive;
 use App\Models\InclusiveAirlineTicket;
 use App\Models\InclusiveAirportPickup;
+use App\Models\InclusiveDetail;
 use App\Models\InclusiveEntranceTicket;
 use App\Models\InclusiveGroupTour;
 use App\Models\InclusiveHotel;
@@ -68,13 +70,13 @@ class InclusiveController extends Controller
      */
     public function store(StoreInclusiveRequest $request)
     {
-
         $data = [
             'name' => $request->name,
             'description' => $request->description,
             'sku_code' => $request->sku_code,
             'price' => $request->price,
             'agent_price' => $request->agent_price,
+            'price_range' => $request->price_range ? json_encode($request->price_range) : null,
             'day' => $request->day,
             'night' => $request->night,
         ];
@@ -216,6 +218,7 @@ class InclusiveController extends Controller
         $find->agent_price = $request->agent_price ?? $find->agent_price;
         $find->day = $request->day ?? 1;
         $find->night = $request->night ?? $find->night;
+        $find->price_range = $request->price_range ? json_encode($request->price_range) : $find->price_range;
 
         if ($request->file('cover_image')) {
 
@@ -355,5 +358,33 @@ class InclusiveController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function storeDetail(string $id, Request $request)
+    {
+        $inclusive = Inclusive::find($id);
+
+        if (!$inclusive) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        foreach ($request->details as $inclusive_detail) {
+            $inclusive_detail = InclusiveDetail::updateOrCreate(
+                [
+                    'inclusive_id' => $id,
+                    'day_name' => $inclusive_detail['day_name'],
+                ],
+                [
+                    'title' => $inclusive_detail['title'],
+                    'image' => $inclusive_detail['image'],
+                    'summary' => $inclusive_detail['summary'],
+                    'meals' => $inclusive_detail['meals'],
+                ]
+            );
+
+            $inclusive_detail->cities()->sync($inclusive_detail['cities']);
+        }
+
+        return $this->success(InclusiveDetailResource::collection($inclusive->details), 'Successfully saved');
     }
 }

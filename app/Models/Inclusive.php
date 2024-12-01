@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
-use App\Http\Resources\InclusiveAirportPickupResource;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Inclusive extends Model
 {
-    use HasFactory;
+    // protected $fillable = ['name', 'description', 'sku_code', 'price', 'agent_price', 'day', 'night', 'cover_image'];
 
-    protected $fillable = ['name', 'description', 'sku_code', 'price', 'agent_price','day','night','cover_image'];
+    protected $guarded = [];
+
+    public function InclusiveDetails()
+    {
+        return $this->hasMany(InclusiveDetail::class);
+    }
 
     public function groupTours()
     {

@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-class ReservationReceiptImageResource extends JsonResource
+class ReservationTaxSlipResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -20,6 +20,7 @@ class ReservationReceiptImageResource extends JsonResource
             'booking_item_id' => $this->booking_item_id,
             'file' => $this->file ? Storage::url('images/' . $this->file) : null,
             'amount' => $this->amount,
+            'issue_date' => $this->issue_date,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

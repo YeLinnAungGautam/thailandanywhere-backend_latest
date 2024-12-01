@@ -92,6 +92,11 @@ class BookingItem extends Model
         return $this->hasMany(ReservationPaidSlip::class, 'booking_item_id');
     }
 
+    public function taxSlips()
+    {
+        return $this->hasMany(ReservationTaxSlip::class, 'booking_item_id');
+    }
+
     public function associatedCustomer()
     {
         return $this->hasMany(ReservationAssociatedCustomer::class, 'booking_item_id');

@@ -9,5 +9,5 @@ class ReservationPaidSlip extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['booking_item_id', 'file'];
+    protected $fillable = ['booking_item_id', 'file', 'amount'];
 }

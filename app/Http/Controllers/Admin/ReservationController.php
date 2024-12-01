@@ -17,6 +17,7 @@ use App\Models\ReservationExpenseReceipt;
 use App\Models\ReservationInfo;
 use App\Models\ReservationPaidSlip;
 use App\Models\ReservationSupplierInfo;
+use App\Models\ReservationTaxSlip;
 use App\Notifications\PaymentSlipUpdatedNotification;
 use App\Services\BookingItemDataService;
 use App\Services\ReservationEmailNotifyService;
@@ -390,11 +391,20 @@ class ReservationController extends Controller
 
             $save = ReservationInfo::create($saveData);
 
+            // Paid Slip
             if ($request->paid_slip) {
                 $paid_slip_names = [];
-                foreach ($request->paid_slip as $image) {
+                foreach ($request->paid_slip as $paid_slip) {
+                    $image = $paid_slip['file'];
+                    $amount = $paid_slip['amount'];
+
                     $fileData = $this->uploads($image, 'images/');
-                    ReservationPaidSlip::create(['booking_item_id' => $save->booking_item_id, 'file' => $fileData['fileName']]);
+
+                    ReservationPaidSlip::create([
+                        'booking_item_id' => $save->booking_item_id,
+                        'file' => $fileData['fileName'],
+                        'amount' => $amount
+                    ]);
 
                     array_push($paid_slip_names, $fileData['fileName']);
                 }
@@ -403,6 +413,23 @@ class ReservationController extends Controller
 
                 if ($bookingItem->reservation_status == 'confirmed') {
                     Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
+                }
+            }
+
+            // Tax Slip
+            if ($request->tax_slip) {
+                foreach ($request->tax_slip as $tax_slip) {
+                    $image = $tax_slip['file'];
+                    $amount = $tax_slip['amount'];
+
+                    $taxFileData = $this->uploads($image, 'images/');
+
+                    ReservationTaxSlip::create([
+                        'booking_item_id' => $findInfo->booking_item_id,
+                        'file' => $taxFileData['fileName'],
+                        'amount' => $amount,
+                        'issue_date' => $tax_slip['issue_date']
+                    ]);
                 }
             }
 
@@ -430,11 +457,20 @@ class ReservationController extends Controller
 
             $findInfo->update();
 
+            // Paid Slip
             if ($request->paid_slip) {
                 $paid_slip_names = [];
-                foreach ($request->paid_slip as $image) {
+
+                foreach ($request->paid_slip as $paid_slip) {
+                    $image = $paid_slip['file'];
+                    $amount = $paid_slip['amount'];
+
                     $fileData = $this->uploads($image, 'images/');
-                    ReservationPaidSlip::create(['booking_item_id' => $findInfo->booking_item_id, 'file' => $fileData['fileName']]);
+                    ReservationPaidSlip::create([
+                        'booking_item_id' => $findInfo->booking_item_id,
+                        'file' => $fileData['fileName'],
+                        'amount' => $amount
+                    ]);
 
                     array_push($paid_slip_names, $fileData['fileName']);
                 }
@@ -443,6 +479,23 @@ class ReservationController extends Controller
 
                 if ($bookingItem->reservation_status == 'confirmed') {
                     Auth::user()->notify(new PaymentSlipUpdatedNotification($bookingItem));
+                }
+            }
+
+            // Tax Slip
+            if ($request->tax_slip) {
+                foreach ($request->tax_slip as $tax_slip) {
+                    $image = $tax_slip['file'];
+                    $amount = $tax_slip['amount'];
+
+                    $taxFileData = $this->uploads($image, 'images/');
+
+                    ReservationTaxSlip::create([
+                        'booking_item_id' => $findInfo->booking_item_id,
+                        'file' => $taxFileData['fileName'],
+                        'amount' => $amount,
+                        'issue_date' => $tax_slip['issue_date']
+                    ]);
                 }
             }
         }

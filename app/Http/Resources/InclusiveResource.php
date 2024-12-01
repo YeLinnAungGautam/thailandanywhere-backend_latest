@@ -33,8 +33,10 @@ class InclusiveResource extends JsonResource
             'airport_pickups' => InclusiveAirportPickupResource::collection($this->airportPickups),
             'airline_tickets' => InclusiveAirlineTicketResource::collection($this->airlineTickets),
             'hotels' => InclusiveHotelResource::collection($this->hotels),
+            'trip_details' => $this->trip_details ? json_decode($this->trip_details) : null,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'price_range' => $this->price_range ? json_decode($this->price_range) : null
         ];
     }
 }
