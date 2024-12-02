@@ -170,9 +170,17 @@ class BookingController extends Controller
             $save = Booking::create($data);
 
             if ($request->receipt_image) {
-                foreach ($request->receipt_image as $image) {
+                foreach ($request->receipt_image as $receipt) {
+                    $image = $receipt['file'];
+                    $amount = $receipt['amount'];
+
                     $fileData = $this->uploads($image, 'images/');
-                    BookingReceipt::create(['booking_id' => $save->id, 'image' => $fileData['fileName']]);
+
+                    BookingReceipt::create([
+                        'booking_id' => $save->id,
+                        'image' => $fileData['fileName'],
+                        'amount' => $amount
+                    ]);
                 }
             }
 
@@ -341,9 +349,17 @@ class BookingController extends Controller
             $find->update($data);
 
             if ($request->receipt_image) {
-                foreach ($request->receipt_image as $image) {
+                foreach ($request->receipt_image as $receipt) {
+                    $image = $receipt['file'];
+                    $amount = $receipt['amount'];
+
                     $fileData = $this->uploads($image, 'images/');
-                    BookingReceipt::create(['booking_id' => $find->id, 'image' => $fileData['fileName']]);
+
+                    BookingReceipt::create([
+                        'booking_id' => $find->id,
+                        'image' => $fileData['fileName'],
+                        'amount' => $amount
+                    ]);
                 }
             }
 

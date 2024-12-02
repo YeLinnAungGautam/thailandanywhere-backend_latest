@@ -9,6 +9,6 @@ class BookingReceipt extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['booking_id', 'image', 'note'];
+    protected $fillable = ['booking_id', 'image', 'note', 'amount'];
 
 }
