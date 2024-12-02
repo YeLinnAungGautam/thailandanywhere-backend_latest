@@ -20,6 +20,7 @@ class BookingReceiptResource extends JsonResource
             'id' => $this->id,
             'image' => $this->image ? Storage::url('images/' . $this->image) : null,
             'note' => $this->note,
+            'amount' => $this->amount,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
