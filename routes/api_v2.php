@@ -15,6 +15,7 @@ use App\Http\Controllers\API\V2\FacilityController;
 use App\Http\Controllers\API\V2\GroupTourController;
 use App\Http\Controllers\API\V2\HotelCityController;
 use App\Http\Controllers\API\V2\HotelController;
+use App\Http\Controllers\API\V2\InclusiveController;
 use App\Http\Controllers\API\V2\MealController;
 use App\Http\Controllers\API\V2\PrivateVanTourController;
 use App\Http\Controllers\API\V2\RestaurantController;
@@ -81,6 +82,10 @@ Route::group([], function () {
 
     # Attraction Activities
     Route::get('attraction-activities', [AttractionActivityController::class, 'index']);
+
+    # Inclusive
+    Route::get('inclusives', [InclusiveController::class, 'index']);
+    Route::get('inclusives/{id}', [InclusiveController::class, 'show']);
 
     # Register
     Route::post('register', [RegisterController::class, 'register']);
