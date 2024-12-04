@@ -40,7 +40,8 @@ class InclusiveController extends Controller
                 'airportPickups',
                 'privateVanTours',
                 'airlineTickets',
-                'hotels'
+                'hotels',
+                'hotels.room',
             ]);
 
         if ($search) {
@@ -370,22 +371,22 @@ class InclusiveController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach ($request->details as $inclusive_detail) {
+        foreach ($request->details as $detail) {
             $inclusive_detail = InclusiveDetail::updateOrCreate(
                 [
                     'inclusive_id' => $id,
-                    'day_name' => $inclusive_detail['day_name'],
+                    'day_name' => $detail['day_name'],
                 ],
                 [
-                    'title' => $inclusive_detail['title'],
-                    'image' => $inclusive_detail['image'],
-                    'summary' => $inclusive_detail['summary'],
-                    'meals' => $inclusive_detail['meals'],
+                    'title' => $detail['title'],
+                    'image' => $detail['image'],
+                    'summary' => $detail['summary'],
+                    'meals' => $detail['meals'],
                 ]
             );
 
-            if ($inclusive_detail['cities']) {
-                $inclusive_cities = explode(',', $inclusive_detail['cities']);
+            if ($detail['cities']) {
+                $inclusive_cities = explode(',', $detail['cities']);
 
                 $inclusive_detail->cities()->sync($inclusive_cities);
             }
