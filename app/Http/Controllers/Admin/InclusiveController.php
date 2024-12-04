@@ -366,7 +366,7 @@ class InclusiveController extends Controller
         foreach ($request->details as $detail) {
             $image = null;
 
-            if ($detail['image']) {
+            if (array_key_exists('image', $detail) && $detail['image']) {
                 $fileData = $this->uploads($detail['image'], 'images/');
 
                 $image = $fileData['fileName'];
