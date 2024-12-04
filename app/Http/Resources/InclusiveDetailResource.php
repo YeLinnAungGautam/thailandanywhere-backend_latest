@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class InclusiveDetailResource extends JsonResource
 {
@@ -18,7 +19,7 @@ class InclusiveDetailResource extends JsonResource
             'id' => $this->id,
             'day_name' => $this->day_name,
             'title' => $this->title,
-            'image' => $this->image,
+            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
             'summary' => $this->summary,
             'meals' => $this->meals,
             'cities' => CityResource::collection($this->cities),
