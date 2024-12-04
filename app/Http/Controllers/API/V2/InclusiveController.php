@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\InclusiveListResource;
 use App\Http\Resources\InclusiveResource;
 use App\Models\Inclusive;
 use Illuminate\Http\Request;
@@ -13,8 +14,7 @@ class InclusiveController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Inclusive::query()
-            ->with(['groupTours', 'entranceTickets', 'airportPickups', 'privateVanTours', 'airlineTickets', 'hotels']);
+        $query = Inclusive::query()->with('InclusiveDetails');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
@@ -24,7 +24,7 @@ class InclusiveController extends Controller
 
         $data = $query->paginate($limit);
 
-        return $this->success(InclusiveResource::collection($data)
+        return $this->success(InclusiveListResource::collection($data)
             ->additional([
                 'meta' => [
                     'total_page' => (int)ceil($data->total() / $data->perPage()),
