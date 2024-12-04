@@ -392,6 +392,6 @@ class InclusiveController extends Controller
             }
         }
 
-        return $this->success(InclusiveDetailResource::collection($inclusive->details), 'Successfully saved');
+        return $this->success(InclusiveDetailResource::collection($inclusive->InclusiveDetails), 'Successfully saved');
     }
 }
