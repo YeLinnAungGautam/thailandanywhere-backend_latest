@@ -364,6 +364,14 @@ class InclusiveController extends Controller
         }
 
         foreach ($request->details as $detail) {
+            $image = null;
+
+            if ($detail['image']) {
+                $fileData = $this->uploads($detail['image'], 'images/');
+
+                $image = $fileData['fileName'];
+            }
+
             $inclusive_detail = InclusiveDetail::updateOrCreate(
                 [
                     'inclusive_id' => $id,
@@ -371,7 +379,7 @@ class InclusiveController extends Controller
                 ],
                 [
                     'title' => $detail['title'],
-                    'image' => $detail['image'],
+                    'image' => $image,
                     'summary' => $detail['summary'],
                     'meals' => $detail['meals'],
                 ]
