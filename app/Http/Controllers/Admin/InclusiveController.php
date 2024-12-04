@@ -364,14 +364,6 @@ class InclusiveController extends Controller
         }
 
         foreach ($request->details as $detail) {
-            $image = null;
-
-            if (array_key_exists('image', $detail) && $detail['image']) {
-                $fileData = $this->uploads($detail['image'], 'images/');
-
-                $image = $fileData['fileName'];
-            }
-
             $inclusive_detail = InclusiveDetail::updateOrCreate(
                 [
                     'inclusive_id' => $id,
@@ -379,11 +371,16 @@ class InclusiveController extends Controller
                 ],
                 [
                     'title' => $detail['title'],
-                    'image' => $image,
                     'summary' => $detail['summary'],
                     'meals' => $detail['meals'],
                 ]
             );
+
+            if (array_key_exists('image', $detail) && $detail['image']) {
+                $fileData = $this->uploads($detail['image'], 'images/');
+
+                $inclusive_detail->update(['image' => $fileData['fileName']]);
+            }
 
             if ($detail['cities']) {
                 $inclusive_cities = explode(',', $detail['cities']);
