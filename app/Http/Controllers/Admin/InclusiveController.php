@@ -31,22 +31,24 @@ class InclusiveController extends Controller
      */
     public function index(Request $request)
     {
-        $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Inclusive::query();
+        $query = Inclusive::query()
+            ->with([
+                'groupTours',
+                'entranceTickets',
+                'airportPickups',
+                'privateVanTours',
+                'airlineTickets',
+                'hotels'
+            ]);
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
         }
 
-        $query->orderBy('created_at', 'desc');
+        $data = $query->orderBy('created_at', 'desc')->paginate($request->limit ?? 10);
 
-        $query->with(['groupTours', 'entranceTickets', 'airportPickups', 'privateVanTours', 'airlineTickets', 'hotels']);
-
-        $data = $query->paginate($limit);
-
-        //        return $data;
         return $this->success(InclusiveResource::collection($data)
             ->additional([
                 'meta' => [
@@ -382,7 +384,11 @@ class InclusiveController extends Controller
                 ]
             );
 
-            $inclusive_detail->cities()->sync($inclusive_detail['cities']);
+            if ($inclusive_detail['cities']) {
+                $inclusive_cities = explode(',', $inclusive_detail['cities']);
+
+                $inclusive_detail->cities()->sync($inclusive_cities);
+            }
         }
 
         return $this->success(InclusiveDetailResource::collection($inclusive->details), 'Successfully saved');
