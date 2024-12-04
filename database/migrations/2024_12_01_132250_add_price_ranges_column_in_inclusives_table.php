@@ -11,7 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('inclusives', function (Blueprint $table) {
-            $table->text('price_ranges')->nullable()->after('agent_price');
+            $table->text('price_range')->nullable()->after('agent_price');
         });
     }
 
@@ -21,7 +21,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('inclusives', function (Blueprint $table) {
-            $table->dropColumn('price_ranges');
+            $table->dropColumn('price_range');
         });
     }
 };
