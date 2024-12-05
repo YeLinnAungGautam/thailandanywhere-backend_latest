@@ -24,14 +24,7 @@ class InclusiveController extends Controller
 
         $data = $query->paginate($limit);
 
-        return $this->success(InclusiveListResource::collection($data)
-            ->additional([
-                'meta' => [
-                    'total_page' => (int)ceil($data->total() / $data->perPage()),
-                ],
-            ])
-            ->response()
-            ->getData(), 'Inclusive List');
+        return InclusiveListResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
     }
 
     public function show(string $id)
@@ -39,9 +32,9 @@ class InclusiveController extends Controller
         $find = Inclusive::find($id);
 
         if (!$find) {
-            return $this->error(null, 'Data not found', 404);
+            return failedMessage('Data not found');
         }
 
-        return $this->success(new InclusiveResource($find), 'Inclusive Detail');
+        return success(new InclusiveResource($find));
     }
 }
