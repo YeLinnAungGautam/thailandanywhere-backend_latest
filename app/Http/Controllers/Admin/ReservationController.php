@@ -83,6 +83,10 @@ class ReservationController extends Controller
                 $query->whereHas('reservationCarInfo', function ($q) use ($request) {
                     $q->where('supplier_id', $request->supplier_id);
                 });
+            })
+            ->when($request->empty_unit_cost, function ($query) {
+                $query->where('booking_items.cost_price', 0)
+                    ->orWhereNull('booking_items.cost_price');
             });
 
         if ($serviceDate) {
@@ -193,7 +197,8 @@ class ReservationController extends Controller
             ->additional([
                 'meta' => [
                     'total_page' => (int)ceil($data->total() / $data->perPage()),
-                    'total_amount' => $query->sum('booking_items.amount')
+                    'total_amount' => $query->sum('booking_items.amount'),
+                    'total_expense_amount' => BookingItemDataService::getTotalExpenseAmount($query),
                 ],
             ])
             ->response()

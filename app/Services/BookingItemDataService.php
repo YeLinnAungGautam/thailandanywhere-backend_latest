@@ -13,6 +13,21 @@ class BookingItemDataService
         $this->booking_item = $booking_item;
     }
 
+    public static function getTotalExpenseAmount($query)
+    {
+        $total_expense = 0;
+
+        $query->chunk(100, function ($booking_items) use (&$total_expense) {
+            foreach ($booking_items as $booking_item) {
+            $self = new static($booking_item);
+
+            $total_expense += $self->getTotalCost();
+            }
+        });
+
+        return $total_expense;
+    }
+
     public function getTotalCost()
     {
         return $this->getCostPrice() * $this->getQuantity();
