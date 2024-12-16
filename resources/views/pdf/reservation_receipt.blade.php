@@ -189,6 +189,12 @@
                         </td>
 
                     </tr>
+                    <tr>
+                        <td style="width:30%;font-size:13px;padding-bottom:12px!important">Special request:
+                        </td>
+                        <td style="width:70%;font-size:13px;font-weight:bold;padding-bottom:12px!important">{{ $data->special_request ?? '-' }}
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
