@@ -21,8 +21,10 @@ class InclusiveDetailResource extends JsonResource
             'title' => $this->title,
             'image' => $this->image ? Storage::url('images/' . $this->image) : null,
             'summary' => $this->summary,
+            'summary_mm' => $this->summary_mm,
             'meals' => $this->meals,
             'cities' => CityResource::collection($this->cities),
+            'destinations' => DestinationResource::collection($this->destinations),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

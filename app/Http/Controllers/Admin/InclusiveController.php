@@ -77,7 +77,6 @@ class InclusiveController extends Controller
         ];
 
         if ($request->file('cover_image')) {
-
             $request->validate([
                 'cover_image' => 'nullable|mimes:pdf'
             ]);
@@ -88,13 +87,24 @@ class InclusiveController extends Controller
             }
         }
 
-
         $save = Inclusive::create($data);
 
         if ($request->file('images')) {
             foreach ($request->file('images') as $image) {
                 $fileData = $this->uploads($image, 'images/');
                 InclusiveImage::create(['inclusive_id' => $save->id, 'image' => $fileData['fileName']]);
+            };
+        }
+
+        if ($request->file('overview_files')) {
+            foreach ($request->file('overview_files') as $file) {
+                $overview_file = $this->uploads($file, 'overview_files/');
+
+                InclusiveImage::create([
+                    'inclusive_id' => $save->id,
+                    'type' => 'overview_pdf',
+                    'image' => $overview_file['fileName']
+                ]);
             };
         }
 
@@ -216,13 +226,11 @@ class InclusiveController extends Controller
         $find->price_range = $request->price_range ? json_encode($request->price_range) : $find->price_range;
 
         if ($request->file('cover_image')) {
-
             $request->validate([
                 'cover_image' => 'nullable|mimes:pdf'
             ]);
 
             if ($file = $request->file('cover_image')) {
-
                 Storage::delete('pdfs/' . $find->cover_image);
 
                 $fileData = $this->uploads($file, 'pdfs/');
@@ -372,6 +380,7 @@ class InclusiveController extends Controller
                 [
                     'title' => $detail['title'],
                     'summary' => $detail['summary'],
+                    'summary_mm' => $detail['summary_mm'] ?? null,
                     'meals' => $detail['meals'],
                 ]
             );
@@ -386,6 +395,12 @@ class InclusiveController extends Controller
                 $inclusive_cities = explode(',', $detail['cities']);
 
                 $inclusive_detail->cities()->sync($inclusive_cities);
+            }
+
+            if ($detail['destinations']) {
+                $inclusive_destinations = explode(',', $detail['destinations']);
+
+                $inclusive_detail->destinations()->sync($inclusive_destinations);
             }
         }
 

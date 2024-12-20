@@ -17,4 +17,9 @@ class InclusiveDetail extends Model
     {
         return $this->belongsToMany(City::class, 'city_inclusive_info');
     }
+
+    public function destinations()
+    {
+        return $this->belongsToMany(Destination::class, 'destination_inclusive_info');
+    }
 }
