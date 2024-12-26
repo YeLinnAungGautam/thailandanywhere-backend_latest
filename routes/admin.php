@@ -86,6 +86,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('report-by-payment-status', [DashboardController::class, 'reportByPaymentStatus']);
     Route::get('report-by-payment-and-product', [DashboardController::class, 'reportByPaymentAndProduct']);
 
+    // Route::get('')
+
     Route::get('sales-by-agent', [DashboardController::class, 'salesByAgentReport']);
     Route::get('unpaid-bookings', [DashboardController::class, 'getUnpaidBooking']);
     Route::get('sale-counts', [DashboardController::class, 'getSaleCounts']);

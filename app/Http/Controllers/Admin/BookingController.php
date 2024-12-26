@@ -231,6 +231,7 @@ class BookingController extends Controller
                     'is_driver_collect' => $is_driver_collect,
                     // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                     'individual_pricing' => null,
+                    'cancellation' => $item['cancellation'] ?? null,
                 ];
 
                 if (isset($request->items[$key]['customer_attachment'])) {
@@ -426,6 +427,7 @@ class BookingController extends Controller
                         'is_driver_collect' => $item['is_driver_collect'] ?? false,
                         // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                         'individual_pricing' => null,
+                        'cancellation' => $item['cancellation'] ?? null,
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
