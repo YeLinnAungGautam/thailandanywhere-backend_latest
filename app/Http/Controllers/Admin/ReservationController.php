@@ -321,7 +321,7 @@ class ReservationController extends Controller
             'payment_method' => $request->payment_method ?? $find->payment_method,
             'payment_status' => $request->payment_status ?? $find->payment_status,
             'exchange_rate' => $request->exchange_rate ?? $find->exchange_rate,
-            'reservation_status' => $request->reservation_status ?? $find->reservation_status,
+            // 'reservation_status' => $request->reservation_status ?? $find->reservation_status,
             'slip_code' => $request->slip_code ?? $find->slip_code,
             'expense_amount' => $request->expense_amount ?? $find->expense_amount,
             'comment' => $request->comment ?? $find->comment,
@@ -332,6 +332,11 @@ class ReservationController extends Controller
             'pickup_time' => $request->pickup_time ?? $find->pickup_time,
         ];
 
+        if ($request->reservation_status == 'confirmed' && $find->reservationPaidSlip->count() == 0) {
+            return $this->error(null, 'Payment slip is required to update the reservation status to confirmed.', 404);
+        }
+
+        $data['reservation_status'] = $request->reservation_status ?? $find->reservation_status;
 
         if ($file = $request->file('confirmation_letter')) {
             if ($find->confirmation_letter) {

@@ -9,6 +9,7 @@ abstract class BookingProductType
     const AIRPORT_PICKUP = 'Airport Pickup';
     const HOTEL = 'Hotel';
     const ARI_LINE = 'Airline';
+    const INCLUSIVE_PRODUCT = 'Inclusive Product';
 
     public static $values = [
         'App\Models\PrivateVanTour' => self::PRIVATE_VAN_TOUR,
@@ -17,5 +18,6 @@ abstract class BookingProductType
         'App\Models\AirportPickup' => self::AIRPORT_PICKUP,
         'App\Models\Hotel' => self::HOTEL,
         'App\Models\Airline' => self::ARI_LINE,
+        'App\Models\InclusiveProduct' => self::INCLUSIVE_PRODUCT,
     ];
 }

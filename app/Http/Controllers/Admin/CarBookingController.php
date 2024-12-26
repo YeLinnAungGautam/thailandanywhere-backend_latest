@@ -36,6 +36,9 @@ class CarBookingController extends Controller
             })
             ->when($request->agent_id, function ($query) use ($request) {
                 $query->whereHas('booking', fn ($q) => $q->where('created_by', $request->agent_id));
+            })
+            ->when($request->assigned_only, function ($query) {
+                $query->whereHas('reservationCarInfo');
             });
 
         if ($request->supplier_id) {

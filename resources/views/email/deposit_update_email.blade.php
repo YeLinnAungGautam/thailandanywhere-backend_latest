@@ -39,7 +39,7 @@
 
     @foreach ($booking->items as $item)
         @php
-            $booking_item = (new App\Http\Resources\BookingResource($item));
+            $booking_item = new App\Http\Resources\BookingResource($item);
 
             switch ($booking_item->product_type) {
                 case 'App\Models\Hotel':
@@ -70,17 +70,17 @@
 
         <div class="hr-line">
 
-        <p>
-            {{ $item->crm_id }}: {{ $product_type[$item->product_type] }} > {{ $item->product->name }} > {{ $variation_name ?? '-' }} > {{ number_format($booking_item->calc_sale_price) }} THB
-        </p>
+            <p>
+                {{ $item->crm_id }}: {{ $product_type[$item->product_type] }} > {{ $item->product->name ?? '-' }} > {{ $variation_name ?? '-' }} > {{ number_format($booking_item->calc_sale_price) }} THB
+            </p>
 
-        <p>
-            <a href="{{ $sale_reservation_link }}" target="_blank">{{ $sale_reservation_link }}</a>
-        </p>
+            <p>
+                <a href="{{ $sale_reservation_link }}" target="_blank">{{ $sale_reservation_link }}</a>
+            </p>
 
-        <p>
-            <a href="{{ $mm_reservation_link }}" target="_blank">{{ $mm_reservation_link }}</a>
-        </p>
+            <p>
+                <a href="{{ $mm_reservation_link }}" target="_blank">{{ $mm_reservation_link }}</a>
+            </p>
     @endforeach
 
     {{-- <div id="watermark">
