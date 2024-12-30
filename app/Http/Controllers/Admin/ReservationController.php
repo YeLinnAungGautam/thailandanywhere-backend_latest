@@ -332,7 +332,10 @@ class ReservationController extends Controller
             'pickup_time' => $request->pickup_time ?? $find->pickup_time,
         ];
 
-        if ($request->reservation_status == 'confirmed' && $find->reservationPaidSlip->count() == 0) {
+        if (
+            $request->reservation_status == 'confirmed' &&
+            $find->reservationPaidSlip->count() == 0
+        ) {
             return $this->error(null, 'Payment slip is required to update the reservation status to confirmed.', 404);
         }
 

@@ -41,6 +41,11 @@ class BookingItemResource extends JsonResource
                 $product = new AirlineResource($this->product);
 
                 break;
+
+            case 'App\Models\InclusiveProduct':
+                $product = new InclusiveProductResource($this->product);
+
+                break;
             default:
                 $product = null;
 

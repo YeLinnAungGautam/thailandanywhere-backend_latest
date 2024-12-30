@@ -75,10 +75,10 @@ class ReservationReportExport implements FromCollection, WithHeadings, WithMappi
         return [
             ++$this->index,
             $booking_item->crm_id,
-            $booking_item->booking->customer->name,
+            $booking_item->booking->customer->name ?? '-',
 
             $booking_item->acsr_product_type_name,
-            $booking_item->product->name,
+            $booking_item->product->name ?? '-',
             $booking_item->acsr_variation_name,
             (new BookingItemDataService($booking_item))->getSalePrice(),
             (new BookingItemDataService($booking_item))->getTotalCost(),
