@@ -165,117 +165,82 @@
                     </tr>
                 </tbody>
             </table>
-            <table class="body-table" style="max-height: 100px !important;">
-                <tbody>
-                    <tr>
-                        <th>SERVICE DATE</th>
-                        <th>SERVICE</th>
-                        <th style="max-width:140px">DESCRIPTION</th>
-                        <th>QTY</th>
-                        <th>RATE</th>
-                        <th>DISCOUNT</th>
-                        <th>AMOUNT</th>
-                    </tr>
-                    @foreach ($data->items as $index => $row)
-                        @if ($index == 4)
-            </table>
-            <div class="break-before"></div>
-            <table class="body-table" style="max-height: 100px !important; margin-top:300px;">
-                <tbody>
-                    <tr>
-                        <th>SERVICE DATE</th>
-                        <th>SERVICE</th>
-                        <th style="max-width:140px">DESCRIPTION</th>
-                        <th>QTY</th>
-                        <th>RATE</th>
-                        <th>DISCOUNT</th>
-                        <th>AMOUNT</th>
-                    </tr>
-                    @endif
-                    @if ($index == 8)
-            </table>
-            <div class="break-before"></div>
-            <table class="body-table" style="max-height: 100px !important; margin-top:300px;">
-                <tbody>
-                    <tr>
-                        <th>SERVICE DATE</th>
-                        <th>SERVICE</th>
-                        <th style="max-width:140px">DESCRIPTION</th>
-                        <th>QTY</th>
-                        <th>RATE</th>
-                        <th>DISCOUNT</th>
-                        <th>AMOUNT</th>
-                    </tr>
-                    @endif
-                    @if ($index == 16)
-            </table>
-            <div class="break-before"></div>
-            <table class="body-table" style="max-height: 100px !important; margin-top:300px;">
-                <tbody>
-                    <tr>
-                        <th>SERVICE DATE</th>
-                        <th>SERVICE</th>
-                        <th style="max-width:140px">DESCRIPTION</th>
-                        <th>QTY</th>
-                        <th>RATE</th>
-                        <th>DISCOUNT</th>
-                        <th>AMOUNT</th>
-                    </tr>
-                    @endif
 
-                    <tr>
-                        <td>{{ $row->service_date }}</td>
+            @foreach ($data->items->chunk(4) as $items)
+                <table class="body-table" style="max-height: 100px !important;">
+                    <tbody>
+                        <tr>
+                            <th>SERVICE DATE</th>
+                            <th>SERVICE</th>
+                            <th style="max-width:140px">DESCRIPTION</th>
+                            <th>QTY</th>
+                            <th>RATE</th>
+                            <th>DISCOUNT</th>
+                            <th>AMOUNT</th>
+                        </tr>
 
-                        <td style="max-width: 100px;">{{ $row->product->name ?? '-' }} </br>
-                            @if ($row->product_type === 'App\Models\Inclusive')
-                                @if ($row->product->privateVanTours)
-                                    @foreach ($row->product->privateVanTours as $pvt)
-                                        <span style="font-size:7px;">{{ $pvt->product->name }}</span> </br>
-                                    @endforeach
-                                @endif
+                        @foreach ($items as $index => $row)
+                            <tr @if (!is_null($row->cancellation) && $row->cancellation === 'cancel_request') style="background: yellow; color: #000"
+                                @elseif (!is_null($row->cancellation) && $row->cancellation === 'cancel_confirm')
+                                    style="background: red; color: white"
+                                @else
+                                    style="background: #ffffff" @endif>
+                                <td>{{ $row->service_date }}</td>
 
-                                @if ($row->product->groupTours)
-                                    @foreach ($row->product->groupTours as $gt)
-                                        <span style="font-size:7px;">{{ $gt->product->name }}</span> </br>
-                                    @endforeach
-                                @endif
+                                <td style="max-width: 100px;">{{ $row->product->name ?? '-' }} </br>
+                                    @if ($row->product_type === 'App\Models\Inclusive')
+                                        @if ($row->product->privateVanTours)
+                                            @foreach ($row->product->privateVanTours as $pvt)
+                                                <span style="font-size:7px;">{{ $pvt->product->name }}</span> </br>
+                                            @endforeach
+                                        @endif
 
-                                @if ($row->product->airportPickups)
-                                    @foreach ($row->product->airportPickups as $ap)
-                                        <span style="font-size:7px;">{{ $ap->product->name }}</span> </br>
-                                    @endforeach
-                                @endif
+                                        @if ($row->product->groupTours)
+                                            @foreach ($row->product->groupTours as $gt)
+                                                <span style="font-size:7px;">{{ $gt->product->name }}</span> </br>
+                                            @endforeach
+                                        @endif
 
-                                @if ($row->product->entranceTickets)
-                                    @foreach ($row->product->entranceTickets as $et)
-                                        <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
-                                    @endforeach
-                                @endif
+                                        @if ($row->product->airportPickups)
+                                            @foreach ($row->product->airportPickups as $ap)
+                                                <span style="font-size:7px;">{{ $ap->product->name }}</span> </br>
+                                            @endforeach
+                                        @endif
 
-                                @if ($row->product->hotels)
-                                    @foreach ($row->product->hotels as $et)
-                                        <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
-                                    @endforeach
-                                @endif
-                            @endif
-                        </td>
+                                        @if ($row->product->entranceTickets)
+                                            @foreach ($row->product->entranceTickets as $et)
+                                                <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
+                                            @endforeach
+                                        @endif
 
-                        <td style="max-width: 120px">{{ $row->comment }}</td>
+                                        @if ($row->product->hotels)
+                                            @foreach ($row->product->hotels as $et)
+                                                <span style="font-size:7px;">{{ $et->product->name }}</span> </br>
+                                            @endforeach
+                                        @endif
+                                    @endif
+                                </td>
 
-                        <td>{{ (int) $row->quantity * (int) ($row->days ? $row->days : 1) }}</td>
+                                <td style="max-width: 120px">{{ $row->comment }}</td>
 
-                        <td>{{ number_format((float) $row->selling_price) }}</td>
+                                <td>{{ (int) $row->quantity * (int) ($row->days ? $row->days : 1) }}</td>
 
-                        <td>{{ number_format((float) $row->discount) }}</td>
+                                <td>{{ number_format((float) $row->selling_price) }}</td>
 
-                        <td>{{ number_format($row->amount) }}</td>
-                    </tr>
-                    @if ($index == 4)
-                        <tbody />
-                    @endif
-                    @endforeach
-                </tbody>
-            </table>
+                                <td>{{ number_format((float) $row->discount) }}</td>
+
+                                <td>{{ number_format($row->amount) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+                @if (!$loop->last)
+                    <div class="break-before"></div>
+                    {{-- <div style="margin-top: 300px;"></div> --}}
+                @endif
+            @endforeach
+
             <table class="footer-table">
                 <tbody>
                     <tr>
