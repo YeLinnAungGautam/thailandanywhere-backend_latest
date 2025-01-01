@@ -64,6 +64,8 @@ Route::get('/reservations/{id}/receipt', [ReservationController::class, 'printRe
 Route::get('/hotel-reservation/{id}/receipt', [ReservationController::class, 'printReservationHotel']);
 Route::get('/vantour-reservation/{id}/receipt', [ReservationController::class, 'printReservationVantour']);
 
+Route::get('product-sale-count-report', [ReportController::class, 'getSaleCountReport']);
+
 # Reservation Export
 Route::get('reservations/report/export', [ReservationExportController::class, 'exportReservationReport']);
 

@@ -22,7 +22,7 @@ class ReportController extends Controller
         $from = $request->start_date;
         $to = $request->end_date;
 
-        if($from != '' && $to != '') {
+        if ($from != '' && $to != '') {
 
             $sales_amount = $this->salesAmount($from, $to);
             $sales_count = $this->salesCount($from, $to);
@@ -80,7 +80,7 @@ class ReportController extends Controller
     public function salesAmount($from = '', $to = '')
     {
 
-        if($from != '' && $to != '') {
+        if ($from != '' && $to != '') {
             $data = Booking::query()
                 ->select('created_by', DB::raw('SUM(grand_total) as total'))
                 ->groupBy('created_by')
@@ -94,7 +94,7 @@ class ReportController extends Controller
                 ->get();
         }
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $amount[] = $result->total;
         }
@@ -110,7 +110,7 @@ class ReportController extends Controller
 
     public function salesCount($from = '', $to = '')
     {
-        if($from != '' && $to != '') {
+        if ($from != '' && $to != '') {
             $data = Booking::query()
                 ->select('created_by', DB::raw('COUNT(grand_total) as total'))
                 ->groupBy('created_by')
@@ -123,7 +123,7 @@ class ReportController extends Controller
                 ->get();
         }
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $amount[] = $result->total;
         }
@@ -139,7 +139,7 @@ class ReportController extends Controller
 
     public function bookingsCount($from = '', $to = '')
     {
-        if($from != '' && $to != '') {
+        if ($from != '' && $to != '') {
             $data = Booking::query()
                 ->select('created_by', DB::raw('COUNT(id) as total'))
                 ->groupBy('created_by')
@@ -153,7 +153,7 @@ class ReportController extends Controller
                 ->get();
         }
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $booking[] = $result->total;
         }
@@ -172,7 +172,7 @@ class ReportController extends Controller
 
         $query = Booking::query();
 
-        if($from != '' && $to != '') {
+        if ($from != '' && $to != '') {
             $query->whereBetween('created_at', [date($from), date($to)]);
 
         }
@@ -182,11 +182,11 @@ class ReportController extends Controller
 
         $items = [];
         $one = [];
-        foreach($results as $key => $res) {
-            foreach($res->items as $res1) {
+        foreach ($results as $key => $res) {
+            foreach ($res->items as $res1) {
                 $reserve_types = substr($res1->product_type, 11);
 
-                if($reserve_types == 'Hotel') {
+                if ($reserve_types == 'Hotel') {
 
                     $datetime1 = new DateTime($res1->checkin_date);
                     $datetime2 = new DateTime($res1->checkout_date);
@@ -215,19 +215,19 @@ class ReportController extends Controller
 
         $count_bookings = array_count_values(array_column($items, 'product_type'));
 
-        foreach($count_bookings as $value) {
+        foreach ($count_bookings as $value) {
             $booking[] = $value;
         }
 
         $new_array = [];
         foreach ($one as $value) {
-            if(array_key_exists($value['product_type'], $new_array)) {
+            if (array_key_exists($value['product_type'], $new_array)) {
                 $value['price'] += $new_array[$value['product_type']]['price'];
             }
             $new_array[$value['product_type']] = $value;
         }
 
-        foreach($new_array as $res) {
+        foreach ($new_array as $res) {
             $type[] = $res['product_type'];
             $prices[] = $res['price'];
 
@@ -249,7 +249,7 @@ class ReportController extends Controller
             ->whereDate('created_at', Carbon::parse($date)->format('Y-m-d'))
             ->get();
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $amount[] = $result->total;
         }
@@ -273,7 +273,7 @@ class ReportController extends Controller
             ->get();
 
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $amount[] = $result->total;
         }
@@ -296,7 +296,7 @@ class ReportController extends Controller
             ->whereDate('created_at', '=', date($date))
             ->get();
 
-        foreach($data as $result) {
+        foreach ($data as $result) {
             $agents[] = $result->createdBy->name;
             $booking[] = $result->total;
         }
@@ -324,11 +324,11 @@ class ReportController extends Controller
         $items = [];
         $one = [];
 
-        foreach($results as $key => $res) {
-            foreach($res->items as $res1) {
+        foreach ($results as $key => $res) {
+            foreach ($res->items as $res1) {
                 $reserve_types = substr($res1->product_type, 11);
 
-                if($reserve_types == 'Hotel') {
+                if ($reserve_types == 'Hotel') {
 
                     $datetime1 = new DateTime($res1->checkin_date);
                     $datetime2 = new DateTime($res1->checkout_date);
@@ -354,19 +354,19 @@ class ReportController extends Controller
 
         $count_bookings = array_count_values(array_column($items, 'product_type'));
 
-        foreach($count_bookings as $value) {
+        foreach ($count_bookings as $value) {
             $booking[] = $value;
         }
 
         $new_array = [];
         foreach ($one as $value) {
-            if(array_key_exists($value['product_type'], $new_array)) {
+            if (array_key_exists($value['product_type'], $new_array)) {
                 $value['price'] += $new_array[$value['product_type']]['price'];
             }
             $new_array[$value['product_type']] = $value;
         }
 
-        foreach($new_array as $res) {
+        foreach ($new_array as $res) {
             $type[] = $res['product_type'];
             $prices[] = $res['price'];
 
@@ -442,7 +442,7 @@ class ReportController extends Controller
             );
         }])->get();
 
-        foreach($customers as $s) {
+        foreach ($customers as $s) {
             $data[] = [
                 'name' => $s->name,
                 'items' => $s->items
@@ -464,5 +464,19 @@ class ReportController extends Controller
         ];
 
         return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));
+    }
+
+    public function getSaleCountReport(Request $request)
+    {
+        $request->validate([
+            'date' => 'required',
+            'product_type' => 'required|in:private_van_tour,hotel,attraction'
+        ]);
+
+        $report_service = new SaleReportService($request->date);
+
+        $data = $report_service->getProductSaleCount($request->product_type);
+
+        return $this->success($data, 'Date: ' . Carbon::parse($request->date)->format('d F Y'));
     }
 }

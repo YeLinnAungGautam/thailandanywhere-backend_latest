@@ -4,8 +4,12 @@ namespace App\Services;
 use App\Http\Resources\BookingResource;
 use App\Models\Admin;
 use App\Models\Booking;
+use App\Models\EntranceTicket;
+use App\Models\Hotel;
+use App\Models\PrivateVanTour;
 use Carbon\Carbon;
 use DateTime;
+use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -87,11 +91,11 @@ class SaleReportService
 
         $items = [];
         $one = [];
-        foreach($results as $res) {
-            foreach($res->items as $res1) {
+        foreach ($results as $res) {
+            foreach ($res->items as $res1) {
                 $reserve_types = substr($res1->product_type, 11);
 
-                if($reserve_types == 'Hotel') {
+                if ($reserve_types == 'Hotel') {
 
                     $datetime1 = new DateTime($res1->checkin_date);
                     $datetime2 = new DateTime($res1->checkout_date);
@@ -120,19 +124,19 @@ class SaleReportService
 
         $count_bookings = array_count_values(array_column($items, 'product_type'));
 
-        foreach($count_bookings as $value) {
+        foreach ($count_bookings as $value) {
             $booking[] = $value;
         }
 
         $new_array = [];
         foreach ($one as $value) {
-            if(array_key_exists($value['product_type'], $new_array)) {
+            if (array_key_exists($value['product_type'], $new_array)) {
                 $value['price'] += $new_array[$value['product_type']]['price'];
             }
             $new_array[$value['product_type']] = $value;
         }
 
-        foreach($new_array as $res) {
+        foreach ($new_array as $res) {
             $type[] = $res['product_type'];
             $prices[] = $res['price'];
 
@@ -172,6 +176,38 @@ class SaleReportService
             ->get();
     }
 
+    public function getProductSaleCount(string $product_type)
+    {
+        switch ($product_type) {
+            case 'private_van_tour':
+                $product_type = PrivateVanTour::class;
+
+                break;
+
+            case 'hotel':
+                $product_type = Hotel::class;
+
+                break;
+
+            case 'attraction':
+                $product_type = EntranceTicket::class;
+
+                break;
+
+            default:
+                throw new Exception('Invalid product type');
+
+                break;
+        }
+
+        return Booking::query()
+            ->whereHas('items', function ($q) use ($product_type) {
+                $q->where('product_type', $product_type);
+            })
+            ->whereDate('created_at', $this->date)
+            ->get();
+    }
+
     private function getDaysOfMonth(): array
     {
         $dates = Carbon::parse($this->date)->startOfMonth()
@@ -194,7 +230,7 @@ class SaleReportService
         foreach ($this->getDaysOfMonth() as $date) {
             $agent_result = [];
 
-            foreach($agents as $agent_id => $agent_name) {
+            foreach ($agents as $agent_id => $agent_name) {
                 $sale_records = $sales->where('sale_date', $date)->where('created_by', $agent_id);
 
                 $data_result = [
@@ -202,14 +238,14 @@ class SaleReportService
                     'total' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total')
                 ];
 
-                if($with_balance) {
+                if ($with_balance) {
                     $data_result += [
                         'total_deposit' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_deposit'),
                         'total_balance' => $sale_records->isEmpty() ? 0 : $sale_records->sum('total_balance'),
                     ];
                 }
 
-                if($with_count) {
+                if ($with_count) {
                     $data_result += [
                         'total_count' => $sale_records->sum('total_count'),
                     ];
