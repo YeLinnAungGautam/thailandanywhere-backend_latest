@@ -60,7 +60,7 @@ class BookingController extends Controller
             $query->where('crm_id', 'LIKE', "%{$crmId}%");
         }
 
-        if (Auth::user()->role === 'super_admin') {
+        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
             if ($filter && $filter !== "") {
                 if ($filter === 'all') {
                 } elseif ($filter === 'past') {
