@@ -18,10 +18,10 @@ class CustomerInformationController extends Controller
     {
         try {
             $request->validate([
-                'name' => 'required',
+                'name' => 'nullable',
                 'email' => 'nullable|email',
-                'phone' => 'required',
-                'passport' => 'required',
+                'phone' => 'nullable',
+                'passport' => 'nullable',
                 'customer_passport.*' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048',
             ]);
 
