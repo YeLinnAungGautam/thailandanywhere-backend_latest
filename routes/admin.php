@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\InclusiveController;
 use App\Http\Controllers\Admin\PlaceController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PrivateVanTourController;
+use App\Http\Controllers\Admin\ProductAddonController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
@@ -306,6 +307,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Users
     Route::get('users', [UserController::class, 'index']);
+
+    # Product Addon
+    Route::apiResource('product-addons', ProductAddonController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
