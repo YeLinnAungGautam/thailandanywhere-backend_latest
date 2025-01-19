@@ -24,14 +24,16 @@ class ProductAddonController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'required',
-                'price' => 'required',
-                'product_id' => 'required',
+                'adult_price' => 'required',
+                'child_price' => 'nullable',
                 'description' => 'nullable',
+                'product_id' => 'required',
             ]);
 
             $addon = ProductAddon::create([
                 'name' => $validated['name'],
-                'price' => $validated['price'],
+                'adult_price' => $validated['adult_price'],
+                'child_price' => $validated['child_price'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'productable_id' => $validated['product_id'],
                 'productable_type' => $this->getProductType($request->product_type),
@@ -50,7 +52,8 @@ class ProductAddonController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'required',
-                'price' => 'required',
+                'adult_price' => 'required',
+                'child_price' => 'nullable',
                 'product_id' => 'required',
                 'description' => 'nullable',
             ]);
@@ -59,7 +62,8 @@ class ProductAddonController extends Controller
 
             $addon->update([
                 'name' => $validated['name'],
-                'price' => $validated['price'],
+                'adult_price' => $validated['adult_price'],
+                'child_price' => $validated['child_price'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'productable_id' => $validated['product_id'],
                 'productable_type' => $this->getProductType($request->product_type),
