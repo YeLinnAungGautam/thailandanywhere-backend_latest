@@ -143,6 +143,7 @@ class BookingItemResource extends JsonResource
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : null,
             'cancellation' => $this->cancellation,
+            'addon' => $this->addon ? json_decode($this->addon) : null,
         ];
     }
 }

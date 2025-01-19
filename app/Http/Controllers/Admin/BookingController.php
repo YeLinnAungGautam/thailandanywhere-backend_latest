@@ -232,6 +232,7 @@ class BookingController extends Controller
                     // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                     'individual_pricing' => null,
                     'cancellation' => $item['cancellation'] ?? null,
+                    'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                 ];
 
                 if (isset($request->items[$key]['customer_attachment'])) {
@@ -428,6 +429,7 @@ class BookingController extends Controller
                         // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                         'individual_pricing' => null,
                         'cancellation' => $item['cancellation'] ?? null,
+                        'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                     ];
 
                     if (isset($request->items[$key]['receipt_image'])) {
