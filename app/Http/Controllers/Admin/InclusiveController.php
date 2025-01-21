@@ -74,6 +74,7 @@ class InclusiveController extends Controller
             'price_range' => $request->price_range ? json_encode($request->price_range) : null,
             'day' => $request->day,
             'night' => $request->night,
+            'product_itenary_material' => $request->product_itenary_material ? json_encode($request->product_itenary_material) : null,
         ];
 
         if ($request->file('cover_image')) {
@@ -224,6 +225,7 @@ class InclusiveController extends Controller
         $find->day = $request->day ?? 1;
         $find->night = $request->night ?? $find->night;
         $find->price_range = $request->price_range ? json_encode($request->price_range) : $find->price_range;
+        $find->product_itenary_material = $request->product_itenary_material ? json_encode($request($request->product_itenary_material)) : $find->product_itenary_material;
 
         if ($request->file('cover_image')) {
             $request->validate([
@@ -405,5 +407,19 @@ class InclusiveController extends Controller
         }
 
         return $this->success(InclusiveDetailResource::collection($inclusive->InclusiveDetails), 'Successfully saved');
+    }
+
+    // inclusive images delete function add by kaung
+    public function deleteImage(Inclusive $inclusive, InclusiveImage $inclusive_image)
+    {
+        if ($inclusive->id !== $inclusive_image->inclusive_id) {
+            return $this->error(null, 'This image is not belongs to the inclusive', 404);
+        }
+
+        Storage::delete('images/' . $inclusive_image->image);
+
+        $inclusive_image->delete();
+
+        return $this->success(null, 'Inclusive image is successfully deleted');
     }
 }

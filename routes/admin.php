@@ -164,6 +164,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Inclusive
     Route::apiResource('inclusive', InclusiveController::class);
     Route::post('inclusive/{inclusive_id}/detail', [InclusiveController::class, 'storeDetail']);
+    Route::delete('inclusive/{inclusive}/images/{inclusive_image}', [InclusiveController::class, 'deleteImage']);
 
     # Destination
     Route::apiResource('destinations', DestinationController::class);
