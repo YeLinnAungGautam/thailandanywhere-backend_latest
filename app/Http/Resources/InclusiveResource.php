@@ -40,6 +40,7 @@ class InclusiveResource extends JsonResource
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'price_range' => $this->price_range ? json_decode($this->price_range) : null,
+            'product_itenary_material' => $this->product_itenary_material ? json_decode($this->product_itenary_material) : null,
             'details' => InclusiveDetailResource::collection($this->InclusiveDetails)
         ];
     }
