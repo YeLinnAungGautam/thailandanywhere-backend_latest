@@ -237,7 +237,7 @@
 
                 @if (!$loop->last)
                     <div class="break-before"></div>
-                    {{-- <div style="margin-top: 300px;"></div> --}}
+                    <div style="margin-top: 300px;"></div>
                 @endif
             @endforeach
 
@@ -337,8 +337,6 @@
                 </tbody>
             </table>
         </div>
-
-
     </div>
 </body>
 
