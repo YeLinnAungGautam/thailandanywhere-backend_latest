@@ -632,7 +632,7 @@ class ReservationController extends Controller
             }
         }
 
-        if ($request->is_associated == 1) {
+        if ($request->is_associated == 1 && $findInfo->booking_item_id) {
             if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
                 ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
                     'name' => $request->customer_name,

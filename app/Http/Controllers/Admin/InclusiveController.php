@@ -428,7 +428,8 @@ class InclusiveController extends Controller
     public function storePdf(string $id, Request $request)
     {
         $request->validate([
-            'pdfs.*' => 'required|file|mimes:pdf|max:2048', // Validate each uploaded file
+            'pdfs' => 'required|array',
+            'pdfs.*' => 'file',
         ]);
 
         $inclusive = Inclusive::findOrFail($id);
