@@ -225,7 +225,7 @@ class InclusiveController extends Controller
         $find->day = $request->day ?? 1;
         $find->night = $request->night ?? $find->night;
         $find->price_range = $request->price_range ? json_encode($request->price_range) : $find->price_range;
-        $find->product_itenary_material = $request->product_itenary_material ? json_encode($request($request->product_itenary_material)) : $find->product_itenary_material;
+        $find->product_itenary_material = $request->product_itenary_material ? json_encode($request->product_itenary_material) : $find->product_itenary_material;
 
         if ($request->file('cover_image')) {
             $request->validate([
