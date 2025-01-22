@@ -429,17 +429,17 @@ class InclusiveController extends Controller
     {
         $request->validate([
             'pdfs' => 'required|array',
-            'pdfs.*' => 'file',
+            // 'pdfs.*' => 'file',
         ]);
 
         $inclusive = Inclusive::findOrFail($id);
 
-        foreach ($request->file('pdfs') as $pdf) {
+        foreach ($request->pdfs as $pdf) {
             // $path = $pdf->store('product_pdfs', 'public'); // Save the PDF in the 'storage/app/public/
             $path = $this->uploads($pdf, 'pdfs/');
 
             $inclusive->pdfs()->create([
-                'pdf_path' => $path,
+                'pdf_path' => $path['fileName'] . '.' . $pdf->getClientOriginalExtension(),
             ]);
         }
 
