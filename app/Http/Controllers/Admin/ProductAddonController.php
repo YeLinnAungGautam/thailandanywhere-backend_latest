@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EntranceTicket;
+use App\Models\Hotel;
 use App\Models\PrivateVanTour;
 use App\Models\ProductAddon;
-use App\Models\Room;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +35,8 @@ class ProductAddonController extends Controller
             ]);
 
             $addon = ProductAddon::create([
-                'product_type' => $validated['product_type'],
+                'productable_type' => $this->getProductType($validated['product_type']),
+                'productable_id' => $validated['product_id'],
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'price' => $validated['price'],
@@ -54,7 +55,6 @@ class ProductAddonController extends Controller
     {
         try {
             $validated = $request->validate([
-                'product_type' => 'required',
                 'name' => 'required',
                 'description' => 'nullable',
                 'price' => 'required',
@@ -63,8 +63,11 @@ class ProductAddonController extends Controller
 
             $addon = ProductAddon::find($id);
 
+            if (!$addon) {
+                return failedMessage('Product addon not found');
+            }
+
             $addon->update([
-                'product_type' => $validated['product_type'],
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'price' => $validated['price'],
@@ -90,7 +93,7 @@ class ProductAddonController extends Controller
     {
         switch ($product_type) {
             case 'hotel':
-                return Room::class;
+                return Hotel::class;
 
                 break;
 
