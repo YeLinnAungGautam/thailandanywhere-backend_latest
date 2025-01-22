@@ -55,6 +55,10 @@ class Inclusive extends Model
         return $this->hasMany(InclusiveImage::class)->whereNull('type');
     }
 
+    public function pdfs(){
+        return $this->hasMany(InclusivePdf::class);
+    }
+
     public function overviewFiles()
     {
         return $this->hasMany(InclusiveImage::class)->where('type', 'overview_pdf');

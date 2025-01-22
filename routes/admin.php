@@ -165,6 +165,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('inclusive', InclusiveController::class);
     Route::post('inclusive/{inclusive_id}/detail', [InclusiveController::class, 'storeDetail']);
     Route::delete('inclusive/{inclusive}/images/{inclusive_image}', [InclusiveController::class, 'deleteImage']);
+    Route::post('inclusive/{inclusive_id}/pdf', [InclusiveController::class, 'storePdf']);
+    Route::delete('inclusive/{inclusive_id}/pdfs/{inclusive_pdf}', [InclusiveController::class, 'deletePdf']);
+    Route::get('/download-pdf/{id}', [InclusiveController::class, 'downloadPdf']);
 
     # Destination
     Route::apiResource('destinations', DestinationController::class);

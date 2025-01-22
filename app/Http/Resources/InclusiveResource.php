@@ -27,6 +27,7 @@ class InclusiveResource extends JsonResource
             'description' => $this->description,
             'cover_image' => $this->cover_image ? Storage::url('images/' . $this->cover_image) : null,
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
+            'pdfs' => $this->pdfs ? InclusivePdfResource::collection($this->pdfs) : null,
 
             'overview_files' => $this->overviewFiles ? InclusiveOverviewFileResource::collection($this->overviewFiles) : null,
 

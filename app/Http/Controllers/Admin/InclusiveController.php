@@ -15,6 +15,7 @@ use App\Models\InclusiveEntranceTicket;
 use App\Models\InclusiveGroupTour;
 use App\Models\InclusiveHotel;
 use App\Models\InclusiveImage;
+use App\Models\InclusivePdf;
 use App\Models\InclusivePrivateVanTour;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -421,5 +422,59 @@ class InclusiveController extends Controller
         $inclusive_image->delete();
 
         return $this->success(null, 'Inclusive image is successfully deleted');
+    }
+
+    // inclusive pdf store function
+    public function storePdf(string $id, Request $request)
+    {
+        $request->validate([
+            'pdfs.*' => 'required|file|mimes:pdf|max:2048', // Validate each uploaded file
+        ]);
+
+        $inclusive = Inclusive::findOrFail($id);
+
+        foreach ($request->file('pdfs') as $pdf) {
+            // $path = $pdf->store('product_pdfs', 'public'); // Save the PDF in the 'storage/app/public/
+            $path = $this->uploads($pdf, 'pdfs/');
+
+            $inclusive->pdfs()->create([
+                'pdf_path' => $path,
+            ]);
+        }
+
+        return $this->success(null, 'Inclusive pdf is successfully created');
+    }
+
+    // inclusive pdf delete function
+    public function deletePdf(Inclusive $inclusive, InclusivePdf $inclusive_pdf)
+    {
+        if ($inclusive->id !== $inclusive_pdf->inclusive_id) {
+            return $this->error(null, 'This PDF does not belong to the inclusive', 404);
+        }
+
+        // Check if file exists before deletion
+        $filePath = 'pdfs/' . $inclusive_pdf->pdf_path;
+        if (Storage::exists($filePath)) {
+            Storage::delete($filePath);
+        }
+
+        $inclusive_pdf->delete();
+
+        return $this->success(null, 'Inclusive PDF is successfully deleted');
+    }
+
+    // pdf download function
+    public function downloadPdf($id)
+    {
+        $pdf = InclusivePdf::findOrFail($id);
+
+        // Ensure file exists before attempting to download
+        $filePath = 'pdfs/' . $pdf->pdf_path;
+
+        if (!Storage::exists($filePath)) {
+            return response()->json(['error' => 'File not found'], 404);
+        }
+
+        return response()->download(Storage::path($filePath));
     }
 }
