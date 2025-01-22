@@ -12,18 +12,12 @@ return new class extends Migration {
     {
         Schema::create('product_addons', function (Blueprint $table) {
             $table->id();
-            $table->string('product_type');
+            $table->morphs('productable');
             $table->string('name');
             $table->text('description')->nullable();
 
             $table->decimal('price', 10, 2)->nullable()->comment('This is the price that will be added to the product price');
             $table->decimal('cost_price', 10, 2)->nullable()->comment('This is the cost price to pay for the addon provider like hotel, ticket seller etc');
-
-            // $table->decimal('adult_price', 10, 2)->nullable();
-            // $table->decimal('adult_cost_price', 10, 2)->nullable();
-
-            // $table->decimal('child_price', 10, 2)->nullable();
-            // $table->decimal('child_cost_price', 10, 2)->nullable();
 
             $table->boolean('is_active')->default(true);
             $table->integer('limit')->nullable();
