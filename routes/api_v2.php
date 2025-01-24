@@ -18,6 +18,7 @@ use App\Http\Controllers\API\V2\HotelController;
 use App\Http\Controllers\API\V2\InclusiveController;
 use App\Http\Controllers\API\V2\MealController;
 use App\Http\Controllers\API\V2\PrivateVanTourController;
+use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
 use Illuminate\Support\Facades\Route;
@@ -92,6 +93,9 @@ Route::group([], function () {
 
     # Login
     Route::post('login', [LoginController::class, 'login']);
+
+    # Reservation Information
+    Route::get('reservation-information', [ReservationController::class, 'reservationInformation']);
 
     Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
