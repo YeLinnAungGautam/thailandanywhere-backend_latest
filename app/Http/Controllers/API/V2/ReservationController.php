@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 class ReservationController extends Controller
 {
     //get reservation information
-    public function getReservationInformation(string $id)
+    public function reservationInformation(string $id)
     {
         $find = BookingItem::find($id);
         if (!$find) {
