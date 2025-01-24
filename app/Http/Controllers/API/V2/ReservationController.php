@@ -5,18 +5,17 @@ namespace App\Http\Controllers\API\V2;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItemResource;
 use App\Models\BookingItem;
-use Illuminate\Http\Request;
 
 class ReservationController extends Controller
 {
-    //get reservation information
     public function reservationInformation(string $id)
     {
         $find = BookingItem::find($id);
+
         if (!$find) {
-            return $this->error(null, 'Data not found', 404);
+            return failedMessage('Booking Item not found');
         }
 
-        return $this->success(new BookingItemResource($find), 'Booking Item Detail');
+        return success(new BookingItemResource($find), 'Booking Item Detail');
     }
 }
