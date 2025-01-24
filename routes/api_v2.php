@@ -95,7 +95,7 @@ Route::group([], function () {
     Route::post('login', [LoginController::class, 'login']);
 
     # Reservation Information
-    Route::get('reservation-information', [ReservationController::class, 'reservationInformation']);
+    Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
 
     Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
