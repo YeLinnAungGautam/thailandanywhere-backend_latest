@@ -481,10 +481,14 @@ class InclusiveController extends Controller
         // Ensure file exists before attempting to download
         $filePath = 'pdfs/' . $pdf->pdf_path;
 
-        if (!Storage::exists($filePath)) {
-            return response()->json(['error' => 'File not found'], 404);
-        }
+        // 'image' => $this->image ? Storage::url('images/' . $this->image) : null,
 
-        return response()->download(Storage::path($filePath));
+        // if (!Storage::exists($filePath)) {
+        //     return response()->json(['error' => 'File not found'], 404);
+        // }
+
+        return response()->download(Storage::url('pdfs/' . $pdf->pdf_path));
+
+        // return response()->download(Storage::path($filePath));
     }
 }
