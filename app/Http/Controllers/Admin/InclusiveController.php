@@ -439,7 +439,7 @@ class InclusiveController extends Controller
             $path = $this->uploads($pdf, 'pdfs/');
 
             $inclusive->pdfs()->create([
-                'pdf_path' => $path['fileName'] . '.' . $pdf->getClientOriginalExtension(),
+                'pdf_path' => $path['fileName'],
             ]);
         }
 
