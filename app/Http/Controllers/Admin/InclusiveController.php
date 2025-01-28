@@ -487,7 +487,9 @@ class InclusiveController extends Controller
         //     return response()->json(['error' => 'File not found'], 404);
         // }
 
-        return response()->download(Storage::url('pdfs/' . $pdf->pdf_path));
+        $link = Storage::url('pdfs/' . $pdf->pdf_path);
+
+        return $this->success(['link' => $link], 'PDF download link generated successfully');
 
         // return response()->download(Storage::path($filePath));
     }
