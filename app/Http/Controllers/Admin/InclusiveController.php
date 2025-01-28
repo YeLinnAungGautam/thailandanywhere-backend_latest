@@ -446,9 +446,14 @@ class InclusiveController extends Controller
         return $this->success(null, 'Inclusive PDFs are successfully created.');
     }
 
-    // inclusive pdf delete function
-    public function deletePdf(Inclusive $inclusive, InclusivePdf $inclusive_pdf)
+    public function deletePdf(Inclusive $inclusive, $pdf_id)
     {
+        $inclusive_pdf = InclusivePdf::find($pdf_id);
+
+        if (!$inclusive_pdf) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
         if ($inclusive->id !== $inclusive_pdf->inclusive_id) {
             return $this->error(null, 'This PDF does not belong to the inclusive', 404);
         }
@@ -468,7 +473,11 @@ class InclusiveController extends Controller
     // inclusive pdf download function
     public function downloadPdf($id)
     {
-        $pdf = InclusivePdf::findOrFail($id);
+        $pdf = InclusivePdf::find($id);
+
+        if (!$pdf) {
+            return $this->error(null, 'Data not found', 404);
+        }
 
         $filePath = 'public/' . $pdf->pdf_path;
 

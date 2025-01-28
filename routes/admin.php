@@ -65,6 +65,8 @@ Route::get('/reservations/{id}/receipt', [ReservationController::class, 'printRe
 Route::get('/hotel-reservation/{id}/receipt', [ReservationController::class, 'printReservationHotel']);
 Route::get('/vantour-reservation/{id}/receipt', [ReservationController::class, 'printReservationVantour']);
 
+Route::get('/download-pdf/{id}', [InclusiveController::class, 'downloadPdf']);
+
 Route::get('product-sale-count-report', [ReportController::class, 'getSaleCountReport']);
 
 # Reservation Export
@@ -166,8 +168,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('inclusive/{inclusive_id}/detail', [InclusiveController::class, 'storeDetail']);
     Route::delete('inclusive/{inclusive}/images/{inclusive_image}', [InclusiveController::class, 'deleteImage']);
     Route::post('inclusive/{inclusive_id}/pdf', [InclusiveController::class, 'storePdf']);
-    Route::delete('inclusive/{inclusive}/pdfs/{inclusive_pdf}', [InclusiveController::class, 'deletePdf']);
-    Route::get('/download-pdf/{id}', [InclusiveController::class, 'downloadPdf']);
+    Route::delete('inclusive/{inclusive}/pdfs/{pdf_id}', [InclusiveController::class, 'deletePdf']);
 
     # Destination
     Route::apiResource('destinations', DestinationController::class);
