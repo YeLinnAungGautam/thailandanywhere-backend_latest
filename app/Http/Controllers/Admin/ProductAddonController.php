@@ -3,23 +3,36 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AddOnResource;
 use App\Models\EntranceTicket;
 use App\Models\Hotel;
 use App\Models\PrivateVanTour;
 use App\Models\ProductAddon;
+use App\Traits\HttpResponses;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ProductAddonController extends Controller
 {
+    use HttpResponses;
+
     public function index(Request $request)
     {
         $addons = ProductAddon::query()
             ->when($request->search, fn ($query) => $query->where('name', 'like', "%{$request->search}%"))
+            ->when($request->product_type, fn ($query) => $query->where('productable_type', $this->getProductType($request->product_type)))
+            ->when($request->product_id, fn ($query) => $query->where('productable_id', $request->product_id))
             ->paginate($request->limit ?? 10);
 
-        return success($addons);
+        return $this->success(AddOnResource::collection($addons)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int)ceil($addons->total() / $addons->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Addon List List');
     }
 
     public function store(Request $request)
