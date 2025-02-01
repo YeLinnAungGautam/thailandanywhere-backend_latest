@@ -28,7 +28,7 @@ class RestaurantController extends Controller
                 $p_query->where('place', $request->place);
             })
             ->when($request->search, function ($s_query) use ($request) {
-                $s_query->where('name', 'LIKE', "%{$request->search}%");
+                $s_query->where('name', 'LIKE', "{$request->search}%");
             })
             ->paginate($request->limit ?? 10);
 
@@ -37,7 +37,7 @@ class RestaurantController extends Controller
 
     public function show(string|int $restaurant_id)
     {
-        if(is_null($restaurant = Restaurant::find($restaurant_id))) {
+        if (is_null($restaurant = Restaurant::find($restaurant_id))) {
             return notFoundMessage();
         }
 

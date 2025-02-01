@@ -15,7 +15,7 @@ class EntranceTicketController extends Controller
             ->withCount('bookingItems')
             ->with('tags', 'cities', 'categories', 'images', 'contracts', 'variations')
             ->when($request->search, function ($query) use ($request) {
-                $query->where('name', 'LIKE', "%{$request->search}%");
+                $query->where('name', 'LIKE', "{$request->search}%");
             })
             ->when($request->category_id, function ($query) use ($request) {
                 $query->whereIn('id', function ($q) use ($request) {

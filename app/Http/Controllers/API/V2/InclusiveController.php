@@ -17,7 +17,7 @@ class InclusiveController extends Controller
         $query = Inclusive::query()->with('InclusiveDetails');
 
         if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
+            $query->where('name', 'LIKE', "{$search}%");
         }
 
         $query->orderBy('created_at', 'desc');
