@@ -14,7 +14,7 @@ class DestinationController extends Controller
     public function index(Request $request)
     {
         $query = Destination::query()
-            ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "%{$request->search}%"))
+            ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "{$request->search}%"))
             // ->when($request->city_id, function ($query) use ($request) {
             //     $query->whereIn('id', function ($q1) use ($request) {
             //         $q1->select('destination_id')
