@@ -439,7 +439,7 @@ class InclusiveController extends Controller
             $path = $pdf->store('pdfs', 'public');
 
             $inclusive->pdfs()->create([
-                'pdf_path' => $path,
+                'pdf_path' => $path['fileName'],
             ]);
         }
 
@@ -479,14 +479,20 @@ class InclusiveController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        $filePath = 'public/' . $pdf->pdf_path;
-
         // Ensure file exists before attempting to download
-        if (!Storage::exists($filePath)) {
-            return response()->json(['error' => 'File not found'], 404);
-        }
+        $filePath = 'pdfs/' . $pdf->pdf_path;
 
-        return response()->download(storage_path('app/' . $filePath));
+        // 'image' => $this->image ? Storage::url('images/' . $this->image) : null,
+
+        // if (!Storage::exists($filePath)) {
+        //     return response()->json(['error' => 'File not found'], 404);
+        // }
+
+        $link = Storage::url('pdfs/' . $pdf->pdf_path);
+
+        return $this->success(['link' => $link], 'PDF download link generated successfully');
+
+        // return response()->download(Storage::path($filePath));
     }
 
 }
