@@ -14,7 +14,7 @@ class GroupTourController extends Controller
         $items = GroupTour::query()
             ->with('destinations', 'tags', 'cities', 'images')
             ->when($request->search, function ($s_query) use ($request) {
-                $s_query->where('name', 'LIKE', "%{$request->search}%");
+                $s_query->where('name', 'LIKE', "{$request->search}%");
             })
             ->when($request->city_id, function ($c_query) use ($request) {
                 $c_query->whereIn('id', function ($q) use ($request) {
@@ -29,7 +29,7 @@ class GroupTourController extends Controller
 
     public function show(string|int $group_tour_id)
     {
-        if(is_null($group_tour = GroupTour::find($group_tour_id))) {
+        if (is_null($group_tour = GroupTour::find($group_tour_id))) {
             return notFoundMessage();
         }
 
