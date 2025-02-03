@@ -23,7 +23,7 @@ class HotelController extends Controller
                 'facilities',
             )
             ->when($request->search, function ($s_query) use ($request) {
-                $s_query->where('name', 'LIKE', "%{$request->search}%");
+                $s_query->where('name', 'LIKE', "{$request->search}%");
             })
             ->when($request->max_price, function ($q) use ($request) {
                 $q->whereIn('id', function ($q1) use ($request) {

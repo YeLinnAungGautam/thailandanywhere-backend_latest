@@ -14,10 +14,28 @@ class InclusiveController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Inclusive::query()->with('InclusiveDetails');
+        $query = Inclusive::query()
+            ->with('InclusiveDetails')
+            ->when($request->lead_days, function ($query) use ($request) {
+                $query->where('day', $request->lead_days)->where('night', $request->lead_days + 1);
+            })
+            ->when($request->destinations, function ($query) use ($request) {
+                $query->whereHas('InclusiveDetails', function ($query) use ($request) {
+                    $query->whereHas('destinations', function ($query) use ($request) {
+                        $query->whereIn('destination_id', explode(',', $request->destinations));
+                    });
+                });
+            })
+            ->when($request->cities, function ($query) use ($request) {
+                $query->whereHas('InclusiveDetails', function ($query) use ($request) {
+                    $query->whereHas('cities', function ($query) use ($request) {
+                        $query->whereIn('city_id', explode(',', $request->cities));
+                    });
+                });
+            });
 
         if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
+            $query->where('name', 'LIKE', "{$search}%");
         }
 
         $query->orderBy('created_at', 'desc');

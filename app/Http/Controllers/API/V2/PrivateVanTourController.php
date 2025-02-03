@@ -15,7 +15,7 @@ class PrivateVanTourController extends Controller
             ->withCount('bookingItems')
             ->vanTour()
             ->with('cars', 'cities', 'destinations', 'tags', 'images')
-            ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "%{$request->search}%"))
+            ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "{$request->search}%"))
             ->when($request->city_id, function ($query) use ($request) {
                 $query->whereIn('id', fn ($q) => $q->select('private_van_tour_id')->from('private_van_tour_cities')->where('city_id', $request->city_id));
             })
