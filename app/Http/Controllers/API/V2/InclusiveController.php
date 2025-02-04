@@ -17,7 +17,7 @@ class InclusiveController extends Controller
         $query = Inclusive::query()
             ->with('InclusiveDetails')
             ->when($request->lead_days, function ($query) use ($request) {
-                $query->where('day', $request->lead_days)->where('night', $request->lead_days + 1);
+                $query->where('day', $request->lead_days)->where('night', $request->lead_days - 1);
             })
             ->when($request->destinations, function ($query) use ($request) {
                 $query->whereHas('InclusiveDetails', function ($query) use ($request) {
