@@ -22,4 +22,8 @@ class InclusiveDetail extends Model
     {
         return $this->belongsToMany(Destination::class, 'destination_inclusive_info');
     }
+
+    public function restaurants(){
+        return $this->belongsToMany(Restaurant::class, 'restaurant_inclusive_info');
+    }
 }

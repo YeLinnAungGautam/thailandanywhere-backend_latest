@@ -25,6 +25,7 @@ class InclusiveDetailResource extends JsonResource
             'meals' => $this->meals,
             'cities' => CityResource::collection($this->cities),
             'destinations' => DestinationResource::collection($this->destinations),
+            'restaurants' => RestaurantFResource::collection($this->restaurants),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

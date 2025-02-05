@@ -405,6 +405,11 @@ class InclusiveController extends Controller
 
                 $inclusive_detail->destinations()->sync($inclusive_destinations);
             }
+            if ($detail['restaurants']) {
+                $inclusive_restaurants = explode(',', $detail['restaurants']);
+
+                $inclusive_detail->restaurants()->sync($inclusive_restaurants);
+            }
         }
 
         return $this->success(InclusiveDetailResource::collection($inclusive->InclusiveDetails), 'Successfully saved');
