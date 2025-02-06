@@ -76,6 +76,8 @@ class RestaurantController extends Controller
                 'account_name' => $request->account_name,
                 'place' => $request->place,
                 'contract_due' => $request->contract_due,
+                'location_map_link' => $request->location_map_link,
+                'location_map_address' => $request->location_map_address,
             ]);
 
             $contractArr = [];
@@ -137,6 +139,8 @@ class RestaurantController extends Controller
                 'payment_method' => $request->payment_method ?? $restaurant->payment_method,
                 'bank_account_number' => $request->bank_account_number ?? $restaurant->bank_account_number,
                 'contract_due' => $request->contract_due,
+                'location_map_link' => $request->location_map_link,
+                'location_map_address' => $request->location_map_address,
             ]);
 
             $contractArr = [];

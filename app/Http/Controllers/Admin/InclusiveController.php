@@ -405,6 +405,7 @@ class InclusiveController extends Controller
 
                 $inclusive_detail->destinations()->sync($inclusive_destinations);
             }
+
             if ($detail['restaurants']) {
                 $inclusive_restaurants = explode(',', $detail['restaurants']);
 
