@@ -16,7 +16,8 @@ class DestinationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $images = $this->images->map(function ($image) {
-            $image->image = asset('storage/images/destination/' . $image->image);
+            // $image->image = asset('storage/images/destination/' . $image->image);
+            $image->image = Storage::url('images/destination/' . $image->image);
 
             return $image;
         });
