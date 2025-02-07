@@ -403,7 +403,11 @@ class InclusiveController extends Controller
             if ($detail['destinations']) {
                 $inclusive_destinations = explode(',', $detail['destinations']);
 
-                $inclusive_detail->destinations()->sync($inclusive_destinations);
+                if (!$inclusive_destinations) {
+                    $inclusive_detail->destinations()->detach();
+                } else {
+                    $inclusive_detail->destinations()->sync($inclusive_destinations);
+                }
             }
 
             if ($detail['restaurants']) {
