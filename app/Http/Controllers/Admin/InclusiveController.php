@@ -400,7 +400,7 @@ class InclusiveController extends Controller
                 $inclusive_detail->cities()->sync($inclusive_cities);
             }
 
-            if ($detail['destinations']) {
+            if ($detail['destinations'] && $detail['destinations'] != '') {
                 $inclusive_destinations = explode(',', $detail['destinations']);
 
                 if (!$inclusive_destinations) {
@@ -408,6 +408,8 @@ class InclusiveController extends Controller
                 } else {
                     $inclusive_detail->destinations()->sync($inclusive_destinations);
                 }
+            }else{
+                $inclusive_detail->destinations()->detach();
             }
 
             if ($detail['restaurants']) {
