@@ -633,21 +633,15 @@ class ReservationController extends Controller
         }
 
         if ($findInfo && $findInfo->booking_item_id) {
-            if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
-                ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
-                    'name' => $request->customer_name,
-                    'phone' => $request->customer_phone,
-                    'passport' => $request->customer_passport_number,
-                ]);
-            } else {
-                ReservationAssociatedCustomer::create([
-                    'booking_item_id' => $findInfo->booking_item_id,
-                    'name' => $request->customer_name,
-                    'phone' => $request->customer_phone,
-                    'passport' => $request->customer_passport_number,
-                ]);
-
-                BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
+            if ($request->customer_name && $request->customer_phone && $request->customer_passport_number) {
+                ReservationAssociatedCustomer::updateOrCreate(
+                    ['booking_item_id' => $findInfo->booking_item_id],
+                    [
+                        'name' => $request->customer_name,
+                        'phone' => $request->customer_phone,
+                        'passport' => $request->customer_passport_number,
+                    ]
+                );
             }
         }
 
