@@ -632,16 +632,14 @@ class ReservationController extends Controller
             }
         }
 
-        if ($request->is_associated == 1 && $findInfo && $findInfo->booking_item_id) {
+        if ($findInfo && $findInfo->booking_item_id) {
             if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
                 ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
                     'name' => $request->customer_name,
                     'phone' => $request->customer_phone,
                     'passport' => $request->customer_passport_number,
                 ]);
-
             } else {
-
                 ReservationAssociatedCustomer::create([
                     'booking_item_id' => $findInfo->booking_item_id,
                     'name' => $request->customer_name,
@@ -651,14 +649,35 @@ class ReservationController extends Controller
 
                 BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
             }
-        } elseif ($request->is_associated == 0) {
-
-            if (isset($findInfo->booking_item_id)) {
-                ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
-
-                BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
-            }
         }
+
+        // if ($request->is_associated == 1 && $findInfo && $findInfo->booking_item_id) {
+        //     if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
+        //         ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
+        //             'name' => $request->customer_name,
+        //             'phone' => $request->customer_phone,
+        //             'passport' => $request->customer_passport_number,
+        //         ]);
+
+        //     } else {
+        //         ReservationAssociatedCustomer::create([
+        //             'booking_item_id' => $findInfo->booking_item_id,
+        //             'name' => $request->customer_name,
+        //             'phone' => $request->customer_phone,
+        //             'passport' => $request->customer_passport_number,
+        //         ]);
+
+        //         BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
+        //     }
+        // }
+        // elseif ($request->is_associated == 0) {
+
+        //     if (isset($findInfo->booking_item_id)) {
+        //         ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
+
+        //         BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
+        //     }
+        // }
 
         return $this->success(new BookingItemResource($bookingItem), 'Successfully updated');
     }
