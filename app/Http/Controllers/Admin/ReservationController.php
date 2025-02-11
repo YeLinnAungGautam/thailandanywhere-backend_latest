@@ -579,11 +579,6 @@ class ReservationController extends Controller
                     'supplier_name' => $request->supplier_name,
                 ];
 
-                //                if ($file = $request->file('receipt_image')) {
-                //                    $fileData = $this->uploads($file, 'images/');
-                //                    ReservationExpenseReceipt::create(['booking_item_id' => $bookingItem->id, 'file' => $fileData['fileName']]);
-                //                }
-
                 if ($request->receipt_image) {
                     foreach ($request->receipt_image as $image) {
                         $fileData = $this->uploads($image, 'images/');
@@ -596,17 +591,11 @@ class ReservationController extends Controller
                     ReservationBookingConfirmLetter::create(['booking_item_id' => $bookingItem->id, 'file' => $fileData['fileName']]);
                 }
 
-
                 ReservationSupplierInfo::create($data);
             } else {
 
                 $findInfo->ref_number = $request->ref_number ?? $findInfo->ref_number;
                 $findInfo->supplier_name = $request->supplier_name ?? $findInfo->supplier_name;
-
-                //                if ($file = $request->file('receipt_image')) {
-                //                    $fileData = $this->uploads($file, 'images/');
-                //                    ReservationExpenseReceipt::create(['booking_item_id' => $findInfo->booking_item_id, 'file' => $fileData['fileName']]);
-                //                }
 
                 if ($request->receipt_image) {
                     foreach ($request->receipt_image as $image) {
@@ -644,34 +633,6 @@ class ReservationController extends Controller
                 );
             }
         }
-
-        // if ($request->is_associated == 1 && $findInfo && $findInfo->booking_item_id) {
-        //     if (ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->count() > 0) {
-        //         ReservationAssociatedCustomer::where('booking_item_id', '=', $findInfo->booking_item_id)->update([
-        //             'name' => $request->customer_name,
-        //             'phone' => $request->customer_phone,
-        //             'passport' => $request->customer_passport_number,
-        //         ]);
-
-        //     } else {
-        //         ReservationAssociatedCustomer::create([
-        //             'booking_item_id' => $findInfo->booking_item_id,
-        //             'name' => $request->customer_name,
-        //             'phone' => $request->customer_phone,
-        //             'passport' => $request->customer_passport_number,
-        //         ]);
-
-        //         BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '1']);
-        //     }
-        // }
-        // elseif ($request->is_associated == 0) {
-
-        //     if (isset($findInfo->booking_item_id)) {
-        //         ReservationAssociatedCustomer::where('booking_item_id', $findInfo->booking_item_id)->delete();
-
-        //         BookingItem::where('id', $findInfo->booking_item_id)->update(['is_associated' => '0']);
-        //     }
-        // }
 
         return $this->success(new BookingItemResource($bookingItem), 'Successfully updated');
     }

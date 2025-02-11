@@ -316,5 +316,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Product Addon
     Route::apiResource('product-addons', ProductAddonController::class);
 
+    Route::delete('booking_confirm_letter/{id}', [BookingController::class, 'deleteBookingConfirmLetter']);
+
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

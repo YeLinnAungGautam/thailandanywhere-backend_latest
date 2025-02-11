@@ -12,6 +12,7 @@ use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
 use App\Models\InclusiveProduct;
+use App\Models\ReservationBookingConfirmLetter;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -570,6 +571,24 @@ class BookingController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
 
+    public function deleteBookingConfirmLetter($id)
+    {
+        try {
+            $find = ReservationBookingConfirmLetter::find($id);
+
+            if (!$find) {
+                return $this->error(null, 'Data not found', 404);
+            }
+
+            Storage::delete('images/' . $find->image);
+
+            $find->delete();
+
+            return $this->success(null, 'Successfully deleted');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage());
+        }
     }
 }
