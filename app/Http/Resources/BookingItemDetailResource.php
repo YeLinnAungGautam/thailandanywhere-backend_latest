@@ -37,7 +37,7 @@ class BookingItemDetailResource extends JsonResource
             'expense_status' => $this->payment_status,
             'balance_due' => $this->booking->balance_due,
             'total_sale_amount' => $this->booking->sub_total,
-
+            'individual_pricing' => is_null($this->individual_pricing) ? null : json_decode($this->individual_pricing),
             'discount' => $this->discount ?? 0,
             'selling_price' => $this->selling_price,
             'quantity' => $this->quantity,

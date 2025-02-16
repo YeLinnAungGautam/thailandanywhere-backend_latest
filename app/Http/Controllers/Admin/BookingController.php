@@ -230,8 +230,8 @@ class BookingController extends Controller
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
                     'is_driver_collect' => $is_driver_collect,
-                    // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
-                    'individual_pricing' => null,
+                    'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
+                    // 'individual_pricing' => null,
                     'cancellation' => $item['cancellation'] ?? null,
                     'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                 ];
@@ -427,8 +427,8 @@ class BookingController extends Controller
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => (isset($item['reservation_status']) && $item['reservation_status'] == 'undefined') ? "1" : "0",
                         'is_driver_collect' => $item['is_driver_collect'] ?? false,
-                        // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
-                        'individual_pricing' => null,
+                        'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
+                        // 'individual_pricing' => null,
                         'cancellation' => $item['cancellation'] ?? null,
                         'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                     ];
