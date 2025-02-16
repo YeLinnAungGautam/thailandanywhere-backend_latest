@@ -230,8 +230,8 @@ class BookingController extends Controller
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
                     'is_driver_collect' => $is_driver_collect,
-                    // 'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
-                    'individual_pricing' => null,
+                    'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
+                    // 'individual_pricing' => null,
                     'cancellation' => $item['cancellation'] ?? null,
                     'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                 ];
