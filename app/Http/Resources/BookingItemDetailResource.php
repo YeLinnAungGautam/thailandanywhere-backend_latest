@@ -43,6 +43,7 @@ class BookingItemDetailResource extends JsonResource
             'quantity' => $this->quantity,
 
             'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : [],
+            'total_cost_price' => $this->total_cost_price,
         ];
 
         if ($this->product_type == 'App\Models\Hotel') {
