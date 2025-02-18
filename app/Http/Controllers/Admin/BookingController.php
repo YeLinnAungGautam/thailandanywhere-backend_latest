@@ -415,6 +415,7 @@ class BookingController extends Controller
                         'dropoff_location' => isset($item['dropoff_location']) ? $item['dropoff_location'] : null,
                         'duration' => $item['duration'] ?? null,
                         'selling_price' => $item['selling_price'] ?? null,
+                        'total_cost_price' => $item['total_cost_price'] ?? null,
                         'amount' => $item['amount'] ?? null,
                         'discount' => $item['discount'] ?? null,
                         'cost_price' => $item['cost_price'] ?? null,

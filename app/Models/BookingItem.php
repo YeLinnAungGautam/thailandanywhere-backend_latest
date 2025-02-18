@@ -29,7 +29,7 @@ class BookingItem extends Model
 
     public function variation()
     {
-        return $this->belongsTo(EntranceTicketVariation::class);
+        return $this->belongsTo(EntranceTicketVariation::class, 'variation_id');
     }
 
     public function hotel()
