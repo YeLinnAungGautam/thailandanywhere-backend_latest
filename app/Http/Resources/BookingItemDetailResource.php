@@ -41,9 +41,11 @@ class BookingItemDetailResource extends JsonResource
             'discount' => $this->discount ?? 0,
             'selling_price' => $this->selling_price,
             'quantity' => $this->quantity,
+
+            'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : [],
         ];
 
-        if($this->product_type == 'App\Models\Hotel') {
+        if ($this->product_type == 'App\Models\Hotel') {
             $data['checkin_date'] = $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null;
             $data['checkout_date'] = $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null;
             $data['room_name'] = $this->room->name;
@@ -52,13 +54,13 @@ class BookingItemDetailResource extends JsonResource
             $data['total_nights'] = $this->getNights($this->checkin_date, $this->checkout_date);
         }
 
-        if($this->product_type == 'App\Models\Airline') {
+        if ($this->product_type == 'App\Models\Airline') {
             // $data['airline_name'] = $this->product->name;
             $data['ticket_type'] = $this->ticket->price;
             $data['total_ticket'] = $this->getQuantity();
         }
 
-        if($this->product_type === EntranceTicket::class) {
+        if ($this->product_type === EntranceTicket::class) {
             $data['entrance_ticket_variation_name'] = $this->variation->name ?? '-';
         }
 
@@ -69,16 +71,16 @@ class BookingItemDetailResource extends JsonResource
     {
         $cost_price = null;
 
-        if($this->cost_price == null || $this->cost_price == 0) {
-            if($this->room) {
+        if ($this->cost_price == null || $this->cost_price == 0) {
+            if ($this->room) {
                 $cost_price = $this->room->cost ?? 0;
             }
 
-            if($this->variation) {
+            if ($this->variation) {
                 $cost_price = $this->variation->cost_price ?? 0;
             }
 
-            if($this->car || $this->product_type == "App\Models\GroupTour" || $this->product_type == "App\Models\Airline") {
+            if ($this->car || $this->product_type == "App\Models\GroupTour" || $this->product_type == "App\Models\Airline") {
                 $cost_price = 0;
             }
         } else {
@@ -95,7 +97,7 @@ class BookingItemDetailResource extends JsonResource
 
     private function getQuantity()
     {
-        if($this->product_type == 'App\Models\Hotel') {
+        if ($this->product_type == 'App\Models\Hotel') {
             return $this->quantity * $this->getNights($this->checkin_date, $this->checkout_date);
         }
 
