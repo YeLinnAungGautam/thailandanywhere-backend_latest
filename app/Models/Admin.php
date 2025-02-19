@@ -44,4 +44,9 @@ class Admin extends Authenticatable
     {
         return $this->hasMany(AdminMeta::class);
     }
+
+    public function saleManagers()
+    {
+        return $this->belongsToMany(Admin::class, 'admin_sale_manager', 'admin_id', 'sale_manager_id');
+    }
 }

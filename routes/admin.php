@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\RoomPeriodController;
+use App\Http\Controllers\Admin\SaleManagerController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
@@ -317,6 +318,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('product-addons', ProductAddonController::class);
 
     Route::delete('booking_confirm_letter/{id}', [BookingController::class, 'deleteBookingConfirmLetter']);
+
+    Route::get('sale-managers', [SaleManagerController::class, 'index']);
+    Route::post('sale-managers/assign', [SaleManagerController::class, 'assign']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
