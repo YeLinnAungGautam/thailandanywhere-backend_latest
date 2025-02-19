@@ -408,7 +408,7 @@ class InclusiveController extends Controller
                 } else {
                     $inclusive_detail->destinations()->sync($inclusive_destinations);
                 }
-            }else{
+            } else {
                 $inclusive_detail->destinations()->detach();
             }
 
@@ -448,10 +448,13 @@ class InclusiveController extends Controller
 
         foreach ($request->file('pdfs') as $pdf) {
             // Store PDF and generate path
-            $path = $pdf->store('pdfs', 'public');
+            // $path = $pdf->store('pdfs', 'public');
+
+            $fileData = $this->uploads($pdf, 'pdfs/');
 
             $inclusive->pdfs()->create([
-                'pdf_path' => $path['fileName'],
+                // 'pdf_path' => $path['fileName'],
+                'pdf_path' => $fileData['fileName'],
             ]);
         }
 
