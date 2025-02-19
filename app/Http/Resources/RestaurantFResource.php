@@ -28,6 +28,8 @@ class RestaurantFResource extends JsonResource
             'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
+            'location_map_link' => $this->location_map_link,
+            'location_map_address' => $this->location_map_address,
         ];
     }
 }
