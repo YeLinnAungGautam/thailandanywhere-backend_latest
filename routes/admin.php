@@ -30,7 +30,9 @@ use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
+use App\Http\Controllers\Admin\ReservationCustomerPassportController;
 use App\Http\Controllers\Admin\ReservationListExportController;
+use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\SaleManagerController;
 use App\Http\Controllers\Admin\TagController;
@@ -321,6 +323,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::get('sale-managers', [SaleManagerController::class, 'index']);
     Route::post('sale-managers/assign', [SaleManagerController::class, 'assign']);
+
+    # File Manager
+    Route::apiResource('reservations/{reservation_id}/passports', ReservationCustomerPassportController::class);
+    Route::apiResource('reservations/{reservation_id}/paid-slips', ReservationPaidSlipController::class);
+    Route::apiResource('reservations/{reservation_id}/booking-confirm-letters', ReservationPaidSlipController::class);
+    Route::apiResource('bookings/{booking_id}/receipts', ReservationPaidSlipController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
