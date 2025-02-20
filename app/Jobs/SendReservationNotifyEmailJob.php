@@ -45,13 +45,15 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     {
         Mail::to($this->getMails())->cc($this->ccEmail)
             ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
+
+        $this->booking_item->update(['is_booking_request' => true]);
     }
 
     public function getMails()
     {
-        if(isset($this->mail_to) && $this->sent_to_default) {
+        if (isset($this->mail_to) && $this->sent_to_default) {
             $mails = [$this->mail_to, $this->default_email];
-        } elseif(isset($this->mail_to) && $this->sent_to_default == false) {
+        } elseif (isset($this->mail_to) && $this->sent_to_default == false) {
             $mails = [$this->mail_to];
         } else {
             $mails = [$this->default_email];

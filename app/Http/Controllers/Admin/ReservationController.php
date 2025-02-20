@@ -699,8 +699,6 @@ class ReservationController extends Controller
                 $ccEmail // Pass the CC email address to the job
             ));
 
-            $booking_item->update(['is_booking_sent' => true]);
-
             return $this->success(null, 'Reservation notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error($e);
