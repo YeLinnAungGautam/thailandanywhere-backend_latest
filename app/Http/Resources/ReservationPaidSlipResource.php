@@ -3,10 +3,10 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class BookingReceiptResource extends JsonResource
+class ReservationPaidSlipResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -15,16 +15,15 @@ class BookingReceiptResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
         return [
             'id' => $this->id,
-            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
-            'note' => $this->note,
+            'booking_item_id' => $this->booking_item_id,
+            'file' => $this->file ? Storage::url('passport/' . $this->file) : null,
             'amount' => $this->amount,
-            'sender' => $this->sender,
             'bank_name' => $this->bank_name,
             'date' => $this->date,
             'is_corporate' => $this->is_corporate,
+            'comment' => $this->comment,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

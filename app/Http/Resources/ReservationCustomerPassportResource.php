@@ -19,6 +19,9 @@ class ReservationCustomerPassportResource extends JsonResource
             'id' => $this->id,
             'booking_item_id' => $this->booking_item_id,
             'file' => $this->file ? Storage::url('passport/' . $this->file) : null,
+            'name' => $this->name,
+            'passport_number' => $this->passport_number,
+            'dob' => $this->dob,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
