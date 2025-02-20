@@ -119,7 +119,8 @@ class HotelController extends Controller
             'location_map' => $request->location_map,
             'rating' => $request->rating,
             'nearby_places' => json_encode($hotel_nearby_places),
-            'youtube_link' => json_encode($request->youtube_link)
+            'youtube_link' => json_encode($request->youtube_link),
+            'email' => $request->email,
         ]);
 
         $contractArr = [];
@@ -214,7 +215,8 @@ class HotelController extends Controller
             'location_map' => $request->location_map ?? $hotel->location_map,
             'rating' => $request->rating ?? $hotel->rating,
             'nearby_places' => json_encode($hotel_nearby_places),
-            'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $hotel->youtube_link
+            'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $hotel->youtube_link,
+            'email' => $request->email ?? $hotel->email,
         ]);
 
         $contractArr = [];

@@ -25,6 +25,7 @@ class EntranceTicketResource extends JsonResource
             'payment_method' => $this->payment_method,
             'account_name' => $this->account_name,
             'name' => $this->name,
+            'email' => $this->email,
             'description' => $this->description,
             'full_description' => $this->full_description,
             'full_description_en' => $this->full_description_en,

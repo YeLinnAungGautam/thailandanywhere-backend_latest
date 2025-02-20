@@ -27,6 +27,7 @@ class UpdateHotelRequest extends FormRequest
             'rating' => 'nullable|integer',
             'nearby_places' => 'nullable|array',
             'category_id' => 'nullable|numeric',
+            // 'email' => 'nullable|email',
         ];
     }
 }

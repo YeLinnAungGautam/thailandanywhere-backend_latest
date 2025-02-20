@@ -684,6 +684,8 @@ class ReservationController extends Controller
             'mail_body' => 'required'
         ]);
 
+        $ccEmail = 'negyi.partnership@thanywhere.com';
+
         try {
             $attachments = ReservationEmailNotifyService::saveAttachToTemp($request->attachments);
 
@@ -693,8 +695,11 @@ class ReservationController extends Controller
                 $request->sent_to_default,
                 $request->mail_body,
                 $booking_item,
-                $attachments
+                $attachments,
+                $ccEmail // Pass the CC email address to the job
             ));
+
+            $booking_item->update(['is_booking_sent' => true]);
 
             return $this->success(null, 'Reservation notify email is successfully sent.', 200);
         } catch (Exception $e) {

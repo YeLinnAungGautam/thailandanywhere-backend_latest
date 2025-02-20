@@ -23,7 +23,8 @@ class StoreEntranceTicketRequest extends FormRequest
     {
         return [
             'name' => 'required',
-            'activities' => 'nullable|array'
+            'activities' => 'nullable|array',
+            'email' => 'nullable|email',
         ];
     }
 

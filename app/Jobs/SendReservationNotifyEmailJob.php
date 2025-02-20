@@ -21,12 +21,13 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     protected $sent_to_default;
     protected $mail_body;
     protected $booking_item;
+    protected $ccEmail;
     public $attachments;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null)
+    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null, $ccEmail = null)
     {
         $this->mail_to = $mail_to;
         $this->mail_subject = $mail_subject;
@@ -34,6 +35,7 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         $this->mail_body = $mail_body;
         $this->booking_item = $booking_item;
         $this->attachments = $attachments;
+        $this->ccEmail = $ccEmail;
     }
 
     /**
@@ -41,7 +43,7 @@ class SendReservationNotifyEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Mail::to($this->getMails())
+        Mail::to($this->getMails())->cc($this->ccEmail)
             ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
     }
 

@@ -144,6 +144,7 @@ class BookingItemResource extends JsonResource
             'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : null,
             'cancellation' => $this->cancellation,
             'addon' => $this->addon ? json_decode($this->addon) : null,
+            'is_booking_request' => $this->is_booking_request,
         ];
     }
 }
