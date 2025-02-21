@@ -49,7 +49,7 @@ class BookingReceiptController extends Controller
 
             $passport = BookingReceipt::create([
                 'booking_id' => $booking_id,
-                'file' => $fileData['fileName'],
+                'image' => $fileData['fileName'],
                 'amount' => $request->amount,
                 'bank_name' => $request->bank_name,
                 'date' => $request->date,
@@ -67,7 +67,7 @@ class BookingReceiptController extends Controller
     public function update(string $booking_id, string $id, Request $request)
     {
         $request->validate([
-            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'amount' => 'nullable',
             'bank_name' => 'nullable',
             'date' => 'nullable',
