@@ -80,7 +80,7 @@ class ReservationPaidSlipController extends Controller
                 return $this->error(null, 'File not found');
             }
 
-            if ($request->file()) {
+            if ($request->file) {
                 $fileData = $this->uploads($request->file, 'images/');
             }
 
