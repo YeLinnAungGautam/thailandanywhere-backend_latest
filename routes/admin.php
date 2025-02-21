@@ -7,7 +7,9 @@ use App\Http\Controllers\Admin\AirlineTicketController;
 use App\Http\Controllers\Admin\AirportPickupController;
 use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BookingConfirmLetterController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -327,8 +329,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # File Manager
     Route::apiResource('reservations/{reservation_id}/passports', ReservationCustomerPassportController::class);
     Route::apiResource('reservations/{reservation_id}/paid-slips', ReservationPaidSlipController::class);
-    Route::apiResource('reservations/{reservation_id}/booking-confirm-letters', ReservationPaidSlipController::class);
-    Route::apiResource('bookings/{booking_id}/receipts', ReservationPaidSlipController::class);
+    Route::apiResource('reservations/{reservation_id}/booking-confirm-letters', BookingConfirmLetterController::class);
+    Route::apiResource('bookings/{booking_id}/receipts', BookingReceiptController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
