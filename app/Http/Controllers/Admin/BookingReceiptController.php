@@ -68,12 +68,12 @@ class BookingReceiptController extends Controller
     {
         $request->validate([
             'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'amount' => $request->amount,
-            'bank_name' => $request->bank_name,
-            'date' => $request->date,
-            'is_corporate' => $request->is_corporate,
-            'note' => $request->note,
-            'sender' => $request->sender,
+            'amount' => 'nullable',
+            'bank_name' => 'nullable',
+            'date' => 'nullable',
+            'is_corporate' => 'nullable',
+            'note' => 'nullable',
+            'sender' => 'nullable',
         ]);
 
         try {
@@ -89,12 +89,12 @@ class BookingReceiptController extends Controller
 
             $passport->update([
                 'file' => $fileData['fileName'] ?? $passport->file,
-                'amount' => $request->amount,
-                'bank_name' => $request->bank_name,
-                'date' => $request->date,
-                'is_corporate' => $request->is_corporate,
-                'note' => $request->note,
-                'sender' => $request->sender,
+                'amount' => $request->amount ?? $passport->amount,
+                'bank_name' => $request->bank_name ?? $passport->bank_name,
+                'date' => $request->date ?? $passport->date,
+                'is_corporate' => $request->is_corporate ?? $passport->is_corporate,
+                'note' => $request->note ?? $passport->note,
+                'sender' => $request->sender ?? $passport->sender,
             ]);
 
             return $this->success(new BookingReceiptResource($passport), 'File Updated');
