@@ -67,7 +67,7 @@ class BookingReceiptController extends Controller
     public function update(string $booking_id, string $id, Request $request)
     {
         $request->validate([
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'amount' => 'nullable',
             'bank_name' => 'nullable',
             'date' => 'nullable',
@@ -88,7 +88,7 @@ class BookingReceiptController extends Controller
             }
 
             $passport->update([
-                'file' => $fileData['fileName'] ?? $passport->file,
+                'image' => $fileData['fileName'] ?? $passport->file,
                 'amount' => $request->amount ?? $passport->amount,
                 'bank_name' => $request->bank_name ?? $passport->bank_name,
                 'date' => $request->date ?? $passport->date,
