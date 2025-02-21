@@ -88,7 +88,7 @@ class BookingReceiptController extends Controller
             }
 
             $passport->update([
-                'image' => $fileData['fileName'] ?? $passport->file,
+                'image' => $fileData['fileName'] ?? $passport->image,
                 'amount' => $request->amount ?? $passport->amount,
                 'bank_name' => $request->bank_name ?? $passport->bank_name,
                 'date' => $request->date ?? $passport->date,
