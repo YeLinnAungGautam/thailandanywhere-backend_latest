@@ -18,6 +18,11 @@ class ReservationBookingConfirmLetterResource extends JsonResource
         return [
             'id' => $this->id,
             'booking_item_id' => $this->booking_item_id,
+            'amount' => $this->amount,
+            'invoice' => $this->invoice,
+            'due_date' => $this->due_date,
+            'customer' => $this->customer,
+            'sender_name' => $this->sender_name,
             'file' => $this->file ? Storage::url('images/' . $this->file) : null,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),

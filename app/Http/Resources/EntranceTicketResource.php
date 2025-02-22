@@ -25,7 +25,7 @@ class EntranceTicketResource extends JsonResource
             'payment_method' => $this->payment_method,
             'account_name' => $this->account_name,
             'name' => $this->name,
-            'email' => $this->email,
+
             'description' => $this->description,
             'full_description' => $this->full_description,
             'full_description_en' => $this->full_description_en,
@@ -46,7 +46,9 @@ class EntranceTicketResource extends JsonResource
             'lowest_walk_in_price' => $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
             'total_booking_count' => $this->bookingItems()->count(),
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
-            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null
+            'email' => is_null($this->email) ? null : json_decode($this->email),
+            'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
+            'contract_name' => $this->contract_name,
         ];
     }
 

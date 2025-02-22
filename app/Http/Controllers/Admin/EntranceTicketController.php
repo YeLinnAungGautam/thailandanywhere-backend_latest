@@ -77,7 +77,7 @@ class EntranceTicketController extends Controller
             'full_description_en' => $request->full_description_en,
             'provider' => $request->provider,
             'place' => $request->place,
-            'email' => $request->email,
+
             'legal_name' => $request->legal_name,
             'bank_name' => $request->bank_name,
             'payment_method' => $request->payment_method,
@@ -89,6 +89,8 @@ class EntranceTicketController extends Controller
             'location_map' => $request->location_map,
             'vat_inclusion' => $request->vat_inclusion,
             'meta_data' => $request->meta_data ? json_encode($request->meta_data) : null,
+            'email' => $request->email ? json_encode($request->email) : null,
+            'contract_name' => $request->contract_name,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -175,7 +177,7 @@ class EntranceTicketController extends Controller
             'full_description_en' => $request->full_description_en ?? $find->full_description_en,
             'provider' => $request->provider ?? $find->provider,
             'place' => $request->place ?? $find->place,
-            'email' => $request->email ?? $find->email,
+
             'legal_name' => $request->legal_name ?? $find->legal_name,
             'bank_name' => $request->bank_name ?? $find->bank_name,
             'payment_method' => $request->payment_method ?? $find->payment_method,
@@ -187,6 +189,8 @@ class EntranceTicketController extends Controller
             'location_map' => $request->location_map ?? $find->location_map,
             'vat_inclusion' => $request->vat_inclusion ?? $find->vat_inclusion,
             'meta_data' => $request->meta_data ? json_encode($request->meta_data) : $find->meta_data,
+            'email' => $request->email ? json_encode($request->email) : $find->email,
+            'contract_name' => $request->contract_name ?? $find->contract_name,
         ];
 
 
