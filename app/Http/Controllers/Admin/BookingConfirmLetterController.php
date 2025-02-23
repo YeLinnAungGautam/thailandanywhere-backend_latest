@@ -48,12 +48,12 @@ class BookingConfirmLetterController extends Controller
 
             $passport = ReservationBookingConfirmLetter::create([
                 'booking_item_id' => $booking_item_id,
-                'file' => $fileData['fileName'],
-                'amount' => $request->amount,
-                'bank_name' => $request->bank_name,
-                'date' => $request->date,
-                'is_corporate' => $request->is_corporate,
-                'comment' => $request->comment,
+                'file' => $fileData['fileName'] ?? $request->file,
+                'amount' => $request->amount ?? $request->amount,
+                'invoice' => $request->invoice ?? $request->invoice,
+                'due_date' => $request->due_date ?? $request->due_date,
+                'customer' => $request->customer ?? $request->customer,
+                'sender_name' => $request->sender_name ?? $request->sender_name,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Created');
@@ -85,12 +85,13 @@ class BookingConfirmLetterController extends Controller
             }
 
             $passport->update([
+                'booking_item_id' => $booking_item_id,
                 'file' => $fileData['fileName'] ?? $passport->file,
                 'amount' => $request->amount ?? $passport->amount,
-                'bank_name' => $request->bank_name ?? $passport->bank_name,
-                'date' => $request->date ?? $passport->date,
-                'is_corporate' => $request->is_corporate ?? $passport->is_corporate,
-                'comment' => $request->comment ?? $passport->comment,
+                'invoice' => $request->invoice ?? $passport->invoice,
+                'due_date' => $request->due_date ?? $passport->due_date,
+                'customer' => $request->customer ?? $passport->customer,
+                'sender_name' => $request->sender_name ?? $passport->sender_name,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Updated');

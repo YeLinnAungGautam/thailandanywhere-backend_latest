@@ -26,7 +26,7 @@ class HotelResource extends JsonResource
             'full_description_en' => $this->full_description_en,
             'type' => $this->type,
             'legal_name' => $this->legal_name,
-            'email' => $this->email,
+
             'account_name' => $this->account_name,
             'contract_due' => $this->contract_due,
             'payment_method' => $this->payment_method,
@@ -50,6 +50,7 @@ class HotelResource extends JsonResource
             'vat_inclusion' => $this->vat_inclusion,
             'nearby_places' => is_null($this->nearby_places) ? null : json_decode($this->nearby_places),
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
+            'email' => is_null($this->email) ? null : json_decode($this->email),
             'total_booking_count' => $this->bookingItems()->count()
         ];
     }

@@ -120,7 +120,7 @@ class HotelController extends Controller
             'rating' => $request->rating,
             'nearby_places' => json_encode($hotel_nearby_places),
             'youtube_link' => json_encode($request->youtube_link),
-            'email' => $request->email,
+            'email' => json_encode($request->email),
         ]);
 
         $contractArr = [];
@@ -216,7 +216,7 @@ class HotelController extends Controller
             'rating' => $request->rating ?? $hotel->rating,
             'nearby_places' => json_encode($hotel_nearby_places),
             'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $hotel->youtube_link,
-            'email' => $request->email ?? $hotel->email,
+            'email' => $request->email ? json_encode($request->email) : $hotel->email,
         ]);
 
         $contractArr = [];

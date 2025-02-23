@@ -33,6 +33,7 @@ use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\ReservationCustomerPassportController;
+use App\Http\Controllers\Admin\ReservationExpenseReceiptController;
 use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
@@ -330,6 +331,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations/{reservation_id}/passports', ReservationCustomerPassportController::class);
     Route::apiResource('reservations/{reservation_id}/paid-slips', ReservationPaidSlipController::class);
     Route::apiResource('reservations/{reservation_id}/booking-confirm-letters', BookingConfirmLetterController::class);
+    Route::apiResource('reservations/{reservation_id}/receipt-images', ReservationExpenseReceiptController::class);
     Route::apiResource('bookings/{booking_id}/receipts', BookingReceiptController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
