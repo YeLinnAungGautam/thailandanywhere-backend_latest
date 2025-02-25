@@ -40,12 +40,27 @@ class Admin extends Authenticatable
         $query->where('role', 'admin');
     }
 
+    public function scopeAgentAndSaleManager($query)
+    {
+        $query->whereIn('role', ['admin', 'sale_manager']);
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isSaleManager()
+    {
+        return $this->role === 'sale_manager';
+    }
+
     public function metas()
     {
         return $this->hasMany(AdminMeta::class);
     }
 
-    public function saleManagers()
+    public function subsidiaries()
     {
         return $this->belongsToMany(Admin::class, 'admin_sale_manager', 'admin_id', 'sale_manager_id');
     }

@@ -42,7 +42,7 @@ class ReservationCustomerPassportController extends Controller
         ]);
 
         try {
-            $fileData = $this->uploads($request->file, 'files/');
+            $fileData = $this->uploads($request->file, 'passport/');
 
             $passport = ReservationCustomerPassport::create([
                 'booking_item_id' => $booking_item_id,

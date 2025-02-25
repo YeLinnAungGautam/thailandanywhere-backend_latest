@@ -30,7 +30,7 @@ class SaleReportService
     {
         $sales = Booking::query()
             ->when($created_by, function ($q) use ($created_by) {
-                $q->where('created_by', $created_by);
+                $q->whereIn('created_by', explode(',', $created_by));
             })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
@@ -51,7 +51,7 @@ class SaleReportService
     {
         $sales = Booking::query()
             ->when($created_by, function ($q) use ($created_by) {
-                $q->where('created_by', $created_by);
+                $q->whereIn('created_by', explode(',', $created_by));
             })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
@@ -69,7 +69,7 @@ class SaleReportService
     {
         $sales = Booking::query()
             ->when($created_by, function ($q) use ($created_by) {
-                $q->where('created_by', $created_by);
+                $q->whereIn('created_by', explode(',', $created_by));
             })
             ->whereBetween('created_at', [$this->start_date, $this->end_date])
             ->select(
@@ -220,9 +220,12 @@ class SaleReportService
     private function generateSaleResponse($sales, $created_by = null, $with_balance = false, $with_count = false): array
     {
         $result = [];
-        $agents = Admin::agentOnly()
+        $agents = Admin::query()
+            // ->agentOnly()
+            ->agentAndSaleManager()
             ->when($created_by, function ($q) use ($created_by) {
-                $q->where('id', $created_by);
+                // $q->where('id', $created_by);
+                $q->whereIn('id', explode(',', $created_by));
             })
             ->pluck('name', 'id')
             ->toArray();

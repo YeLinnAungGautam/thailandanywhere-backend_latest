@@ -6,7 +6,9 @@ use App\Http\Resources\AdminResource;
 use App\Models\Admin;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SaleManagerController extends Controller
 {
@@ -17,7 +19,7 @@ class SaleManagerController extends Controller
     {
         $auth_user = auth()->user();
 
-        $data = $auth_user->saleManagers()->paginate();
+        $data = Admin::whereHas('subsidiaries')->with('subsidiaries')->paginate();
 
         return $this->success(AdminResource::collection($data)
             ->additional([
@@ -31,18 +33,34 @@ class SaleManagerController extends Controller
 
     public function assign(Request $request)
     {
-        $auth_user = auth()->user();
+        try {
+            $auth_user = auth()->user();
 
-        $this->validate($request, [
-            'sale_manager_ids' => 'required', // format - 1,2,3
-        ]);
+            if (!$auth_user->isSuperAdmin()) {
+                return $this->error('You are not authorized to access this route.', 403);
+            }
 
-        $auth_user->saleManagers()->sync(explode(',', $request->sale_manager_ids));
+            $this->validate($request, [
+                'sale_manager_id' => 'required',
+                'subsidiary_ids' => 'required', // format - 1,2,3
+            ]);
 
-        $data = $auth_user->saleManagers()->get();
+            $sale_manager = Admin::query()
+                ->where('id', $request->sale_manager_id)
+                ->with('subsidiaries')
+                ->first();
 
-        return $this->success(AdminResource::collection($data)
-            ->response()
-            ->getData(), 'Sale Manager List');
+            if (!$sale_manager || !$sale_manager->isSaleManager()) {
+                return $this->error('Sale Manager not found.', 404);
+            }
+
+            $sale_manager->subsidiaries()->sync(explode(',', $request->subsidiary_ids));
+
+            return $this->success(new AdminResource($sale_manager), 'Sale Manager assigned successfully.');
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+
+            return $this->error($e->getMessage(), 500);
+        }
     }
 }
