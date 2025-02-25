@@ -23,7 +23,8 @@ class AdminController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Admin::query();
+        $query = Admin::query()
+            ->with('subsidiaries');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%")
