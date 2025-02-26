@@ -330,6 +330,7 @@ class ReservationController extends Controller
             'dropoff_location' => $request->dropoff_location ?? $find->dropoff_location,
             'pickup_location' => $request->pickup_location ?? $find->pickup_location,
             'pickup_time' => $request->pickup_time ?? $find->pickup_time,
+            'individual_pricing' => $request->individual_pricing ? json_encode($request->individual_pricing) : null,
         ];
 
         if (
