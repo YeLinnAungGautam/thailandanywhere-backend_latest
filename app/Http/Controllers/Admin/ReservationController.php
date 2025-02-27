@@ -157,7 +157,7 @@ class ReservationController extends Controller
             });
         }
 
-        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
+        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor') {
             if ($filter) {
                 if ($filter === 'past') {
                     $query->whereHas('booking', function ($q) {
