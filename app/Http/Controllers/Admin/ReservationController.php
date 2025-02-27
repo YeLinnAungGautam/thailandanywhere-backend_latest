@@ -682,7 +682,8 @@ class ReservationController extends Controller
     {
         $request->validate([
             'mail_subject' => 'required',
-            'mail_body' => 'required'
+            'mail_body' => 'required',
+            'mail_to' => 'required',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
