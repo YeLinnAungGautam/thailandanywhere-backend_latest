@@ -49,12 +49,35 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         $this->booking_item->update(['is_booking_request' => true]);
     }
 
+    // public function getMails()
+    // {
+    //     if (isset($this->mail_to) && $this->sent_to_default) {
+    //         $mails = [$this->mail_to, $this->default_email];
+    //     } elseif (isset($this->mail_to) && $this->sent_to_default == false) {
+    //         $mails = [$this->mail_to];
+    //     } else {
+    //         $mails = [$this->default_email];
+    //     }
+
+    //     return $mails;
+    // }
+
     public function getMails()
     {
-        if (isset($this->mail_to) && $this->sent_to_default) {
-            $mails = [$this->mail_to, $this->default_email];
-        } elseif (isset($this->mail_to) && $this->sent_to_default == false) {
-            $mails = [$this->mail_to];
+        $mails = [];
+
+        if (isset($this->mail_to)) {
+            // Handle if mail_to is already an array
+            if (is_array($this->mail_to)) {
+                $mails = $this->mail_to;
+            } else {
+                $mails = [$this->mail_to];
+            }
+
+            // Add default email if sent_to_default is true
+            if ($this->sent_to_default && !in_array($this->default_email, $mails)) {
+                $mails[] = $this->default_email;
+            }
         } else {
             $mails = [$this->default_email];
         }

@@ -157,7 +157,7 @@ class ReservationController extends Controller
             });
         }
 
-        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
+        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor') {
             if ($filter) {
                 if ($filter === 'past') {
                     $query->whereHas('booking', function ($q) {
@@ -682,7 +682,8 @@ class ReservationController extends Controller
     {
         $request->validate([
             'mail_subject' => 'required',
-            'mail_body' => 'required'
+            'mail_body' => 'required',
+            'mail_to' => 'required',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
