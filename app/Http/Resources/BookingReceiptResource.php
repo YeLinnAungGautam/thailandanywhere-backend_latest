@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +24,7 @@ class BookingReceiptResource extends JsonResource
             'amount' => $this->amount,
             'sender' => $this->sender,
             'bank_name' => $this->bank_name,
-            'date' => isset($this->date) ? $this->date->format('d-m-Y H:i:s') : null,
+            'date' => isset($this->date) ? Carbon::parse($this->date)->format('d-m-Y H:i:s') : null,
             'is_corporate' => $this->is_corporate,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
