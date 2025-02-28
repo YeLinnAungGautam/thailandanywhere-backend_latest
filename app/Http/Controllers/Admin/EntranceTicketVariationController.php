@@ -61,7 +61,7 @@ class EntranceTicketVariationController extends Controller
             $save = EntranceTicketVariation::create([
                 'name' => $request->name,
                 'price_name' => $request->price_name,
-
+                'contract_name' => $request->contract_name,
                 'price' => $request->price,
                 'cost_price' => $request->cost_price,
                 'agent_price' => $request->agent_price,
@@ -135,7 +135,7 @@ class EntranceTicketVariationController extends Controller
                 'name' => $request->name ?? $entrance_tickets_variation->name,
                 'entrance_ticket_id' => $request->entrance_ticket_id ?? $entrance_tickets_variation->entrance_ticket_id,
                 'price_name' => $request->price_name ?? $entrance_tickets_variation->price_name,
-
+                'contract_name' => $request->contract_name ?? $entrance_tickets_variation->contract_name,
                 'price' => $request->price ?? $entrance_tickets_variation->price,
                 'cost_price' => $request->cost_price ?? $entrance_tickets_variation->cost_price,
                 'agent_price' => $request->agent_price ?? $entrance_tickets_variation->agent_price,
