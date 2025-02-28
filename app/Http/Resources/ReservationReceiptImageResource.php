@@ -21,7 +21,7 @@ class ReservationReceiptImageResource extends JsonResource
             'file' => $this->file ? Storage::url('images/' . $this->file) : null,
             'amount' => $this->amount,
             'bank_name' => $this->bank_name,
-            'date' => $this->date->format('d-m-Y H:i:s'),
+            // 'date' => $this->date->format('d-m-Y H:i:s'),
             'is_corporate' => $this->is_corporate,
             'comment' => $this->comment,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
