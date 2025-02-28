@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -19,8 +20,8 @@ class ReservationBookingConfirmLetterResource extends JsonResource
             'id' => $this->id,
             'booking_item_id' => $this->booking_item_id,
             'amount' => $this->amount,
-            // 'invoice' => $this->invoice->format('d-m-Y H:i:s'),
-            // 'due_date' => $this->due_date->format('d-m-Y H:i:s'),
+            'invoice' => $this->invoice ? Carbon::parse($this->invoice)->format('d-m-Y H:i:s') : null,
+            'due_date' => $this->due_date ? Carbon::parse($this->due_date)->format('d-m-Y H:i:s') : null,
             'customer' => $this->customer,
             'sender_name' => $this->sender_name,
             'file' => $this->file ? Storage::url('images/' . $this->file) : null,
