@@ -23,7 +23,7 @@ class BookingReceiptResource extends JsonResource
             'amount' => $this->amount,
             'sender' => $this->sender,
             'bank_name' => $this->bank_name,
-            'date' => $this->date->format('d-m-Y H:i:s'),
+            'date' => $this->date ? $this->date->format('d-m-Y H:i:s') : null,
             'is_corporate' => $this->is_corporate,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
