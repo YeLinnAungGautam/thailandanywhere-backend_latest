@@ -683,7 +683,7 @@ class ReservationController extends Controller
         $request->validate([
             'mail_subject' => 'required',
             'mail_body' => 'required',
-            'mail_to' => 'required',
+            'mail_tos' => 'required',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
@@ -691,15 +691,19 @@ class ReservationController extends Controller
         try {
             $attachments = ReservationEmailNotifyService::saveAttachToTemp($request->attachments);
 
-            dispatch(new SendReservationNotifyEmailJob(
-                $request->mail_to,
-                $request->mail_subject,
-                $request->sent_to_default,
-                $request->mail_body,
-                $booking_item,
-                $attachments,
-                $ccEmail // Pass the CC email address to the job
-            ));
+            $users = explode(',', $request->mail_tos);
+
+            foreach ($users as $mail_to) {
+                dispatch(new SendReservationNotifyEmailJob(
+                    $mail_to,
+                    $request->mail_subject,
+                    $request->sent_to_default,
+                    $request->mail_body,
+                    $booking_item,
+                    $attachments,
+                    $ccEmail // Pass the CC email address to the job
+                ));
+            }
 
             return $this->success(null, 'Reservation notify email is successfully sent.', 200);
         } catch (Exception $e) {
