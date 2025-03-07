@@ -202,7 +202,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
     Route::get('reservations/export/excel', [ReservationListExportController::class, 'export']);
+
+    # Reservation Group By
     Route::get('reservations-hotel', [ReservationHotelController::class, 'getHotelReservations']);
+    Route::get('/reservations-hotel/{id}', [ReservationHotelController::class, 'getHotelReservationDetail']);
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);

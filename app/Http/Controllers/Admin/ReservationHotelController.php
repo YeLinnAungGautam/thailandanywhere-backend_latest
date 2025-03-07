@@ -132,4 +132,104 @@ class ReservationHotelController extends Controller
 
         return $this->success($response->response()->getData(), 'Hotel Reservations Grouped By CRM ID');
     }
+
+    /**
+     * Get detailed hotel reservation by booking ID
+     *
+     * @param Request $request
+     * @param int $id - The booking ID
+     * @return JsonResponse
+     */
+    public function getHotelReservationDetail(Request $request, $id)
+    {
+        // Query for the specific booking by ID
+        $booking = Booking::query()
+            ->with([
+                'customer',
+                // Only load hotel items
+                'items' => function($query) {
+                    $query->where('product_type', 'App\Models\Hotel');
+                },
+                'items.product',
+            ])
+            ->where('id', $id)
+            ->first();
+
+        // If no booking found, return error
+        if (!$booking) {
+            return $this->error('No hotel reservation found for the provided booking ID', 404);
+        }
+
+        // Apply user role restrictions
+        if (!(Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor')) {
+            if ($booking->created_by !== Auth::id() && $booking->past_user_id !== Auth::id()) {
+                return $this->error('You do not have permission to view this booking', 403);
+            }
+        }
+
+        // Find other bookings with the same CRM ID to group them
+        $relatedBookings = null;
+        if ($booking->crm_id) {
+            $relatedBookings = Booking::query()
+                ->with([
+                    'customer',
+                    'items' => function($query) {
+                        $query->where('product_type', 'App\Models\Hotel');
+                    },
+                    'items.product',
+                ])
+                ->where('crm_id', $booking->crm_id)
+                ->where('id', '!=', $booking->id) // Exclude the current booking
+                ->get();
+        }
+
+        // Prepare the result with grouped information
+        $result = [
+            'booking' => [
+                'id' => $booking->id,
+                'crm_id' => $booking->crm_id,
+                'booking_date' => $booking->booking_date,
+                'booking_status' => $booking->status,
+                'total_amount' => $booking->items->sum('amount'),
+                'customer' => $booking->customer,
+                'items' => $booking->items->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'product_type' => $item->product_type,
+                        'product' => $item->product,
+                        'amount' => $item->amount,
+                        'service_date' => $item->service_date,
+                        'status' => $item->status,
+                        // Add other relevant item fields
+                    ];
+                }),
+                'created_by' => $booking->created_by,
+                'created_at' => $booking->created_at,
+                'updated_at' => $booking->updated_at,
+                // Add other relevant booking fields
+            ],
+            'group_info' => null
+        ];
+
+        // If there are related bookings with the same CRM ID, include group information
+        if ($relatedBookings && $relatedBookings->count() > 0) {
+            // Combine current booking with related bookings for calculations
+            $allBookings = collect([$booking])->merge($relatedBookings);
+
+            $result['group_info'] = [
+                'crm_id' => $booking->crm_id,
+                'total_bookings' => $allBookings->count(),
+                'total_amount' => $allBookings->sum(function ($b) {
+                    return $b->items->sum('amount');
+                }),
+                'latest_service_date' => $allBookings->max(function ($b) {
+                    return $b->items->max('service_date');
+                }),
+                'related_bookings' => BookingResource::collection($relatedBookings),
+            ];
+        }
+
+        return $this->success($result, 'Hotel Reservation Detail');
+    }
 }
