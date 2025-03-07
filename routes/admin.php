@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\ReservationCustomerPassportController;
 use App\Http\Controllers\Admin\ReservationExpenseReceiptController;
+use App\Http\Controllers\Admin\ReservationHotelController;
 use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
@@ -201,6 +202,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
     Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
     Route::get('reservations/export/excel', [ReservationListExportController::class, 'export']);
+    Route::get('reservations-hotel', [ReservationHotelController::class, 'getHotelReservations']);
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);
