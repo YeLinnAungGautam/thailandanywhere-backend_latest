@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItemResource;
+use App\Http\Resources\BookingReceiptResource;
 use App\Http\Resources\BookingResource;
+use App\Http\Resources\ReservationGroupByResource;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Services\BookingItemDataService;
@@ -118,7 +121,7 @@ class ReservationHotelController extends Controller
             $totalExpenseAmount = BookingItemDataService::getTotalExpenseAmount($query);
         }
 
-        // Use a resource collection with additional data
+    // Create the resource collection with additional data
         $response = (new \Illuminate\Http\Resources\Json\AnonymousResourceCollection(
             $paginator,
             \App\Http\Resources\HotelGroupResource::class
@@ -130,6 +133,7 @@ class ReservationHotelController extends Controller
             ],
         ]);
 
+        // Return the success response with the formatted data
         return $this->success($response->response()->getData(), 'Hotel Reservations Grouped By CRM ID');
     }
 
@@ -185,30 +189,7 @@ class ReservationHotelController extends Controller
 
         // Prepare the result with grouped information
         $result = [
-            'booking' => [
-                'id' => $booking->id,
-                'crm_id' => $booking->crm_id,
-                'booking_date' => $booking->booking_date,
-                'booking_status' => $booking->status,
-                'total_amount' => $booking->items->sum('amount'),
-                'customer' => $booking->customer,
-                'items' => $booking->items->map(function($item) {
-                    return [
-                        'id' => $item->id,
-                        'product_id' => $item->product_id,
-                        'product_type' => $item->product_type,
-                        'product' => $item->product,
-                        'amount' => $item->amount,
-                        'service_date' => $item->service_date,
-                        'status' => $item->status,
-                        // Add other relevant item fields
-                    ];
-                }),
-                'created_by' => $booking->created_by,
-                'created_at' => $booking->created_at,
-                'updated_at' => $booking->updated_at,
-                // Add other relevant booking fields
-            ],
+            'booking' => new ReservationGroupByResource($booking),
             'group_info' => null
         ];
 
