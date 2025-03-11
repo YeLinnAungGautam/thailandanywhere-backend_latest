@@ -29,37 +29,36 @@ class ReservationHotelController extends Controller
     public function getHotelReservations(Request $request)
     {
         $limit = $request->query('limit', 10);
+        $page = $request->input('page', 1);
 
-        // Get all booking IDs that have at least one hotel product
-        $hotelBookingIds = BookingItem::query()
-            ->select('booking_id')
-            ->where('product_type', 'App\Models\Hotel')
-            ->distinct()
-            ->pluck('booking_id')
-            ->toArray();
-
-        // Now query bookings with those IDs
+        // Use a single query with JOIN instead of getting IDs first
         $query = Booking::query()
+            ->join('booking_items', function ($join) {
+                $join->on('bookings.id', '=', 'booking_items.booking_id')
+                     ->where('booking_items.product_type', 'App\Models\Hotel');
+            })
+            ->select('bookings.*')
+            ->distinct() // Ensure we don't get duplicate bookings
             ->with([
-                'customer',
-                // Only load hotel items using a constraint on the relationship
+                'customer:id,name,email', // Select only needed customer fields
+                // Only load hotel items and select all necessary fields
+                // Make sure to include all fields needed by BookingItemResource
                 'items' => function($query) {
                     $query->where('product_type', 'App\Models\Hotel');
+                    // Don't limit fields as BookingItemResource.php needs all fields
                 },
-                'items.product',
+                'items.product:id,name', // Select only needed product fields
             ])
-            ->whereIn('id', $hotelBookingIds)
             ->when($request->booking_daterange, function ($query) use ($request) {
                 $dates = explode(',', $request->booking_daterange);
                 $query->whereBetween('booking_date', $dates);
             })
             ->when($request->user_id, function ($query) use ($request) {
                 $query->where('created_by', $request->user_id)
-                    ->orWhere('past_user_id', $request->user_id);
-            })
-            ->orderBy('created_at', 'desc'); // Order by created_at (server date) in descending order
+                      ->orWhere('past_user_id', $request->user_id);
+            });
 
-        // Apply user role restrictions similar to the original endpoint
+        // Apply user role restrictions
         if (!(Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor')) {
             $query->where(function ($q) {
                 $q->where('created_by', Auth::id())
@@ -67,40 +66,61 @@ class ReservationHotelController extends Controller
             });
         }
 
-        // Group by CRM ID
-        $results = $query->get()
-            ->groupBy('crm_id')
-            ->map(function ($bookings, $crmId) {
-                // Find the most recent service date for sorting
-                $latestServiceDate = $bookings->max(function ($booking) {
-                    // Only hotel items are loaded, so this works correctly
-                    return $booking->items->max('service_date');
-                });
+        // Add indexes for these columns if they don't exist
+        // Create a migration: php artisan make:migration add_indexes_to_bookings_table
+        // $table->index('crm_id');
+        // $table->index('created_by');
+        // $table->index('past_user_id');
+        // $table->index('booking_date');
 
-                return [
-                    'crm_id' => $crmId,
-                    'latest_service_date' => $latestServiceDate,
-                    'total_bookings' => $bookings->count(),
-                    'total_amount' => $bookings->sum(function ($booking) {
-                        // This sum already only includes hotel items
-                        return $booking->items->sum('amount');
-                    }),
-                    'bookings' => BookingResource::collection($bookings),
-                ];
-            })
-            ->sortByDesc('latest_service_date')
-            ->values();
+        // Calculate totals for metadata using efficient queries
+        $totalHotelAmount = DB::table('booking_items')
+            ->whereIn('booking_id', $query->clone()->pluck('bookings.id'))
+            ->where('product_type', 'App\Models\Hotel')
+            ->sum('amount');
 
-        // Create a custom paginator for our grouped results
-        $perPage = $limit;
-        $page = $request->input('page', 1);
+        // You may need to adjust this method call based on your actual implementation
+        $totalExpenseAmount = 0;
+        if (class_exists('BookingItemDataService')) {
+            $totalExpenseAmount = BookingItemDataService::getTotalExpenseAmount($query->clone());
+        }
+
+        // Get all required bookings at once
+        $bookings = $query->orderBy('bookings.created_at', 'desc')->get();
+
+        // Group by CRM ID more efficiently
+        $results = collect();
+        $bookingsByCrmId = $bookings->groupBy('crm_id');
+
+        foreach ($bookingsByCrmId as $crmId => $crmBookings) {
+            // Find the latest service date
+            $latestServiceDate = $crmBookings->max(function ($booking) {
+                return $booking->items->max('service_date');
+            });
+
+            $results->push([
+                'crm_id' => $crmId,
+                'latest_service_date' => $latestServiceDate,
+                'total_bookings' => $crmBookings->count(),
+                'total_amount' => $crmBookings->sum(function ($booking) {
+                    return $booking->items->sum('amount');
+                }),
+                'bookings' => BookingResource::collection($crmBookings),
+            ]);
+        }
+
+        // Sort by latest service date
+        $results = $results->sortByDesc('latest_service_date')->values();
+
+        // Calculate pagination values
         $total = $results->count();
+        $perPage = $limit;
         $offset = ($page - 1) * $perPage;
 
         // Slice the results for the current page
         $paginatedResults = $results->slice($offset, $perPage)->values();
 
-        // Create a custom paginator instance
+        // Create a paginator
         $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
             $paginatedResults,
             $total,
@@ -109,19 +129,7 @@ class ReservationHotelController extends Controller
             ['path' => \Illuminate\Support\Facades\Request::url()]
         );
 
-        // Calculate totals for all hotel items
-        $totalHotelAmount = $query->withCount(['items as total_hotel_amount' => function($q) {
-            $q->where('product_type', 'App\Models\Hotel')
-            ->select(DB::raw('SUM(amount)'));
-        }])->get()->sum('total_hotel_amount');
-
-        // You may need to adjust this method call based on your actual implementation
-        $totalExpenseAmount = 0;
-        if (class_exists('BookingItemDataService')) {
-            $totalExpenseAmount = BookingItemDataService::getTotalExpenseAmount($query);
-        }
-
-    // Create the resource collection with additional data
+        // Create the resource collection with additional data
         $response = (new \Illuminate\Http\Resources\Json\AnonymousResourceCollection(
             $paginator,
             \App\Http\Resources\HotelGroupResource::class
@@ -133,7 +141,12 @@ class ReservationHotelController extends Controller
             ],
         ]);
 
-        // Return the success response with the formatted data
+        // Add cache if appropriate (e.g., for 5 minutes)
+        // return Cache::remember('hotel_reservations_' . md5($request->fullUrl()), 300, function() use ($response) {
+        //     return $this->success($response->response()->getData(), 'Hotel Reservations Grouped By CRM ID');
+        // });
+
+        // Return the success response
         return $this->success($response->response()->getData(), 'Hotel Reservations Grouped By CRM ID');
     }
 
