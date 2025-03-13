@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingReceiptResource;
 use App\Http\Resources\BookingResource;
@@ -12,6 +13,7 @@ use App\Models\BookingItem;
 use App\Services\BookingItemDataService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -231,5 +233,81 @@ class ReservationHotelController extends Controller
         }
 
         return $this->success($result, 'Hotel Reservation Detail');
+    }
+
+    public function copyBookingItemsGroup(string $bookingId)
+    {
+        // Find the booking
+        $booking = Booking::find($bookingId);
+
+        if (!$booking) {
+            return $this->error(null, 'Booking not found', 404);
+        }
+
+        // Load booking items with related entities
+        $booking->load([
+            'items' => function ($query) {
+                $query->where('product_type', 'App\Models\Hotel');
+            },
+            'items.product',
+            'items.room',
+            'items.variation'
+        ]);
+
+        // Check if there are any hotel items
+        if ($booking->items->isEmpty()) {
+            return $this->error(null, 'No hotel items found in this booking', 404);
+        }
+
+        // Transform each booking item using existing resource
+        $detailedItems = [];
+        foreach ($booking->items as $item) {
+            $detailedItems[] = new BookingItemDetailResource($item);
+        }
+
+        // Also get any related bookings with the same CRM ID
+        $relatedItems = [];
+        if ($booking->crm_id) {
+            $relatedBookings = Booking::with([
+                'items' => function ($query) {
+                    $query->where('product_type', 'App\Models\Hotel');
+                },
+                'items.product',
+                'items.room',
+                'items.variation'
+            ])
+            ->where('crm_id', $booking->crm_id)
+            ->where('id', '!=', $booking->id)
+            ->get();
+
+            foreach ($relatedBookings as $relatedBooking) {
+                foreach ($relatedBooking->items as $item) {
+                    $relatedItems[] = new BookingItemDetailResource($item);
+                }
+            }
+        }
+
+        // Prepare response data
+        $responseData = [
+            'booking_id' => $booking->id,
+            'crm_id' => $booking->crm_id,
+            'customer_name' => $booking->customer->name ?? '-',
+            'booking_date' => $booking->booking_date,
+            'items' => $detailedItems,
+            'related_items' => $relatedItems,
+            'summary' => [
+                'total_rooms' => $booking->items->sum('quantity'),
+                'total_nights' => $booking->items->sum(function ($item) {
+                    if ($item->product_type == 'App\Models\Hotel' && $item->checkin_date && $item->checkout_date) {
+                        return (int) Carbon::parse($item->checkin_date)->diff(Carbon::parse($item->checkout_date))->format("%a") * $item->quantity;
+                    }
+                    return 0;
+                }),
+                'total_amount' => $booking->items->sum('amount'),
+                'total_cost' => $booking->items->sum('total_cost_price')
+            ]
+        ];
+
+        return $this->success($responseData, 'Booking Items Group Details');
     }
 }
