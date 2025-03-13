@@ -39,6 +39,12 @@ class ReservationHotelController extends Controller
             })
             ->select('bookings.*')
             ->distinct() // Ensure we don't get duplicate bookings
+            ->whereHas('items', function($query) use ($request) {
+                $query->where('product_type', 'App\Models\Hotel')
+                    ->when($request->hotel_name, function($q) use ($request) {
+                        $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                    });
+            })
             ->with([
                 'customer:id,name,email', // Select only needed customer fields
                 // Only load hotel items and select all necessary fields
