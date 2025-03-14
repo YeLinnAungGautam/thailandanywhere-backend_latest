@@ -63,8 +63,34 @@ class ReservationHotelController extends Controller
             })
             ->when($request->user_id, function ($query) use ($request) {
                 $query->where('created_by', $request->user_id)
-                      ->orWhere('past_user_id', $request->user_id);
+                    ->orWhere('past_user_id', $request->user_id);
             });
+
+        // Add filter for CRM ID
+        // Add filter for CRM ID - explicitly specify the table name to avoid ambiguity
+        $query->when($request->crm_id, function ($query) use ($request) {
+            $query->where('bookings.crm_id','LIKE','%'. $request->crm_id . '%');
+        });
+
+
+        // Add filter for customer name
+        $query->when($request->customer_name, function ($query) use ($request) {
+            $query->whereHas('customer', function ($q) use ($request) {
+                $q->where('customers.name', 'LIKE', '%' . $request->customer_name . '%');
+            });
+        });
+
+        // Add filter for booking payment status
+        $query->when($request->customer_payment_status, function ($query) use ($request) {
+            $query->where('bookings.payment_status', $request->customer_payment_status);
+        });
+
+        // Add filter for expense payment status (on booking_items level)
+        $query->when($request->expense_status, function ($query) use ($request) {
+            $query->whereHas('items', function ($q) use ($request) {
+                $q->where('payment_status', $request->expense_status);
+            });
+        });
 
         // Apply user role restrictions
         if (!(Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor')) {
