@@ -40,7 +40,38 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_active' => 'boolean',
     ];
+
+    /**
+     * Check if user email is verified
+     *
+     * @return bool
+     */
+    public function isVerified()
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    /**
+     * Check if user account is active
+     *
+     * @return bool
+     */
+    public function isActive()
+    {
+        return $this->is_active === true;
+    }
+
+    /**
+     * Check if user can access the system (both verified and active)
+     *
+     * @return bool
+     */
+    public function canAccessSystem()
+    {
+        return $this->isVerified() && $this->isActive();
+    }
 
     public function oauthProviders()
     {

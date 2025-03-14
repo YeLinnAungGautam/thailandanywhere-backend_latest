@@ -21,6 +21,21 @@ class LoginController extends Controller
 
         $user = Auth::guard('user')->user();
 
+        // Check if user is active
+        if (!$user->is_active) {
+            // Log the user out since we just logged them in with Auth::attempt
+            Auth::guard('user')->logout();
+
+            return failedMessage('Your account is not active. Please verify your email or contact administrator.');
+        }
+
+        // Check if email is verified (optional, if you're also implementing email verification)
+        if ($user->email_verified_at === null) {
+            Auth::guard('user')->logout();
+
+            return failedMessage('Please verify your email before logging in.');
+        }
+
         $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
 
         return success([

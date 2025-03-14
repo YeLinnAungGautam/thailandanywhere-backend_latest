@@ -4,22 +4,53 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
+use App\Mail\VerifyEmail;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+
+use function Laravel\Prompts\error;
 
 class RegisterController extends Controller
 {
     public function register(RegisterRequest $request)
     {
+        // create new token
+        $token = Str::random(64);
+
         $user = User::create([
             'name' => $request->first_name . ' ' . $request->last_name,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'dob' => $request->dob
+            'dob' => $request->dob,
+            'email_verification_token' => $token,
+            'email_verified_at' => null,
+            'is_active' => false,
         ]);
 
-        return success($user, 'User registered successfully');
+        // send verification email
+        Mail::to($user->email)->send(new VerifyEmail($user));
+
+        return success($user, 'User registered successfully. Please check your email to verify your account.');
+    }
+
+    public function verifyEmail($token)
+    {
+        $user = User::where('email_verification_token', $token)->first();
+
+        if (!$user) {
+            return error('Invalid verification token!');
+        }
+
+        $user->email_verification_token = null;
+        $user->email_verified_at = Carbon::now();
+        $user->is_active = true; // Activate the user after email verification
+        $user->save();
+
+        return success(null, 'Your email has been verified successfully. You can now login.');
     }
 }
