@@ -293,6 +293,9 @@ class ReservationHotelController extends Controller
             'crm_id' => $booking->crm_id,
             'customer_name' => $booking->customer->name ?? '-',
             'booking_date' => $booking->booking_date,
+            'payment_status' => $booking->payment_status,
+            'balance_due' => $booking->balance_due,
+            'selling_price' => $booking->sub_total,
             'items' => $detailedItems,
             'related_items' => $relatedItems,
             'summary' => [
