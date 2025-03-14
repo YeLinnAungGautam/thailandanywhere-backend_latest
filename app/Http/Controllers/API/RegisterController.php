@@ -38,6 +38,29 @@ class RegisterController extends Controller
         return success($user, 'User registered successfully. Please check your email to verify your account.');
     }
 
+    public function resendVerificationEmail($email)
+    {
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            return error('User not found!');
+        }
+
+        if ($user->email_verified_at) {
+            return error('Email already verified!');
+        }
+
+        $user->email_verification_token = Str::random(64);
+        $user->email_verified_at = null;
+        $user->is_active = false; // Deactivate the user before sending the verification email
+        $user->save();
+
+        // send verification email
+        Mail::to($user->email)->send(new VerifyEmail($user));
+
+        return success(null, 'Verification email sent successfully.');
+    }
+
     public function verifyEmail($token)
     {
         $user = User::where('email_verification_token', $token)->first();

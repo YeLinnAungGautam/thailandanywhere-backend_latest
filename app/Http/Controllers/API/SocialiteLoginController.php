@@ -71,6 +71,7 @@ class SocialiteLoginController extends Controller
             'email' => $sUser->getEmail(),
             'email_verified_at' => now(),
             'password' => bcrypt(Str::random(10)),
+            'is_active' => true,
         ]);
 
         $user->oauthProviders()->create([
