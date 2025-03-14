@@ -33,7 +33,7 @@ class RegisterController extends Controller
         ]);
 
         // send verification email
-        Mail::to($user->email)->send(new VerifyEmail($user));
+        Mail::to($user->email)->queue(new VerifyEmail($user));
 
         return success($user, 'User registered successfully. Please check your email to verify your account.');
     }
@@ -55,8 +55,8 @@ class RegisterController extends Controller
         $user->is_active = false; // Deactivate the user before sending the verification email
         $user->save();
 
-        // send verification email
-        Mail::to($user->email)->send(new VerifyEmail($user));
+        // send verification email ** need to add job
+        Mail::to($user->email)->queue(new VerifyEmail($user));
 
         return success(null, 'Verification email sent successfully.');
     }
