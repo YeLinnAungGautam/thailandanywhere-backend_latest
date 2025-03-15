@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
-use App\Http\Resources\BookingReceiptResource;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\ReservationGroupByResource;
 use App\Models\Booking;
-use App\Models\BookingItem;
 use App\Services\BookingItemDataService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -25,7 +23,7 @@ class ReservationHotelController extends Controller
     /**
      * Get hotel reservations grouped by CRM ID
      *
-     * @param Request $request
+     * @param  Request      $request
      * @return JsonResponse
      */
     public function getHotelReservations(Request $request)
@@ -37,13 +35,14 @@ class ReservationHotelController extends Controller
         $query = Booking::query()
             ->join('booking_items', function ($join) {
                 $join->on('bookings.id', '=', 'booking_items.booking_id')
-                     ->where('booking_items.product_type', 'App\Models\Hotel');
+                    ->where('booking_items.product_type', 'App\Models\Hotel')
+                    ->groupBy('booking_items.product_id');
             })
             ->select('bookings.*')
             ->distinct() // Ensure we don't get duplicate bookings
-            ->whereHas('items', function($query) use ($request) {
+            ->whereHas('items', function ($query) use ($request) {
                 $query->where('product_type', 'App\Models\Hotel')
-                    ->when($request->hotel_name, function($q) use ($request) {
+                    ->when($request->hotel_name, function ($q) use ($request) {
                         $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                     });
             })
@@ -51,7 +50,7 @@ class ReservationHotelController extends Controller
                 'customer:id,name,email', // Select only needed customer fields
                 // Only load hotel items and select all necessary fields
                 // Make sure to include all fields needed by BookingItemResource
-                'items' => function($query) {
+                'items' => function ($query) {
                     $query->where('product_type', 'App\Models\Hotel');
                     // Don't limit fields as BookingItemResource.php needs all fields
                 },
@@ -69,7 +68,7 @@ class ReservationHotelController extends Controller
         // Add filter for CRM ID
         // Add filter for CRM ID - explicitly specify the table name to avoid ambiguity
         $query->when($request->crm_id, function ($query) use ($request) {
-            $query->where('bookings.crm_id','LIKE','%'. $request->crm_id . '%');
+            $query->where('bookings.crm_id', 'LIKE', '%'. $request->crm_id . '%');
         });
 
 
@@ -187,8 +186,8 @@ class ReservationHotelController extends Controller
     /**
      * Get detailed hotel reservation by booking ID
      *
-     * @param Request $request
-     * @param int $id - The booking ID
+     * @param  Request      $request
+     * @param  int          $id      - The booking ID
      * @return JsonResponse
      */
     public function getHotelReservationDetail(Request $request, $id)
@@ -198,7 +197,7 @@ class ReservationHotelController extends Controller
             ->with([
                 'customer',
                 // Only load hotel items
-                'items' => function($query) {
+                'items' => function ($query) {
                     $query->where('product_type', 'App\Models\Hotel');
                 },
                 'items.product',
@@ -224,7 +223,7 @@ class ReservationHotelController extends Controller
             $relatedBookings = Booking::query()
                 ->with([
                     'customer',
-                    'items' => function($query) {
+                    'items' => function ($query) {
                         $query->where('product_type', 'App\Models\Hotel');
                     },
                     'items.product',
@@ -302,9 +301,9 @@ class ReservationHotelController extends Controller
                 'items.room',
                 'items.variation'
             ])
-            ->where('crm_id', $booking->crm_id)
-            ->where('id', '!=', $booking->id)
-            ->get();
+                ->where('crm_id', $booking->crm_id)
+                ->where('id', '!=', $booking->id)
+                ->get();
 
             foreach ($relatedBookings as $relatedBooking) {
                 foreach ($relatedBooking->items as $item) {
@@ -330,6 +329,7 @@ class ReservationHotelController extends Controller
                     if ($item->product_type == 'App\Models\Hotel' && $item->checkin_date && $item->checkout_date) {
                         return (int) Carbon::parse($item->checkin_date)->diff(Carbon::parse($item->checkout_date))->format("%a") * $item->quantity;
                     }
+
                     return 0;
                 }),
                 'total_amount' => $booking->items->sum('amount'),
