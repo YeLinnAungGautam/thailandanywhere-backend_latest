@@ -63,7 +63,8 @@ class ReservationHotelController extends Controller
             ->when($request->user_id, function ($query) use ($request) {
                 $query->where('created_by', $request->user_id)
                     ->orWhere('past_user_id', $request->user_id);
-            });
+            })
+            ->groupBy('items.product_id');
 
         // Add filter for CRM ID
         // Add filter for CRM ID - explicitly specify the table name to avoid ambiguity
