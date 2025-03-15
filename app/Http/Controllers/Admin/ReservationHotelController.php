@@ -35,8 +35,7 @@ class ReservationHotelController extends Controller
         $query = Booking::query()
             ->join('booking_items', function ($join) {
                 $join->on('bookings.id', '=', 'booking_items.booking_id')
-                    ->where('booking_items.product_type', 'App\Models\Hotel')
-                    ->groupBy('booking_items.product_id');
+                    ->where('booking_items.product_type', 'App\Models\Hotel');
             })
             ->select('bookings.*')
             ->distinct() // Ensure we don't get duplicate bookings
@@ -63,8 +62,7 @@ class ReservationHotelController extends Controller
             ->when($request->user_id, function ($query) use ($request) {
                 $query->where('created_by', $request->user_id)
                     ->orWhere('past_user_id', $request->user_id);
-            })
-            ->groupBy(DB::raw('booking_items.product_id'));
+            });
 
         // Add filter for CRM ID
         // Add filter for CRM ID - explicitly specify the table name to avoid ambiguity
