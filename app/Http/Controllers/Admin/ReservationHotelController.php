@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingGroupResource;
 use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingReceiptResource;
@@ -128,6 +129,13 @@ class ReservationHotelController extends Controller
 
         foreach ($bookingsByCrmId as $crmId => $crmBookings) {
             // Find the latest service date
+
+            $processedBookings = $crmBookings->map(function($booking) {
+                // Group the booking items by product_id
+                $booking->groupedItems = $booking->items->groupBy('product_id');
+                return $booking;
+            });
+
             $latestServiceDate = $crmBookings->max(function ($booking) {
                 return $booking->items->max('service_date');
             });
@@ -139,7 +147,7 @@ class ReservationHotelController extends Controller
                 'total_amount' => $crmBookings->sum(function ($booking) {
                     return $booking->items->sum('amount');
                 }),
-                'bookings' => BookingResource::collection($crmBookings),
+                'bookings' => BookingGroupResource::collection($processedBookings),
             ]);
         }
 
@@ -191,15 +199,18 @@ class ReservationHotelController extends Controller
      * @param int $id - The booking ID
      * @return JsonResponse
      */
-    public function getHotelReservationDetail(Request $request, $id)
+    public function getHotelReservationDetail(Request $request, $id, $product_id = null)
     {
         // Query for the specific booking by ID
         $booking = Booking::query()
             ->with([
                 'customer',
-                // Only load hotel items
-                'items' => function($query) {
+                // Only load hotel items, filter by product_id if provided
+                'items' => function($query) use ($product_id) {
                     $query->where('product_type', 'App\Models\Hotel');
+                    if ($product_id) {
+                        $query->where('product_id', $product_id);
+                    }
                 },
                 'items.product',
             ])
@@ -224,8 +235,11 @@ class ReservationHotelController extends Controller
             $relatedBookings = Booking::query()
                 ->with([
                     'customer',
-                    'items' => function($query) {
+                    'items' => function($query) use ($product_id) {
                         $query->where('product_type', 'App\Models\Hotel');
+                        if ($product_id) {
+                            $query->where('product_id', $product_id);
+                        }
                     },
                     'items.product',
                 ])
@@ -261,7 +275,7 @@ class ReservationHotelController extends Controller
         return $this->success($result, 'Hotel Reservation Detail');
     }
 
-    public function copyBookingItemsGroup(string $bookingId)
+    public function copyBookingItemsGroup(string $bookingId, string $product_id = null)
     {
         // Find the booking
         $booking = Booking::find($bookingId);
@@ -270,10 +284,13 @@ class ReservationHotelController extends Controller
             return $this->error(null, 'Booking not found', 404);
         }
 
-        // Load booking items with related entities
+        // Load booking items with related entities, filtered by product_id if provided
         $booking->load([
-            'items' => function ($query) {
+            'items' => function ($query) use ($product_id) {
                 $query->where('product_type', 'App\Models\Hotel');
+                if ($product_id) {
+                    $query->where('product_id', $product_id);
+                }
             },
             'items.product',
             'items.room',
@@ -295,8 +312,11 @@ class ReservationHotelController extends Controller
         $relatedItems = [];
         if ($booking->crm_id) {
             $relatedBookings = Booking::with([
-                'items' => function ($query) {
+                'items' => function ($query) use ($product_id) {
                     $query->where('product_type', 'App\Models\Hotel');
+                    if ($product_id) {
+                        $query->where('product_id', $product_id);
+                    }
                 },
                 'items.product',
                 'items.room',
