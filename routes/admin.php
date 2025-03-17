@@ -205,8 +205,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Reservation Group By
     Route::get('reservations-hotel', [ReservationHotelController::class, 'getHotelReservations']);
-    Route::get('/reservations-hotel/{id}', [ReservationHotelController::class, 'getHotelReservationDetail']);
-    Route::get('/reservations-hotel/{id}/copy', [ReservationHotelController::class, 'copyBookingItemsGroup']);
+    Route::get('/reservations-hotel/{id}/{product_id}', [ReservationHotelController::class, 'getHotelReservationDetail']);
+    Route::get('/reservations-hotel/{id}/copy/{product_id}', [ReservationHotelController::class, 'copyBookingItemsGroup']);
 
     # Private Vantour
     Route::apiResource('private-van-tours', PrivateVanTourController::class);
