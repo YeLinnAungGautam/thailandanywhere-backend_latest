@@ -14,6 +14,33 @@ class BookingGroupResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Filter items based on expense_status if provided
+        $filteredItems = $this->items;
+
+        if ($request->has('expense_status') && isset($this->items)) {
+            $filteredItems = $this->items->filter(function ($item) use ($request) {
+                return $item->payment_status === $request->expense_status;
+            })->values();
+        }
+
+        // Filter booking based on customer_payment_status if provided
+        if ($request->has('customer_payment_status') && $this->payment_status !== $request->customer_payment_status) {
+            $filteredItems = collect([]);
+        }
+
+        // Sort grouped items to put true values first
+        $sortedGroupedItems = null;
+        if (isset($this->groupedItems)) {
+            $sortedGroupedItems = $this->groupedItems->map(function($items, $productId) {
+                // Sort items in each group
+                return $items->sortByDesc(function($item) {
+                    // Add your sorting logic here
+                    // For example, sort by reservation_status == "confirmed"
+                    return $item->reservation_status === "confirmed" ? 1 : 0;
+                });
+            });
+        }
+
         return [
             'id' => $this->id,
             'invoice_number' => $this->invoice_number,
@@ -47,17 +74,32 @@ class BookingGroupResource extends JsonResource
             'created_by' => $this->createdBy,
             'bill_to' => $this->customer ? $this->customer->name : "-",
             'receipts' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
-            'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
-            'grouped_items' => $this->when(isset($this->groupedItems), function() {
+            'items' => isset($filteredItems) ? BookingItemResource::collection($filteredItems) : '',
+            'grouped_items' => $this->when(isset($sortedGroupedItems), function() use ($sortedGroupedItems) {
                 $result = [];
-                foreach($this->groupedItems as $productId => $items) {
+                foreach($sortedGroupedItems as $productId => $items) {
                     $result[] = [
                         'product_id' => $productId,
                         'items' => BookingItemResource::collection($items)
                     ];
                 }
+
+                // Sort the groups to have groups with confirmed status first
+                usort($result, function($a, $b) {
+                    $aHasConfirmed = collect($a['items'])->contains(function ($item) {
+                        return $item['reservation_status'] === 'confirmed';
+                    });
+
+                    $bHasConfirmed = collect($b['items'])->contains(function ($item) {
+                        return $item['reservation_status'] === 'confirmed';
+                    });
+
+                    return $bHasConfirmed <=> $aHasConfirmed;
+                });
+
                 return $result;
             }),
+
             // Inclusive
             'is_inclusive' => $this->is_inclusive,
             'inclusive_name' => $this->inclusive_name,
