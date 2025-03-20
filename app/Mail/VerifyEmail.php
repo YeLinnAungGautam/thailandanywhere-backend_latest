@@ -39,16 +39,13 @@ class VerifyEmail extends Mailable
      */
     public function content(): Content
     {
-        $verificationUrl = url('/verify-email/' . $this->user->email_verification_token);
-
         return new Content(
             view: 'email.verify-email', // Be sure this view exists at resources/views/emails/verify-email.blade.php
             with: [
                 'user' => $this->user,
-                'verificationUrl' => $verificationUrl,
+                'verificationCode' => $this->user->email_verification_token,
             ],
         );
-
     }
 
     /**
