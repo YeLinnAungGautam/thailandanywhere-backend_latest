@@ -38,8 +38,15 @@ class RegisterController extends Controller
         return success($user, 'User registered successfully. Please check your email to verify your account.');
     }
 
-    public function resendVerificationEmail($email)
+    // For POST request
+    public function resendVerificationEmail(Request $request)
     {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $email = $request->email;
+
         $user = User::where('email', $email)->first();
 
         if (!$user) {
@@ -78,6 +85,11 @@ class RegisterController extends Controller
         $user->is_active = true; // Activate the user after email verification
         $user->save();
 
-        return success(null, 'Your email has been verified successfully. You can now login.');
+        $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
+
+        return success([
+            'user' => $user,
+            'token' => $token
+        ], 'Your email has been verified successfully. You can now login.');
     }
 }

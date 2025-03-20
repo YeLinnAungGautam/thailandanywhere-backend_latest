@@ -91,6 +91,8 @@ Route::group([], function () {
     # Register
     Route::post('register', [RegisterController::class, 'register']);
     Route::post('/verify-email', [RegisterController::class, 'verifyEmail']);
+    Route::post('/resend-verification-email', [RegisterController::class, 'resendVerificationEmail']);
+
 
     # Login
     Route::post('login', [LoginController::class, 'login']);
