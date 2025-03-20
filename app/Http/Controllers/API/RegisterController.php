@@ -17,7 +17,30 @@ class RegisterController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        // create 6-digit verification code
+        // Check if email already exists
+        $existingUser = User::where('email', $request->email)->first();
+
+        if ($existingUser) {
+            // If the user exists but is not active (not verified)
+            if (!$existingUser->is_active) {
+                // Generate new verification code
+                $code = sprintf('%06d', mt_rand(0, 999999));
+
+                // Update the existing user with new verification code
+                $existingUser->email_verification_token = $code;
+                $existingUser->save();
+
+                // Resend verification email
+                Mail::to($existingUser->email)->queue(new VerifyEmail($existingUser));
+
+                return error('This email is already registered but not verified. A new verification code has been sent to your email.');
+            }
+
+            // If user exists and is active
+            return error('This email is already registered. Please login instead.');
+        }
+
+        // If email doesn't exist, create new user
         $code = sprintf('%06d', mt_rand(0, 999999));
 
         $user = User::create([
