@@ -90,7 +90,7 @@ Route::group([], function () {
 
     # Register
     Route::post('register', [RegisterController::class, 'register']);
-    Route::get('/verify-email/{token}', [RegisterController::class, 'verifyEmail']);
+    Route::post('/verify-email', [RegisterController::class, 'verifyEmail']);
 
     # Login
     Route::post('login', [LoginController::class, 'login']);

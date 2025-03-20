@@ -7,7 +7,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Mail\VerifyEmail;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
@@ -17,8 +17,8 @@ class RegisterController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        // create new token
-        $token = Str::random(64);
+        // create 6-digit verification code
+        $code = sprintf('%06d', mt_rand(0, 999999));
 
         $user = User::create([
             'name' => $request->first_name . ' ' . $request->last_name,
@@ -27,7 +27,7 @@ class RegisterController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'dob' => $request->dob,
-            'email_verification_token' => $token,
+            'email_verification_token' => $code,
             'email_verified_at' => null,
             'is_active' => false,
         ]);
@@ -50,23 +50,27 @@ class RegisterController extends Controller
             return error('Email already verified!');
         }
 
-        $user->email_verification_token = Str::random(64);
+        // Generate new 6-digit verification code
+        $code = sprintf('%06d', mt_rand(0, 999999));
+
+        $user->email_verification_token = $code;
         $user->email_verified_at = null;
         $user->is_active = false; // Deactivate the user before sending the verification email
         $user->save();
 
-        // send verification email ** need to add job
+        // send verification email
         Mail::to($user->email)->queue(new VerifyEmail($user));
 
         return success(null, 'Verification email sent successfully.');
     }
 
-    public function verifyEmail($token)
+    public function verifyEmail(Request $request)
     {
-        $user = User::where('email_verification_token', $token)->first();
+        $code = $request->code;
+        $user = User::where('email_verification_token', $code)->first();
 
         if (!$user) {
-            return error('Invalid verification token!');
+            return error('Invalid verification code!');
         }
 
         $user->email_verification_token = null;

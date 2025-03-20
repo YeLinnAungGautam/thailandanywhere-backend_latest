@@ -14,14 +14,16 @@
             padding: 20px;
         }
 
-        .button {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white !important;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+        .verification-code {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-align: center;
+            padding: 20px;
             margin: 20px 0;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            color: #333;
         }
 
         .footer {
@@ -35,20 +37,19 @@
 <body>
     <h2>Hello {{ $user->first_name }},</h2>
 
-    <p>Thank you for registering with our application. Please click the button below to verify your email address:</p>
+    <p>Thank you for registering with our application. Please use the verification code below to verify your email
+        address:</p>
 
-    <a href="{{ $verificationUrl }}" class="button">Verify Email Address</a>
+    <div class="verification-code">{{ $verificationCode }}</div>
 
-    <p>If the button doesn't work, copy and paste the following URL into your browser:</p>
+    <p>Enter this code in the email verification page to complete your registration.</p>
 
-    <p>{{ $verificationUrl }}</p>
-
-    <p>This verification link will expire in 24 hours.</p>
+    <p>This verification code will expire in 24 hours.</p>
 
     <p>If you did not create an account, no further action is required.</p>
 
     <div class="footer">
-        <p>Regards,<br>Your Application Team</p>
+        <p>Regards,<br>Thanywhere Application Team</p>
     </div>
 </body>
 
