@@ -64,6 +64,7 @@ class RegisterController extends Controller
     // For POST request
     public function resendVerificationEmail(Request $request)
     {
+        info('resendVerificationEmail');
         $request->validate([
             'email' => 'required|email'
         ]);
@@ -102,7 +103,7 @@ class RegisterController extends Controller
         if (!$user) {
             return error('Invalid verification code!');
         }
-
+        info('verifyEmail');
         $user->email_verification_token = null;
         $user->email_verified_at = Carbon::now();
         $user->is_active = true; // Activate the user after email verification
