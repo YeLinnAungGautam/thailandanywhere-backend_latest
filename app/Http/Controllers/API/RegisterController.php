@@ -64,6 +64,7 @@ class RegisterController extends Controller
     // For POST request
     public function resendVerificationEmail(Request $request)
     {
+        info('resendVerificationEmail');
         $request->validate([
             'email' => 'required|email'
         ]);
@@ -96,7 +97,11 @@ class RegisterController extends Controller
 
     public function verifyEmail(Request $request)
     {
-        $code = $request->code;
+        $request->validate([
+            'verification_code' => 'required|numeric|digits:6'
+        ]);
+
+        $code = $request->verification_code;
         $user = User::where('email_verification_token', $code)->first();
 
         if (!$user) {
