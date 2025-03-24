@@ -28,4 +28,20 @@ class BookingController extends Controller
 
         return success(new BookingResource($find), 'Booking Detail');
     }
+
+    public function store(Request $request, $id){
+        $booking = Booking::find($id);
+        if (!$booking) {
+            return failedMessage('Booking not found');
+        }
+
+        $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $booking->user_id = $request->user_id;
+        $booking->save();
+
+        return success(new BookingResource($booking), 'Booking Add User successfully');
+    }
 }
