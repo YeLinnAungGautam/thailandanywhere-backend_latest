@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PrivateVanTourController;
 use App\Http\Controllers\Admin\ProductAddonController;
 use App\Http\Controllers\Admin\ProductCategoryController;
+use App\Http\Controllers\Admin\ProductReportController;
 use App\Http\Controllers\Admin\ProductSubCategoryController;
 use App\Http\Controllers\Admin\ProductTagController;
 use App\Http\Controllers\Admin\ReportController;
@@ -97,8 +98,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('report-by-payment-method', [DashboardController::class, 'reportByPaymentMethod']);
     Route::get('report-by-payment-status', [DashboardController::class, 'reportByPaymentStatus']);
     Route::get('report-by-payment-and-product', [DashboardController::class, 'reportByPaymentAndProduct']);
-
     // Route::get('')
+
+    Route::get('/reports/dashboard-sales', [ProductReportController::class, 'getDailyProductSalesDB']);
+    Route::get('/product-sales-report', [ProductReportController::class, 'getTopProductsByType']);
+    Route::get('/product-sales-report-by-month', [ProductReportController::class, 'getMonthlyTopProductsByType']);
 
     Route::get('sales-by-agent', [DashboardController::class, 'salesByAgentReport']);
     Route::get('unpaid-bookings', [DashboardController::class, 'getUnpaidBooking']);
