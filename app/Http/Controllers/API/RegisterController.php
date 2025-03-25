@@ -98,14 +98,20 @@ class RegisterController extends Controller
     public function verifyEmail(Request $request)
     {
         $request->validate([
-            'verification_code' => 'required|numeric|digits:6'
+            'verification_code' => 'required|numeric|digits:6',
+            'email' => 'required|email' // Add email validation
         ]);
 
         $code = $request->verification_code;
-        $user = User::where('email_verification_token', $code)->first();
+        $email = $request->email;
+
+        // Find user with both the correct email and verification code
+        $user = User::where('email', $email)
+                    ->where('email_verification_token', $code)
+                    ->first();
 
         if (!$user) {
-            return error('Invalid verification code!');
+            return error('Invalid verification code or email!');
         }
 
         $user->email_verification_token = null;
