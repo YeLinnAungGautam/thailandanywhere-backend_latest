@@ -107,5 +107,6 @@ Route::group([], function () {
         Route::get('bookings', [BookingController::class, 'index']);
         Route::get('bookings/{id}', [BookingController::class, 'show']);
         Route::post('bookings/{id}', [BookingController::class, 'store']);
+        Route::get('bookings/{id}/check-user', [BookingController::class, 'checkBookingHasUser']);
     });
 });
