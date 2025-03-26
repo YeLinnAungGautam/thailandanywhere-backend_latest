@@ -320,6 +320,8 @@ class ReservationController extends Controller
             'total_cost_price' => $request->total_cost_price ?? $find->total_cost_price,
             'payment_method' => $request->payment_method ?? $find->payment_method,
             'payment_status' => $request->payment_status ?? $find->payment_status,
+            'booking_status' => $request->booking_status ?? $find->booking_status,
+            'is_booking_request' => $request->is_booking_request ?? $find->is_booking_request,
             'exchange_rate' => $request->exchange_rate ?? $find->exchange_rate,
             // 'reservation_status' => $request->reservation_status ?? $find->reservation_status,
             'slip_code' => $request->slip_code ?? $find->slip_code,
