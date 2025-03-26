@@ -83,6 +83,7 @@ class BookingItemResource extends JsonResource
             'total_cost_price' => $this->total_cost_price,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
+            'booking_status' => $this->booking_status,
             'bank_name' => $this->bank_name,
             'cost' => $this->cost,
 

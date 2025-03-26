@@ -16,6 +16,8 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('send:reservation-report daily')->dailyAt('9:00');
         $schedule->command('send:reservation-report weekly')->weeklyOn(1, '9:00');
+
+        $schedule->command('users:delete-unverified')->everyFiveMinutes();
     }
 
     /**
