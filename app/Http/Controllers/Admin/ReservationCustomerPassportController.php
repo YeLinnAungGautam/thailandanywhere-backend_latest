@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -35,20 +36,23 @@ class ReservationCustomerPassportController extends Controller
     public function store(string $booking_item_id, Request $request)
     {
         $request->validate([
-            'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'name' => 'nullable',
+            'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'name' => 'required',
             'passport_number' => 'nullable',
             'dob' => 'nullable',
         ]);
 
         try {
-            $fileData = $this->uploads($request->file, 'passport/');
+            $fileData = null;
+            if ($request->hasFile('file')) {
+                $fileData = $this->uploads($request->file, 'passport/');
+            }
 
             $passport = ReservationCustomerPassport::create([
                 'booking_item_id' => $booking_item_id,
-                'file' => $fileData['fileName'],
+                'file' => $fileData ? $fileData['fileName'] : 'no-file.jpg',
                 'name' => $request->name,
-                'passport_number' => $request->passport_number,
+                'passport_number' => $request->passport_number ?? '-',
                 'dob' => $request->dob,
             ]);
 
@@ -62,7 +66,7 @@ class ReservationCustomerPassportController extends Controller
     {
         $request->validate([
             'file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'name' => 'nullable',
+            'name' => 'required',
             'passport_number' => 'nullable',
             'dob' => 'nullable',
         ]);
@@ -74,16 +78,24 @@ class ReservationCustomerPassportController extends Controller
                 return $this->error(null, 'File not found');
             }
 
+            $updateData = [
+                'name' => $request->name,
+            ];
+
             if ($request->hasFile('file')) {
                 $fileData = $this->uploads($request->file, 'files/');
+                $updateData['file'] = $fileData['fileName'];
             }
 
-            $passport->update([
-                'file' => $fileData['fileName'] ?? $passport->file,
-                'name' => $request->name ?? $passport->name,
-                'passport_number' => $request->passport_number ?? $passport->passport_number,
-                'dob' => $request->dob ?? $passport->dob,
-            ]);
+            if ($request->has('passport_number')) {
+                $updateData['passport_number'] = $request->passport_number ?: '-';
+            }
+
+            if ($request->has('dob')) {
+                $updateData['dob'] = $request->dob ? $request->dob : null;
+            }
+
+            $passport->update($updateData);
 
             return $this->success(new ReservationCustomerPassportResource($passport), 'File Updated');
         } catch (Exception $e) {
