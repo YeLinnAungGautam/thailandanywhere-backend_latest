@@ -686,6 +686,7 @@ class ReservationController extends Controller
             'mail_subject' => 'required',
             'mail_body' => 'required',
             'mail_tos' => 'required',
+            'email_type' => 'required|in:booking,expense',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
@@ -703,11 +704,14 @@ class ReservationController extends Controller
                     $request->mail_body,
                     $booking_item,
                     $attachments,
-                    $ccEmail // Pass the CC email address to the job
+                    $ccEmail, // Pass the CC email address to the job
+                    $request->email_type
                 ));
             }
 
-            return $this->success(null, 'Reservation notify email is successfully sent.', 200);
+            $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';
+
+            return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error($e);
 

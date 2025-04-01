@@ -22,12 +22,13 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     protected $mail_body;
     protected $booking_item;
     protected $ccEmail;
+    protected $email_type;
     public $attachments;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null, $ccEmail = null)
+    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null, $ccEmail = null, $email_type = 'booking')
     {
         $this->mail_to = $mail_to;
         $this->mail_subject = $mail_subject;
@@ -36,6 +37,7 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         $this->booking_item = $booking_item;
         $this->attachments = $attachments;
         $this->ccEmail = $ccEmail;
+        $this->email_type = $email_type;
     }
 
     /**
@@ -46,7 +48,11 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         Mail::to($this->getMails())->cc($this->ccEmail)
             ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
 
-        $this->booking_item->update(['is_booking_request' => true]);
+        if($this->email_type == 'booking'){
+            $this->booking_item->update(['is_booking_request' => true]);
+        }else if($this->email_type == 'expense'){
+            $this->booking_item->update(['is_expense_email_sent' => true]);
+        }
     }
 
     // public function getMails()
