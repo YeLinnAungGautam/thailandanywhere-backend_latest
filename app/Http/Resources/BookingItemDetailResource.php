@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\BookingItem;
 use App\Models\EntranceTicket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,13 +19,15 @@ class BookingItemDetailResource extends JsonResource
     {
         $total_cost = $this->getCostPrice() * $this->getQuantity();
         $sale_price = $this->amount;
+        $unpaidCount = $this->getEntranceTicketStats()['unpaid_count'];
+        $totalCount = $this->getEntranceTicketStats()['reservations_count'];
 
         $data = [
             'total_cost' => $total_cost,
             'bank_name' => $this->product->bank_name,
             'bank_account_number' => $this->product->bank_account_number,
             'account_name' => $this->product->account_name ?? '-',
-            'crm_id' => $this->booking->crm_id ,
+            'crm_id' => $this->booking->crm_id,
             'reservation_code' => $this->crm_id,
             'sale_price' => $sale_price,
             'sale_date' => $this->booking->booking_date,
@@ -41,7 +44,6 @@ class BookingItemDetailResource extends JsonResource
             'discount' => $this->discount ?? 0,
             'selling_price' => $this->selling_price,
             'quantity' => $this->quantity,
-
             'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : [],
             'total_cost_price' => $this->total_cost_price,
         ];
@@ -63,9 +65,35 @@ class BookingItemDetailResource extends JsonResource
 
         if ($this->product_type === EntranceTicket::class) {
             $data['entrance_ticket_variation_name'] = $this->variation->name ?? '-';
+            $data['unpaid_count'] = $unpaidCount;
+            $data['total_count'] = $totalCount;
         }
 
         return $data;
+    }
+
+    private function getEntranceTicketStats()
+    {
+        $today = Carbon::today();
+        $endDate = Carbon::today()->addDays(90);
+
+        // Count of unpaid entrance tickets for today and next 90 days
+        $unpaidCount = BookingItem::where('product_type', EntranceTicket::class)
+            ->where('payment_status', '!=', 'paid')
+            ->whereDate('service_date', '>=', $today)
+            ->whereDate('service_date', '<=', $endDate)
+            ->count();
+
+        // Count of all entrance ticket reservations for today and next 90 days
+        $reservationsCount = BookingItem::where('product_type', EntranceTicket::class)
+            ->whereDate('service_date', '>=', $today)
+            ->whereDate('service_date', '<=', $endDate)
+            ->count();
+
+        return [
+            'unpaid_count' => $unpaidCount,
+            'reservations_count' => $reservationsCount
+        ];
     }
 
     private function getCostPrice()
