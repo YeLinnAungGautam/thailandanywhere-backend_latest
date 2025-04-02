@@ -40,15 +40,22 @@ class EntranceTicketResource extends JsonResource
             'variations' => $this->getVariations(),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
             'contacts' => HotelContractResource::collection($this->contracts),
-            'created_at' => $this->created_at->format('d-m-Y H:i:s'),
-            'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-            'lowest_variation_price' => $this->variations->where('is_add_on', false)->sortBy('price')->first()->price ?? 0,
-            'lowest_walk_in_price' => $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
+            // 'created_at' => $this->created_at->format('d-m-Y H:i:s'),
+            // 'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
+            'lowest_variation_price' => $this->whenLoaded('variations') && $this->variations->where('is_add_on', false)->count() > 0
+                ? $this->variations->where('is_add_on', false)->sortBy('price')->first()->price ?? 0
+                : 0,
+            'lowest_walk_in_price' => $this->whenLoaded('variations') && $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->count() > 0
+                ? $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0
+                : 0,
             'total_booking_count' => $this->bookingItems()->count(),
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
             'email' => is_null($this->email) ? null : json_decode($this->email),
             'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
             'contract_name' => $this->contract_name,
+
+            'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
         ];
     }
 

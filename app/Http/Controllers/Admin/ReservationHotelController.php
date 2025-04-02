@@ -23,6 +23,13 @@ class ReservationHotelController extends Controller
 {
     use ImageManager;
     use HttpResponses;
+
+    // Define allowed product types
+    protected $allowedProductTypes = [
+        'App\Models\Hotel',
+        'App\Models\EntranceTicket'
+    ];
+
     /**
      * Get hotel reservations grouped by CRM ID
      *
@@ -34,35 +41,47 @@ class ReservationHotelController extends Controller
         $limit = $request->query('limit', 10);
         $page = $request->input('page', 1);
 
+        // Get product type from request or use default
+        $productType = $request->product_type ?? 'App\Models\Hotel';
+
+        // Ensure product type is allowed
+        if (!in_array($productType, $this->allowedProductTypes)) {
+            $productType = 'App\Models\Hotel'; // Default to Hotel if invalid
+        }
+
         // Use a single query with JOIN instead of getting IDs first
         $query = Booking::query()
-            ->join('booking_items', function ($join) {
+            ->join('booking_items', function ($join) use ($productType) {
                 $join->on('bookings.id', '=', 'booking_items.booking_id')
-                    ->where('booking_items.product_type', 'App\Models\Hotel');
+                    ->where('booking_items.product_type', $productType);
             })
             ->select('bookings.*')
             ->distinct() // Ensure we don't get duplicate bookings
-            ->whereHas('items', function($query) use ($request) {
-                $query->where('product_type', 'App\Models\Hotel')
-                    ->when($request->hotel_name, function($q) use ($request) {
-                        $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+            ->whereHas('items', function($query) use ($request, $productType) {
+                $query->where('product_type', $productType)
+                    ->when($request->hotel_name, function($q) use ($request, $productType) {
+                        if ($productType == 'App\Models\Hotel') {
+                            $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                        } elseif ($productType == 'App\Models\EntranceTicket') {
+                            $q->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                        }
                     });
             })
             ->with([
                 'customer:id,name,email', // Select only needed customer fields
-                // Only load hotel items and select all necessary fields
-                'items' => function($query) {
-                    $query->where('product_type', 'App\Models\Hotel');
+                // Only load items of the selected product type
+                'items' => function($query) use ($productType) {
+                    $query->where('product_type', $productType);
                     // Don't limit fields as BookingItemResource.php needs all fields
                 },
                 'items.product:id,name', // Select only needed product fields
             ])
-            ->when($request->booking_daterange, function ($query) use ($request) {
+            ->when($request->booking_daterange, function ($query) use ($request, $productType) {
                 $dates = explode(',', $request->booking_daterange);
                 // Filter bookings that have at least one item with service_date within the given range
-                $query->whereHas('items', function($q) use ($dates) {
-                    $q->where('product_type', 'App\Models\Hotel')
-                    ->whereBetween('service_date', $dates);
+                $query->whereHas('items', function($q) use ($dates, $productType) {
+                    $q->where('product_type', $productType)
+                      ->whereBetween('service_date', $dates);
                 });
             })
             ->when($request->user_id, function ($query) use ($request) {
@@ -82,9 +101,6 @@ class ReservationHotelController extends Controller
             });
         });
 
-        // REMOVED customer_payment_status and expense_status filters from the database query
-        // We'll apply these filters after grouping
-
         // Apply user role restrictions
         if (!(Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor')) {
             $query->where(function ($q) {
@@ -94,9 +110,9 @@ class ReservationHotelController extends Controller
         }
 
         // Calculate totals for metadata using efficient queries
-        $totalHotelAmount = DB::table('booking_items')
+        $totalProductAmount = DB::table('booking_items')
             ->whereIn('booking_id', $query->clone()->pluck('bookings.id'))
-            ->where('product_type', 'App\Models\Hotel')
+            ->where('product_type', $productType)
             ->sum('amount');
 
         // You may need to adjust this method call based on your actual implementation
@@ -240,6 +256,9 @@ class ReservationHotelController extends Controller
             ['path' => \Illuminate\Support\Facades\Request::url()]
         );
 
+        // Create a more appropriate title based on product type
+        $titlePrefix = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+
         // Create the resource collection with additional data
         $response = (new \Illuminate\Http\Resources\Json\AnonymousResourceCollection(
             $paginator,
@@ -247,30 +266,40 @@ class ReservationHotelController extends Controller
         ))->additional([
             'meta' => [
                 'total_page' => (int)ceil($total / $perPage),
-                'total_amount' => $totalHotelAmount,
+                'total_amount' => $totalProductAmount,
                 'total_expense_amount' => $totalExpenseAmount,
+                'product_type' => $productType
             ],
         ]);
 
-        return $this->success($response->response()->getData(), 'Hotel Reservations Grouped By CRM ID');
+        return $this->success($response->response()->getData(), $titlePrefix . ' Reservations Grouped By CRM ID');
     }
 
     /**
-     * Get detailed hotel reservation by booking ID
+     * Get detailed reservation by booking ID
      *
      * @param Request $request
      * @param int $id - The booking ID
+     * @param int|null $product_id - Optional product ID filter
      * @return JsonResponse
      */
     public function getHotelReservationDetail(Request $request, $id, $product_id = null)
     {
+        // Get product type from request or use default
+        $productType = $request->product_type ?? 'App\Models\Hotel';
+
+        // Ensure product type is allowed
+        if (!in_array($productType, $this->allowedProductTypes)) {
+            $productType = 'App\Models\Hotel'; // Default to Hotel if invalid
+        }
+
         // Query for the specific booking by ID
         $booking = Booking::query()
             ->with([
                 'customer',
-                // Only load hotel items, filter by product_id if provided
-                'items' => function($query) use ($product_id) {
-                    $query->where('product_type', 'App\Models\Hotel');
+                // Only load specified product type items, filter by product_id if provided
+                'items' => function($query) use ($product_id, $productType) {
+                    $query->where('product_type', $productType);
                     if ($product_id) {
                         $query->where('product_id', $product_id);
                     }
@@ -282,7 +311,7 @@ class ReservationHotelController extends Controller
 
         // If no booking found, return error
         if (!$booking) {
-            return $this->error('No hotel reservation found for the provided booking ID', 404);
+            return $this->error('No reservation found for the provided booking ID', 404);
         }
 
         // Apply user role restrictions
@@ -298,8 +327,8 @@ class ReservationHotelController extends Controller
             $relatedBookings = Booking::query()
                 ->with([
                     'customer',
-                    'items' => function($query) use ($product_id) {
-                        $query->where('product_type', 'App\Models\Hotel');
+                    'items' => function($query) use ($product_id, $productType) {
+                        $query->where('product_type', $productType);
                         if ($product_id) {
                             $query->where('product_id', $product_id);
                         }
@@ -335,11 +364,22 @@ class ReservationHotelController extends Controller
             ];
         }
 
-        return $this->success($result, 'Hotel Reservation Detail');
+        // Create a more appropriate title based on product type
+        $titlePrefix = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+
+        return $this->success($result, $titlePrefix . ' Reservation Detail');
     }
 
-    public function copyBookingItemsGroup(string $bookingId, string $product_id = null)
+    public function copyBookingItemsGroup(Request $request, string $bookingId, string $product_id = null)
     {
+        // Get product type from request or use default
+        $productType = $request->product_type ?? 'App\Models\Hotel';
+
+        // Ensure product type is allowed
+        if (!in_array($productType, $this->allowedProductTypes)) {
+            $productType = 'App\Models\Hotel'; // Default to Hotel if invalid
+        }
+
         // Find the booking
         $booking = Booking::find($bookingId);
 
@@ -349,8 +389,8 @@ class ReservationHotelController extends Controller
 
         // Load booking items with related entities, filtered by product_id if provided
         $booking->load([
-            'items' => function ($query) use ($product_id) {
-                $query->where('product_type', 'App\Models\Hotel');
+            'items' => function ($query) use ($product_id, $productType) {
+                $query->where('product_type', $productType);
                 if ($product_id) {
                     $query->where('product_id', $product_id);
                 }
@@ -360,9 +400,10 @@ class ReservationHotelController extends Controller
             'items.variation'
         ]);
 
-        // Check if there are any hotel items
+        // Check if there are any items of the specified product type
         if ($booking->items->isEmpty()) {
-            return $this->error(null, 'No hotel items found in this booking', 404);
+            $typeName = $productType == 'App\Models\EntranceTicket' ? 'entrance ticket' : 'hotel';
+            return $this->error(null, "No {$typeName} items found in this booking", 404);
         }
 
         // Transform each booking item using existing resource
@@ -375,8 +416,8 @@ class ReservationHotelController extends Controller
         $relatedItems = [];
         if ($booking->crm_id) {
             $relatedBookings = Booking::with([
-                'items' => function ($query) use ($product_id) {
-                    $query->where('product_type', 'App\Models\Hotel');
+                'items' => function ($query) use ($product_id, $productType) {
+                    $query->where('product_type', $productType);
                     if ($product_id) {
                         $query->where('product_id', $product_id);
                     }
@@ -407,19 +448,31 @@ class ReservationHotelController extends Controller
             'selling_price' => $booking->sub_total,
             'items' => $detailedItems,
             'related_items' => $relatedItems,
-            'summary' => [
+            'product_type' => $productType,
+        ];
+
+        // Add summary with appropriate calculation based on product type
+        if ($productType == 'App\Models\Hotel') {
+            $responseData['summary'] = [
                 'total_rooms' => $booking->items->sum('quantity'),
                 'total_nights' => $booking->items->sum(function ($item) {
-                    if ($item->product_type == 'App\Models\Hotel' && $item->checkin_date && $item->checkout_date) {
+                    if ($item->checkin_date && $item->checkout_date) {
                         return (int) Carbon::parse($item->checkin_date)->diff(Carbon::parse($item->checkout_date))->format("%a") * $item->quantity;
                     }
                     return 0;
                 }),
                 'total_amount' => $booking->items->sum('amount'),
                 'total_cost' => $booking->items->sum('total_cost_price')
-            ]
-        ];
+            ];
+        } else {
+            $responseData['summary'] = [
+                'total_tickets' => $booking->items->sum('quantity'),
+                'total_amount' => $booking->items->sum('amount'),
+                'total_cost' => $booking->items->sum('total_cost_price')
+            ];
+        }
 
-        return $this->success($responseData, 'Booking Items Group Details');
+        $typeName = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+        return $this->success($responseData, $typeName . ' Booking Items Group Details');
     }
 }

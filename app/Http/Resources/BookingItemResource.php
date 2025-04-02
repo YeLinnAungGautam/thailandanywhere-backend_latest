@@ -146,6 +146,7 @@ class BookingItemResource extends JsonResource
             'cancellation' => $this->cancellation,
             'addon' => $this->addon ? json_decode($this->addon) : null,
             'is_booking_request' => $this->is_booking_request,
+            'is_expense_email_sent' => $this->is_expense_email_sent,
         ];
     }
 }

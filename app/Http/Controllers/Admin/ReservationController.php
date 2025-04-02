@@ -322,6 +322,7 @@ class ReservationController extends Controller
             'payment_status' => $request->payment_status ?? $find->payment_status,
             'booking_status' => $request->booking_status ?? $find->booking_status,
             'is_booking_request' => $request->is_booking_request ?? $find->is_booking_request,
+            'is_expense_email_sent' => $request->is_expense_email_sent ?? $find->is_expense_email_sent,
             'exchange_rate' => $request->exchange_rate ?? $find->exchange_rate,
             // 'reservation_status' => $request->reservation_status ?? $find->reservation_status,
             'slip_code' => $request->slip_code ?? $find->slip_code,
@@ -686,6 +687,7 @@ class ReservationController extends Controller
             'mail_subject' => 'required',
             'mail_body' => 'required',
             'mail_tos' => 'required',
+            'email_type' => 'required|in:booking,expense',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
@@ -703,11 +705,14 @@ class ReservationController extends Controller
                     $request->mail_body,
                     $booking_item,
                     $attachments,
-                    $ccEmail // Pass the CC email address to the job
+                    $ccEmail, // Pass the CC email address to the job
+                    $request->email_type
                 ));
             }
 
-            return $this->success(null, 'Reservation notify email is successfully sent.', 200);
+            $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';
+
+            return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error($e);
 
