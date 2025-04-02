@@ -49,6 +49,9 @@ class EntranceTicketResource extends JsonResource
             'email' => is_null($this->email) ? null : json_decode($this->email),
             'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
             'contract_name' => $this->contract_name,
+
+            'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
         ];
     }
 
