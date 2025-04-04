@@ -345,8 +345,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations/{reservation_id}/booking-confirm-letters', BookingConfirmLetterController::class);
     Route::apiResource('reservations/{reservation_id}/receipt-images', ReservationExpenseReceiptController::class);
     Route::apiResource('bookings/{booking_id}/receipts', BookingReceiptController::class);
+
+    # Expense Mail & Booking request methods
     Route::apiResource('reservations/{reservation_id}/expense-mails', ReservationExpenseMailController::class);
     Route::apiResource('reservations/{reservation_id}/booking-request', ReservationBookingRequestController::class);
+    Route::delete('reservations/{reservation_id}/booking-request/{id}', [ReservationBookingRequestController::class, 'destroy']);
+    Route::delete('reservations/{reservation_id}/expense-mails/{id}', [ReservationExpenseMailController::class, 'destroy']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

@@ -18,7 +18,7 @@ class ReservationExpenseMailResource extends JsonResource
         return [
             'id' => $this->id,
             'booking_item_id' => $this->booking_item_id,
-            'file' => $this->file ? Storage::url('images/' . $this->file) : null,
+            'file' => $this->file ? Storage::url('files/' . $this->file) : null,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];
