@@ -62,6 +62,14 @@ class BookingItem extends Model
         return $this->hasOne(ReservationInfo::class, 'booking_item_id');
     }
 
+    public function requestProves(){
+        return $this->hasMany(ReservationBookingRequest::class, 'booking_item_id');
+    }
+
+    public function expenseMail(){
+        return $this->hasMany(ReservationExpenseMail::class, 'booking_item_id');
+    }
+
     public function reservationCarInfo()
     {
         return $this->hasOne(ReservationCarInfo::class, 'booking_item_id');
