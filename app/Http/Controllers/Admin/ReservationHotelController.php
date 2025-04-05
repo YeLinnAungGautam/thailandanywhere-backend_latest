@@ -65,13 +65,37 @@ class ReservationHotelController extends Controller
                         } elseif ($productType == 'App\Models\EntranceTicket') {
                             $q->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                         }
+                    })
+                    // Add invoice status search in booking_items
+                    ->when($request->invoice_status, function($q) use ($request) {
+                        if ($request->invoice_status === 'not_receive') {
+                            $q->where(function($subquery) {
+                                $subquery->whereNull('booking_items.booking_status')
+                                        ->orWhere('booking_items.booking_status', '')
+                                        ->orWhere('booking_items.booking_status', 'not_receive');
+                            });
+                        } else {
+                            $q->where('booking_items.booking_status', $request->invoice_status);
+                        }
                     });
             })
             ->with([
                 'customer:id,name,email', // Select only needed customer fields
                 // Only load items of the selected product type
-                'items' => function($query) use ($productType) {
-                    $query->where('product_type', $productType);
+                'items' => function($query) use ($productType, $request) {
+                    $query->where('product_type', $productType)
+                          // Also filter items by invoice status if provided
+                          ->when($request->invoice_status, function($q) use ($request) {
+                              if ($request->invoice_status === 'not_receive') {
+                                  $q->where(function($subquery) {
+                                      $subquery->whereNull('booking_status')
+                                              ->orWhere('booking_status', '')
+                                              ->orWhere('booking_status', 'not_receive');
+                                  });
+                              } else {
+                                  $q->where('booking_status', $request->invoice_status);
+                              }
+                          });
                     // Don't limit fields as BookingItemResource.php needs all fields
                 },
                 'items.product:id,name', // Select only needed product fields
@@ -113,6 +137,17 @@ class ReservationHotelController extends Controller
         $totalProductAmount = DB::table('booking_items')
             ->whereIn('booking_id', $query->clone()->pluck('bookings.id'))
             ->where('product_type', $productType)
+            ->when($request->invoice_status, function($q) use ($request) {
+                if ($request->invoice_status === 'not_receive') {
+                    $q->where(function($subquery) {
+                        $subquery->whereNull('booking_status')
+                                ->orWhere('booking_status', '')
+                                ->orWhere('booking_status', 'not_receive');
+                    });
+                } else {
+                    $q->where('booking_status', $request->invoice_status);
+                }
+            })
             ->sum('amount');
 
         // You may need to adjust this method call based on your actual implementation
