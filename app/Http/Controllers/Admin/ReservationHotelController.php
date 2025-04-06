@@ -356,6 +356,11 @@ class ReservationHotelController extends Controller
             }
         }
 
+        // Get the total items count (without filters)
+        $totalItemsCount = DB::table('booking_items')
+            ->where('booking_id', $id)
+            ->count();
+
         // Find other bookings with the same CRM ID to group them
         $relatedBookings = null;
         if ($booking->crm_id) {
@@ -378,6 +383,7 @@ class ReservationHotelController extends Controller
         // Prepare the result with grouped information
         $result = [
             'booking' => new ReservationGroupByResource($booking),
+            'total_items_count' => $totalItemsCount, // Add total items count here
             'group_info' => null
         ];
 
