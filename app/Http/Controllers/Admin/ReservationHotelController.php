@@ -81,9 +81,17 @@ class ReservationHotelController extends Controller
             })
             ->with([
                 'customer:id,name,email', // Select only needed customer fields
-                // Only load items of the selected product type
+                // Only load items of the selected product type and apply the hotel_name filter to the relationship
                 'items' => function($query) use ($productType, $request) {
                     $query->where('product_type', $productType)
+                          // Filter items by hotel_name if provided
+                          ->when($request->hotel_name, function($q) use ($request, $productType) {
+                              if ($productType == 'App\Models\Hotel') {
+                                  $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                              } elseif ($productType == 'App\Models\EntranceTicket') {
+                                  $q->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                              }
+                          })
                           // Also filter items by invoice status if provided
                           ->when($request->invoice_status, function($q) use ($request) {
                               if ($request->invoice_status === 'not_receive') {
@@ -133,22 +141,34 @@ class ReservationHotelController extends Controller
             });
         }
 
-        // Calculate totals for metadata using efficient queries
-        $totalProductAmount = DB::table('booking_items')
+        // Calculate totals for metadata using efficient queries - adjust to include hotel_name filter
+        $totalProductAmountQuery = DB::table('booking_items')
             ->whereIn('booking_id', $query->clone()->pluck('bookings.id'))
-            ->where('product_type', $productType)
-            ->when($request->invoice_status, function($q) use ($request) {
-                if ($request->invoice_status === 'not_receive') {
-                    $q->where(function($subquery) {
-                        $subquery->whereNull('booking_status')
-                                ->orWhere('booking_status', '')
-                                ->orWhere('booking_status', 'not_receive');
-                    });
-                } else {
-                    $q->where('booking_status', $request->invoice_status);
-                }
-            })
-            ->sum('amount');
+            ->where('product_type', $productType);
+
+        // Apply hotel_name filter to the total amount calculation
+        if ($request->hotel_name) {
+            if ($productType == 'App\Models\Hotel') {
+                $totalProductAmountQuery->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+            } elseif ($productType == 'App\Models\EntranceTicket') {
+                $totalProductAmountQuery->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+            }
+        }
+
+        // Apply invoice status filter
+        if ($request->invoice_status) {
+            if ($request->invoice_status === 'not_receive') {
+                $totalProductAmountQuery->where(function($subquery) {
+                    $subquery->whereNull('booking_status')
+                            ->orWhere('booking_status', '')
+                            ->orWhere('booking_status', 'not_receive');
+                });
+            } else {
+                $totalProductAmountQuery->where('booking_status', $request->invoice_status);
+            }
+        }
+
+        $totalProductAmount = $totalProductAmountQuery->sum('amount');
 
         // You may need to adjust this method call based on your actual implementation
         $totalExpenseAmount = 0;
@@ -202,13 +222,16 @@ class ReservationHotelController extends Controller
             $recentBooking = $crmBookings->sortByDesc('created_at')->first();
             $customerPaymentStatus = $recentBooking->payment_status ?? 'not_paid';
 
+            // Calculate total amount only for the filtered items
+            $totalAmount = $crmBookings->sum(function ($booking) {
+                return $booking->items->sum('amount');
+            });
+
             $results->push([
                 'crm_id' => $crmId,
                 'latest_service_date' => $latestServiceDate,
                 'total_bookings' => $crmBookings->count(),
-                'total_amount' => $crmBookings->sum(function ($booking) {
-                    return $booking->items->sum('amount');
-                }),
+                'total_amount' => $totalAmount,
                 'customer_payment_status' => $customerPaymentStatus,
                 'expense_status' => $expenseStatus,
                 'bookings' => BookingGroupResource::collection($processedBookings),

@@ -14,7 +14,9 @@ class ChartOfAccount extends Model
         'account_name',
         'account_class_id',
         'account_head_id',
-        'product_type'
+        'product_type',
+        'connection',
+        'connection_detail'
     ];
 
     public function accountClass()

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AccountClassController;
+use App\Http\Controllers\Admin\AccountHeadController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminMetaController;
 use App\Http\Controllers\Admin\AirlineController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChartOfAccountController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -351,6 +354,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations/{reservation_id}/booking-request', ReservationBookingRequestController::class);
     Route::delete('reservations/{reservation_id}/booking-request/{id}', [ReservationBookingRequestController::class, 'destroy']);
     Route::delete('reservations/{reservation_id}/expense-mails/{id}', [ReservationExpenseMailController::class, 'destroy']);
+
+    # Account Head & Class & Chart of Account
+    Route::apiResource('account-heads', AccountHeadController::class);
+    Route::apiResource('account-classes', AccountClassController::class);
+    Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

@@ -9,10 +9,15 @@ class AccountClass extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name','code','account_head_id'];
 
     public function accounts()
     {
         return $this->hasMany(ChartOfAccount::class);
+    }
+
+    public function accountHead()
+    {
+        return $this->belongsTo(AccountHead::class);
     }
 }

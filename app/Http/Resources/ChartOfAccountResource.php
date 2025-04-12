@@ -21,6 +21,8 @@ class ChartOfAccountResource extends JsonResource
             'account_class' => new AccountClassResource($this->accountClass),
             'account_head' => new AccountHeadResource($this->accountHead),
             'product_type' => $this->product_type,
+            'connection' => $this->connection,
+            'connection_detail' => $this->connection_detail,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
