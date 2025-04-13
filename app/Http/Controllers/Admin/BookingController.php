@@ -36,23 +36,33 @@ class BookingController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $crmId = $request->query('crm_id');
-
         $filter = $request->query('filter');
         $paymentStatus = $request->query('status');
-
+        $connectionStatus = $request->query('connection_status'); // New filter for connected/not_connected
+        $sortBy = $request->query('sort_by', 'created_at'); // New sorting parameter
+        $sortDirection = $request->query('sort_direction', 'desc'); // Direction of sorting
 
         $query = Booking::query()
-            ->when($request->sale_date_order_by, function ($q) use ($request) {
-                $order_by = $request->sale_date_order_by == 'desc' ? 'desc' : 'asc';
-                $q->orderBy('booking_date', $order_by);
-            })
+            // ->when($request->sale_date_order_by, function ($q) use ($request) {
+            //     $order_by = $request->sale_date_order_by == 'desc' ? 'desc' : 'asc';
+            //     $q->orderBy('booking_date', $order_by);
+            // })
             ->when($request->inclusive_only, function ($q) use ($request) {
                 $is_inclusive = $request->inclusive_only ? 1 : 0;
                 $q->where('is_inclusive', $is_inclusive);
             })
             ->when($request->created_by, fn ($query) => $query->where('created_by', $request->created_by));
 
+        // Connection status filter (connected/not_connected)
+        if ($connectionStatus) {
+            if ($connectionStatus === 'connected') {
+                $query->has('user');  // Check if the relationship exists
+            } elseif ($connectionStatus === 'not_connected') {
+                $query->doesntHave('user');  // Check if the relationship doesn't exist
+            }
+        }
 
+        // Search filter
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
         }
@@ -61,23 +71,36 @@ class BookingController extends Controller
             $query->where('crm_id', 'LIKE', "%{$crmId}%");
         }
 
+        // Booking date range filter
+        if ($request->has('booking_date_from') && $request->has('booking_date_to')) {
+            $query->whereBetween('booking_date', [
+                $request->input('booking_date_from'),
+                $request->input('booking_date_to')
+            ]);
+        } elseif ($request->has('booking_date_from')) {
+            $query->whereDate('booking_date', '>=', $request->input('booking_date_from'));
+        } elseif ($request->has('booking_date_to')) {
+            $query->whereDate('booking_date', '<=', $request->input('booking_date_to'));
+        }
+
         if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
             if ($filter && $filter !== "") {
                 if ($filter === 'all') {
+                    // No filter needed
                 } elseif ($filter === 'past') {
                     $query->where('is_past_info', true)->whereNotNull('past_user_id');
                 } elseif ($filter === 'current') {
                     $query->whereNull('past_user_id');
                 }
             }
-
         } else {
-
-            $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+            $query->where(function($q) {
+                $q->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+            });
 
             if ($filter && $filter !== "") {
                 if ($filter === 'all') {
-                    $query->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id());
+                    // Already filtered by created_by or past_user_id
                 } elseif ($filter === 'past') {
                     $query->where('is_past_info', true)->where('past_user_id', Auth::id())->whereNotNull('past_user_id');
                 } elseif ($filter === 'current') {
@@ -105,16 +128,32 @@ class BookingController extends Controller
             $query->whereDate('booking_date', $request->input('sale_date'));
         }
 
-
-        $data = $query->paginate($limit);
-
+        // Apply payment status filter before pagination
         if ($paymentStatus && $paymentStatus !== "all") {
-            $query = $query->where('payment_status', $paymentStatus);
-            $data = $query->paginate($limit);
+            $query->where('payment_status', $paymentStatus);
         }
 
+        // Apply sorting with the new requirements
+        switch ($sortBy) {
+            case 'name':
+                // Sort by customer.name
+                $query->join('customers', 'bookings.customer_id', '=', 'customers.id')
+                      ->orderBy('customers.name', $sortDirection)
+                      ->select('bookings.*'); // Important to select only booking fields to avoid column ambiguity
+                break;
+            case 'booking_date':
+                $query->orderBy('booking_date', $sortDirection);
+                break;
+            case 'amount':
+                // Sort by grand_total numerically (cast to decimal)
+                $query->orderByRaw("CAST(grand_total AS DECIMAL(10,2)) {$sortDirection}");
+                break;
+            default:
+                // Default sort by created_at
+                $query->orderBy('created_at', $sortDirection);
+        }
 
-        $query->orderBy('created_at', 'desc');
+        $data = $query->paginate($limit);
 
         return $this->success(BookingResource::collection($data)
             ->additional([

@@ -43,10 +43,14 @@ class AccountClassController extends Controller
     {
         $request->validate([
             'name'  => 'required|string|max:225',
+            'code' => 'required|string|max:225|unique:account_classes,code',
+            'account_head_id' => 'required|exists:account_heads,id',
         ]);
 
         $data = [
             'name' => $request->name,
+            'code' => $request->code,
+            'account_head_id' => $request->account_head_id,
         ];
 
         $save = AccountClass::create($data);
@@ -65,7 +69,8 @@ class AccountClassController extends Controller
 
         $data = [
             'name' => $request->name ?? $find->name,
-            'max_person' => $request->max_person ?? $find->max_person,
+            'code' => $request->code?? $find->code,
+            'account_head_id' => $request->account_head_id?? $find->account_head_id,
         ];
 
 

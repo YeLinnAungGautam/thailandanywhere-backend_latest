@@ -42,11 +42,13 @@ class ChartOfAccountController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'account_code' => 'required|string|max:255|unique:chart_of_accounts',
+            'account_code' => 'required|string|max:255|unique:chart_of_accounts,account_code',
             'account_name' => 'required|string|max:255',
             'account_class_id' => 'required|exists:account_classes,id',
             'account_head_id' => 'required|exists:account_heads,id',
             'product_type' => 'nullable|string|max:255',
+            'connection' => 'nullable|string|max:255',
+            'connection_detail' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -67,6 +69,8 @@ class ChartOfAccountController extends Controller
             'account_class_id' => $request->account_class_id,
             'account_head_id' => $request->account_head_id,
             'product_type' => $request->product_type,
+            'connection' => $request->connection,
+            'connection_detail' => $request->connection_detail,
         ]);
 
         return $this->success(new ChartOfAccountResource($account), 'Successfully created');
@@ -83,24 +87,14 @@ class ChartOfAccountController extends Controller
             return $this->error(null, 'Account not found', 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'account_code' => 'required|string|max:255|unique:chart_of_accounts,account_code,' . $id,
-            'account_name' => 'required|string|max:255',
-            'account_class_id' => 'required|exists:account_classes,id',
-            'account_head_id' => 'required|exists:account_heads,id',
-            'product_type' => 'nullable|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error($validator->errors(), 'Validation error');
-        }
-
         $account->update([
-            'account_code' => $request->account_code,
-            'account_name' => $request->account_name,
-            'account_class_id' => $request->account_class_id,
-            'account_head_id' => $request->account_head_id,
-            'product_type' => $request->product_type,
+            'account_code' => $request->account_code ?? $account->account_code,
+            'account_name' => $request->account_name ?? $account->account_name,
+            'account_class_id' => $request->account_class_id ?? $account->account_class_id,
+            'account_head_id' => $request->account_head_id ?? $account->account_head_id,
+            'product_type' => $request->product_type ?? $account->product_type,
+            'connection' => $request->connection ?? $account->connection,
+            'connection_detail' => $request->connection_detail ?? $account->connection_detail,
         ]);
 
         // Refresh account with relationships

@@ -65,7 +65,6 @@ class AccountHeadController extends Controller
 
         $data = [
             'name' => $request->name ?? $find->name,
-            'max_person' => $request->max_person ?? $find->max_person,
         ];
 
 
