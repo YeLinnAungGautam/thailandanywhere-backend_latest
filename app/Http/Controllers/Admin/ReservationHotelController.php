@@ -27,7 +27,8 @@ class ReservationHotelController extends Controller
     // Define allowed product types
     protected $allowedProductTypes = [
         'App\Models\Hotel',
-        'App\Models\EntranceTicket'
+        'App\Models\EntranceTicket',
+        'App\Models\PrivateVanTour'
     ];
 
     /**
@@ -64,6 +65,8 @@ class ReservationHotelController extends Controller
                             $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                         } elseif ($productType == 'App\Models\EntranceTicket') {
                             $q->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                        } elseif ($productType == 'App\Models\PrivateVanTour') {
+                            $q->whereRaw("EXISTS (SELECT 1 FROM private_van_tours WHERE booking_items.product_id = private_van_tours.id AND private_van_tours.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                         }
                     })
                     // Add invoice status search in booking_items
@@ -90,6 +93,8 @@ class ReservationHotelController extends Controller
                                   $q->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                               } elseif ($productType == 'App\Models\EntranceTicket') {
                                   $q->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+                              } elseif ($productType == 'App\Models\PrivateVanTour') {
+                                  $q->whereRaw("EXISTS (SELECT 1 FROM private_van_tours WHERE booking_items.product_id = private_van_tours.id AND private_van_tours.name LIKE ?)", ['%' . $request->hotel_name . '%']);
                               }
                           })
                           // Also filter items by invoice status if provided
@@ -152,6 +157,8 @@ class ReservationHotelController extends Controller
                 $totalProductAmountQuery->whereRaw("EXISTS (SELECT 1 FROM hotels WHERE booking_items.product_id = hotels.id AND hotels.name LIKE ?)", ['%' . $request->hotel_name . '%']);
             } elseif ($productType == 'App\Models\EntranceTicket') {
                 $totalProductAmountQuery->whereRaw("EXISTS (SELECT 1 FROM entrance_tickets WHERE booking_items.product_id = entrance_tickets.id AND entrance_tickets.name LIKE ?)", ['%' . $request->hotel_name . '%']);
+            } elseif ($productType == 'App\Models\PrivateVanTour') {
+                $totalProductAmountQuery->whereRaw("EXISTS (SELECT 1 FROM private_van_tours WHERE booking_items.product_id = private_van_tours.id AND private_van_tours.name LIKE ?)", ['%' . $request->hotel_name . '%']);
             }
         }
 
@@ -315,7 +322,7 @@ class ReservationHotelController extends Controller
         );
 
         // Create a more appropriate title based on product type
-        $titlePrefix = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+        $titlePrefix = $this->getProductTypeTitle($productType);
 
         // Create the resource collection with additional data
         $response = (new \Illuminate\Http\Resources\Json\AnonymousResourceCollection(
@@ -429,9 +436,264 @@ class ReservationHotelController extends Controller
         }
 
         // Create a more appropriate title based on product type
-        $titlePrefix = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+        $titlePrefix = $this->getProductTypeTitle($productType);
 
         return $this->success($result, $titlePrefix . ' Reservation Detail');
+    }
+
+    /**
+     * Get private van tour reservation details by booking ID
+     *
+     * @param Request $request
+     * @param int $id - The booking ID
+     * @return JsonResponse
+     */
+    /**
+     * Get private van tour reservation details by booking ID
+     *
+     * @param Request $request
+     * @param int $id - The booking ID
+     * @return JsonResponse
+     */
+    /**
+     * Get private van tour reservation details by booking ID with car booking information
+     *
+     * @param Request $request
+     * @param int $id - The booking ID
+     * @return JsonResponse
+     */
+    public function getPrivateVanTourReservationDetail(Request $request, $id)
+    {
+        // Set product type to PrivateVanTour
+        $productType = 'App\Models\PrivateVanTour';
+
+        // Query for the specific booking by ID
+        $booking = Booking::query()
+            ->with([
+                'customer',
+                // Load all PrivateVanTour items for this booking with necessary relationships
+                'items' => function($query) use ($productType) {
+                    $query->where('product_type', $productType);
+                },
+                'items.product',
+                'items.variation',
+                // Add car booking related relationships - ensure these match your actual model relationships
+                'items.reservationCarInfo',
+                'items.reservationCarInfo.supplier',
+                'items.reservationCarInfo.driverInfo',
+                'items.reservationCarInfo.driverInfo.driver',
+                'items.reservationCarInfo.driverInfo.driver.contact',
+                'items.reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+            ])
+            ->where('id', $id)
+            ->first();
+
+        // If no booking found, return error
+        if (!$booking) {
+            return $this->error('No reservation found for the provided booking ID', 404);
+        }
+
+        // Apply user role restrictions
+        if (!(Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor')) {
+            if ($booking->created_by !== Auth::id() && $booking->past_user_id !== Auth::id()) {
+                return $this->error('You do not have permission to view this booking', 403);
+            }
+        }
+
+        // Get the total items count of PrivateVanTour type
+        $totalItemsCount = DB::table('booking_items')
+            ->where('booking_id', $id)
+            ->where('product_type', $productType)
+            ->count();
+
+        // Find other bookings with the same CRM ID to group them
+        $relatedBookings = null;
+        if ($booking->crm_id) {
+            $relatedBookings = Booking::query()
+                ->with([
+                    'customer',
+                    'items' => function($query) use ($productType) {
+                        $query->where('product_type', $productType);
+                    },
+                    'items.product',
+                    'items.variation',
+                    // Add same car booking relationships to related bookings
+                    'items.reservationCarInfo',
+                    'items.reservationCarInfo.supplier',
+                    'items.reservationCarInfo.driverInfo',
+                    'items.reservationCarInfo.driverInfo.driver',
+                    'items.reservationCarInfo.driverInfo.driver.contact',
+                    'items.reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+                ])
+                ->where('crm_id', $booking->crm_id)
+                ->where('id', '!=', $booking->id) // Exclude the current booking
+                ->get();
+        }
+
+        // Enhance booking items with car booking details
+        foreach ($booking->items as $item) {
+            $carInfo = null;
+            $driverInfo = null;
+            $pickupInfo = null;
+            $isAssigned = false;
+            $isComplete = false;
+
+            // Check if car is assigned and get car info
+            if ($item->reservationCarInfo) {
+                $isAssigned = true;
+                $carInfo = [
+                    'id' => $item->reservationCarInfo->id,
+                    'supplier_id' => $item->reservationCarInfo->supplier_id ?? null,
+                    'supplier_name' => $item->reservationCarInfo->supplier->name ?? 'N/A',
+                ];
+
+                // Check if driver info exists
+                if ($item->reservationCarInfo->driverInfo &&
+                    $item->reservationCarInfo->driverInfo->driver &&
+                    $item->reservationCarInfo->driverInfo->driver->contact) {
+                    $driverInfo = [
+                        'id' => $item->reservationCarInfo->driverInfo->driver->id ?? null,
+                        'name' => $item->reservationCarInfo->driverInfo->driver->name ?? 'N/A',
+                        'contact' => $item->reservationCarInfo->driverInfo->driver->contact->phone ?? 'N/A',
+                    ];
+                }
+            }
+
+            // Get pickup information
+            if ($item->reservationInfo) {
+                $pickupInfo = [
+                    'id' => $item->reservationInfo->id,
+                    'location' => $item->reservationInfo->pickup_location ?? null,
+                    'time' => $item->reservationInfo->pickup_time ?? null,
+                ];
+            }
+
+            // Check if booking is complete based on logic in your completePercentage method
+            $isComplete = !(
+                is_null($item->reservationCarInfo) ||
+                is_null($item->reservationCarInfo->supplier ?? null) ||
+                is_null($item->reservationCarInfo->driverInfo ?? null) ||
+                is_null($item->reservationCarInfo->driverInfo->driver ?? null) ||
+                is_null($item->reservationCarInfo->driverInfo->driver->contact ?? null) ||
+                is_null($item->cost_price) ||
+                is_null($item->total_cost_price) ||
+                is_null($item->pickup_time) ||
+                is_null($item->route_plan) ||
+                is_null($item->special_request) ||
+                ($item->is_driver_collect && is_null($item->extra_collect_amount))
+            );
+
+            // Add all the car booking details to the item
+            $item->car_booking_details = [
+                'is_assigned' => $isAssigned,
+                'is_complete' => $isComplete,
+                'car_info' => $carInfo,
+                'driver_info' => $driverInfo,
+                'pickup_info' => $pickupInfo,
+                'route_plan' => $item->route_plan ?? null,
+                'special_request' => $item->special_request ?? null,
+                'is_driver_collect' => $item->is_driver_collect ?? false,
+                'extra_collect_amount' => $item->extra_collect_amount ?? null,
+            ];
+        }
+
+        // Do the same for related bookings if they exist
+        if ($relatedBookings) {
+            foreach ($relatedBookings as $relatedBooking) {
+                foreach ($relatedBooking->items as $item) {
+                    $carInfo = null;
+                    $driverInfo = null;
+                    $pickupInfo = null;
+                    $isAssigned = false;
+                    $isComplete = false;
+
+                    // Check if car is assigned and get car info
+                    if ($item->reservationCarInfo) {
+                        $isAssigned = true;
+                        $carInfo = [
+                            'id' => $item->reservationCarInfo->id,
+                            'supplier_id' => $item->reservationCarInfo->supplier_id ?? null,
+                            'supplier_name' => $item->reservationCarInfo->supplier->name ?? 'N/A',
+                        ];
+
+                        // Check if driver info exists
+                        if ($item->reservationCarInfo->driverInfo &&
+                            $item->reservationCarInfo->driverInfo->driver &&
+                            $item->reservationCarInfo->driverInfo->driver->contact) {
+                            $driverInfo = [
+                                'id' => $item->reservationCarInfo->driverInfo->driver->id ?? null,
+                                'name' => $item->reservationCarInfo->driverInfo->driver->name ?? 'N/A',
+                                'contact' => $item->reservationCarInfo->driverInfo->driver->contact->phone ?? 'N/A',
+                            ];
+                        }
+                    }
+
+                    // Get pickup information
+                    if ($item->reservationInfo) {
+                        $pickupInfo = [
+                            'id' => $item->reservationInfo->id,
+                            'location' => $item->reservationInfo->pickup_location ?? null,
+                            'time' => $item->reservationInfo->pickup_time ?? null,
+                        ];
+                    }
+
+                    // Check if booking is complete
+                    $isComplete = !(
+                        is_null($item->reservationCarInfo) ||
+                        is_null($item->reservationCarInfo->supplier ?? null) ||
+                        is_null($item->reservationCarInfo->driverInfo ?? null) ||
+                        is_null($item->reservationCarInfo->driverInfo->driver ?? null) ||
+                        is_null($item->reservationCarInfo->driverInfo->driver->contact ?? null) ||
+                        is_null($item->cost_price) ||
+                        is_null($item->total_cost_price) ||
+                        is_null($item->pickup_time) ||
+                        is_null($item->route_plan) ||
+                        is_null($item->special_request) ||
+                        ($item->is_driver_collect && is_null($item->extra_collect_amount))
+                    );
+
+                    // Add all the car booking details to the item
+                    $item->car_booking_details = [
+                        'is_assigned' => $isAssigned,
+                        'is_complete' => $isComplete,
+                        'car_info' => $carInfo,
+                        'driver_info' => $driverInfo,
+                        'pickup_info' => $pickupInfo,
+                        'route_plan' => $item->route_plan ?? null,
+                        'special_request' => $item->special_request ?? null,
+                        'is_driver_collect' => $item->is_driver_collect ?? false,
+                        'extra_collect_amount' => $item->extra_collect_amount ?? null,
+                    ];
+                }
+            }
+        }
+
+        // Prepare the result with grouped information
+        $result = [
+            'booking' => new ReservationGroupByResource($booking),
+            'total_items_count' => $totalItemsCount,
+            'group_info' => null
+        ];
+
+        // If there are related bookings with the same CRM ID, include group information
+        if ($relatedBookings && $relatedBookings->count() > 0) {
+            // Combine current booking with related bookings for calculations
+            $allBookings = collect([$booking])->merge($relatedBookings);
+
+            $result['group_info'] = [
+                'crm_id' => $booking->crm_id,
+                'total_bookings' => $allBookings->count(),
+                'total_amount' => $allBookings->sum(function ($b) {
+                    return $b->items->sum('amount');
+                }),
+                'latest_service_date' => $allBookings->max(function ($b) {
+                    return $b->items->max('service_date');
+                }),
+                'related_bookings' => BookingResource::collection($relatedBookings),
+            ];
+        }
+
+        return $this->success($result, 'Private Van Tour Reservation Detail');
     }
 
     public function copyBookingItemsGroup(Request $request, string $bookingId, string $product_id = null)
@@ -466,7 +728,7 @@ class ReservationHotelController extends Controller
 
         // Check if there are any items of the specified product type
         if ($booking->items->isEmpty()) {
-            $typeName = $productType == 'App\Models\EntranceTicket' ? 'entrance ticket' : 'hotel';
+            $typeName = $this->getProductTypeTitle($productType, true);
             return $this->error(null, "No {$typeName} items found in this booking", 404);
         }
 
@@ -528,15 +790,41 @@ class ReservationHotelController extends Controller
                 'total_amount' => $booking->items->sum('amount'),
                 'total_cost' => $booking->items->sum('total_cost_price')
             ];
-        } else {
+        } elseif ($productType == 'App\Models\EntranceTicket') {
             $responseData['summary'] = [
                 'total_tickets' => $booking->items->sum('quantity'),
                 'total_amount' => $booking->items->sum('amount'),
                 'total_cost' => $booking->items->sum('total_cost_price')
             ];
+        } elseif ($productType == 'App\Models\PrivateVanTour') {
+            $responseData['summary'] = [
+                'total_tours' => $booking->items->sum('quantity'),
+                'total_amount' => $booking->items->sum('amount'),
+                'total_cost' => $booking->items->sum('total_cost_price')
+            ];
         }
 
-        $typeName = $productType == 'App\Models\EntranceTicket' ? 'Entrance Ticket' : 'Hotel';
+        $typeName = $this->getProductTypeTitle($productType);
         return $this->success($responseData, $typeName . ' Booking Items Group Details');
+    }
+
+    /**
+     * Helper method to get user-friendly product type title
+     *
+     * @param string $productType
+     * @param bool $lowercase Whether to return title in lowercase
+     * @return string
+     */
+    private function getProductTypeTitle($productType, $lowercase = false)
+    {
+        if ($productType == 'App\Models\EntranceTicket') {
+            $title = 'Entrance Ticket';
+        } elseif ($productType == 'App\Models\PrivateVanTour') {
+            $title = 'Private Van Tour';
+        } else {
+            $title = 'Hotel';
+        }
+
+        return $lowercase ? strtolower($title) : $title;
     }
 }
