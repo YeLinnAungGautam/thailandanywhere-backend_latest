@@ -780,4 +780,23 @@ class ReservationHotelController extends Controller
         $title = $this->productTypeTitles[$productType] ?? 'Hotel';
         return $lowercase ? strtolower($title) : $title;
     }
+
+    protected function getRelatedItems($booking, $productType, $product_id = null)
+    {
+        if (!$booking->crm_id) {
+            return [];
+        }
+
+        $relatedItems = BookingItem::whereHas('booking', function($query) use ($booking) {
+            $query->where('crm_id', $booking->crm_id)
+                  ->where('id', '!=', $booking->id);
+        })->where('product_type', $productType)
+          ->when($product_id, function($query) use ($product_id) {
+              $query->where('product_id', $product_id);
+          })
+          ->with(['product', 'room', 'variation', 'booking.customer:id,name'])
+          ->get();
+
+        return BookingItemDetailResource::collection($relatedItems);
+    }
 }
