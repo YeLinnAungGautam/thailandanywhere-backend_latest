@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
+use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PlaceController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PrivateVanTourController;
@@ -359,6 +360,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('account-heads', AccountHeadController::class);
     Route::apiResource('account-classes', AccountClassController::class);
     Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
+
+    # Partner
+    Route::apiResource('partners', PartnerController::class);
+
+    # Assign Product to Partner
+    Route::post('partners/{id}/assign-product', [PartnerController::class, 'assignProduct']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

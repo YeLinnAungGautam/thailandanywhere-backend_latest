@@ -55,6 +55,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'partner' => [
+            'driver' => 'session',
+            'provider' => 'partners',
+        ],
     ],
 
     /*
@@ -88,6 +93,11 @@ return [
         'suppliers' => [
             'driver' => 'eloquent',
             'model' => App\Models\Supplier::class,
+        ],
+
+        'partners' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Partner::class,
         ],
 
         // 'users' => [
@@ -132,6 +142,13 @@ return [
 
         'suppliers' => [
             'provider' => 'suppliers',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'suppliers' => [
+            'provider' => 'partners',
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,

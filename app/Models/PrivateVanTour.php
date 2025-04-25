@@ -66,4 +66,9 @@ class PrivateVanTour extends Model
     {
         return $query->where('type', self::TYPES['car_rental']);
     }
+
+    public function partners()
+    {
+        return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
 }
