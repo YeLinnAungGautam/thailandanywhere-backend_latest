@@ -64,4 +64,9 @@ class Inclusive extends Model
     {
         return $this->hasMany(InclusiveImage::class)->where('type', 'overview_pdf');
     }
+
+    public function partners()
+    {
+        return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
 }
