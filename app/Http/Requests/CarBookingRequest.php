@@ -22,11 +22,19 @@ class CarBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id' => 'nullable',
-            'driver_id' => 'nullable',
-            'driver_info_id' => 'nullable',
-            'cost_price' => 'nullable|integer',
-            'total_cost_price' => 'nullable|integer'
+            'pickup_location' => 'nullable|string',
+            'dropoff_location' => 'nullable|string',
+            'pickup_time' => 'nullable',
+            'route_plan' => 'nullable|string',
+            'special_request' => 'nullable|string',
+            'is_driver_collect' => 'nullable|boolean',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'driver_id' => 'nullable|exists:drivers,id',
+            'driver_info_id' => 'nullable|exists:driver_infos,id',
+            'driver_contact' => 'nullable|string',
+            'car_number' => 'nullable|string',
+            'cost_price' => 'nullable|numeric',
+            'total_cost_price' => 'nullable|numeric',
         ];
     }
 }

@@ -69,4 +69,9 @@ class Hotel extends Model
     {
         return $this->belongsTo(HotelCategory::class, 'category_id');
     }
+
+    public function partners()
+    {
+        return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
 }
