@@ -32,4 +32,9 @@ class GroupTour extends Model
     {
         return $this->belongsToMany(City::class, 'group_tour_cities', 'group_tour_id', 'city_id');
     }
+
+    public function partners()
+    {
+        return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
 }

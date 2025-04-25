@@ -53,4 +53,9 @@ class EntranceTicket extends Model
     {
         return $this->morphMany(BookingItem::class, 'product');
     }
+
+    public function partners()
+    {
+        return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
 }
