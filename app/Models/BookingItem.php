@@ -90,6 +90,10 @@ class BookingItem extends Model
         return $this->hasMany(ReservationExpenseReceipt::class, 'booking_item_id');
     }
 
+    public function amendInfo(){
+        return $this->hasOne(AmendInfo::class, 'booking_item_id');
+    }
+
     public function reservationCustomerPassport()
     {
         return $this->hasMany(ReservationCustomerPassport::class, 'booking_item_id');

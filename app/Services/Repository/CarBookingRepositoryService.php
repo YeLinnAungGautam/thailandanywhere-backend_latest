@@ -49,11 +49,14 @@ class CarBookingRepositoryService
                 'special_request' => $request->special_request,
                 'pickup_location' => $request->pickup_location,
                 'pickup_time' => $request->pickup_time,
+                'is_driver_collect' => $request->has('is_driver_collect') ? (bool)$request->is_driver_collect : false,
             ];
 
-            if ($request->is_driver_collect) {
-                $booking_item_data['is_driver_collect'] = true;
+            if ($request->has('is_driver_collect') && (bool)$request->is_driver_collect) {
                 $booking_item_data['extra_collect_amount'] = $request->extra_collect_amount;
+            } else {
+                // Set extra_collect_amount to null when is_driver_collect is false
+                $booking_item_data['extra_collect_amount'] = null;
             }
 
             $booking_item->update($booking_item_data);
