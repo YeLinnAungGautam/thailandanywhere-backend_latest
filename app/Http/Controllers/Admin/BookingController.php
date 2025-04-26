@@ -225,11 +225,11 @@ class BookingController extends Controller
             }
 
             foreach ($request->items as $key => $item) {
-                $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
+                // $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
 
-                if (isset($item['is_driver_collect'])) {
-                    $is_driver_collect = $item['is_driver_collect'];
-                }
+                // if (isset($item['is_driver_collect'])) {
+                //     $is_driver_collect = $item['is_driver_collect'];
+                // }
 
                 $is_excluded = ($item['product_type'] == Airline::class) ? true : false;
 
@@ -268,7 +268,7 @@ class BookingController extends Controller
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
-                    'is_driver_collect' => $is_driver_collect,
+                    // 'is_driver_collect' => $request->is_driver_collect,
                     'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                     // 'individual_pricing' => null,
                     'cancellation' => $item['cancellation'] ?? null,
@@ -466,7 +466,7 @@ class BookingController extends Controller
                         'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => (isset($item['reservation_status']) && $item['reservation_status'] == 'undefined') ? "1" : "0",
-                        'is_driver_collect' => $item['is_driver_collect'] ?? false,
+                        // 'is_driver_collect' => $item['is_driver_collect'],
                         'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
                         // 'individual_pricing' => null,
                         'cancellation' => $item['cancellation'] ?? null,

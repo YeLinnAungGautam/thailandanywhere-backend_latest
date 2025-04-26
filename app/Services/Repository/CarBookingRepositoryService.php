@@ -49,13 +49,26 @@ class CarBookingRepositoryService
                 'special_request' => $request->special_request,
                 'pickup_location' => $request->pickup_location,
                 'pickup_time' => $request->pickup_time,
-                'is_driver_collect' => $request->has('is_driver_collect') ? (bool)$request->is_driver_collect : false,
+                'contact_number' => $request->contact_number,
+                'total_pax' => $request->total_pax,
+                'collect_comment' => $request->collect_comment,
             ];
 
-            if ($request->has('is_driver_collect') && (bool)$request->is_driver_collect) {
+               // Handle is_driver_collect with three states
+            if ($request->has('is_driver_collect')) {
+                // Convert empty string to null, otherwise use 1 or 0
+                if ($request->is_driver_collect === "" || $request->is_driver_collect === null) {
+                    $booking_item_data['is_driver_collect'] = null;
+                } else {
+                    $booking_item_data['is_driver_collect'] = (int)$request->is_driver_collect;
+                }
+            }
+
+            // Only set extra_collect_amount if is_driver_collect is explicitly 1
+            if ($request->has('is_driver_collect') && $request->is_driver_collect == "1") {
                 $booking_item_data['extra_collect_amount'] = $request->extra_collect_amount;
             } else {
-                // Set extra_collect_amount to null when is_driver_collect is false
+                // Set extra_collect_amount to null when is_driver_collect is not 1
                 $booking_item_data['extra_collect_amount'] = null;
             }
 
@@ -92,6 +105,9 @@ class CarBookingRepositoryService
             'quantity' => $booking_item->quantity,
             'cost_price' => $booking_item->cost_price,
             'total_cost_price' => $booking_item->total_cost_price,
+            'contact_number' => $booking_item->contact_number,
+            'total_pax' => $booking_item->total_pax,
+            'collect_comment' => $booking_item->collect_comment,
 
             'route_plan' => $booking_item->route_plan,
             'special_request' => $booking_item->special_request,
