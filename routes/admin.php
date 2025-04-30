@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminMetaController;
 use App\Http\Controllers\Admin\AirlineController;
 use App\Http\Controllers\Admin\AirlineTicketController;
 use App\Http\Controllers\Admin\AirportPickupController;
+use App\Http\Controllers\Admin\AmendmentController;
 use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingConfirmLetterController;
@@ -367,6 +368,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Assign Product to Partner
     Route::post('partners/{id}/assign-product', [PartnerController::class, 'assignProduct']);
+
+    # Amendment
+    Route::apiResource('booking-item-amendments', AmendmentController::class);
+    Route::post('booking-item-amendments/{id}/reject', [AmendmentController::class, 'rejectAmendment']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

@@ -133,6 +133,7 @@ class BookingItemResource extends JsonResource
             'checkin_date' => $this->checkin_date,
             'checkout_date' => $this->checkout_date,
             'reservation_car_info' => new ReservationCarInfoResource($this->reservationCarInfo),
+            'amend_info' => BookingItemAmendmentResource::collection($this->amendments),
             'reservation_supplier_info' => new ReservationCarInfoResource($this->reservationSupplierInfo),
             'booking_confirm_letters' => ReservationBookingConfirmLetterResource::collection($this->reservationBookingConfirmLetter),
             'receipt_images' => ReservationReceiptImageResource::collection($this->reservationReceiptImage),
