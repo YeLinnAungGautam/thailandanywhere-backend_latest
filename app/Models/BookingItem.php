@@ -90,10 +90,6 @@ class BookingItem extends Model
         return $this->hasMany(ReservationExpenseReceipt::class, 'booking_item_id');
     }
 
-    public function amendInfo(){
-        return $this->hasOne(AmendInfo::class, 'booking_item_id');
-    }
-
     public function reservationCustomerPassport()
     {
         return $this->hasMany(ReservationCustomerPassport::class, 'booking_item_id');
@@ -117,6 +113,11 @@ class BookingItem extends Model
     public function reservationTransactions()
     {
         return $this->belongsToMany(ReservationTransaction::class);
+    }
+
+    public function amendments()
+    {
+        return $this->hasMany(BookingItemAmendment::class);
     }
 
     protected function calcSalePrice(): Attribute

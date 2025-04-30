@@ -225,12 +225,6 @@ class BookingController extends Controller
             }
 
             foreach ($request->items as $key => $item) {
-                // $is_driver_collect = $save->payment_method == 'Cash' ? true : false;
-
-                // if (isset($item['is_driver_collect'])) {
-                //     $is_driver_collect = $item['is_driver_collect'];
-                // }
-
                 $is_excluded = ($item['product_type'] == Airline::class) ? true : false;
 
                 $data = [
@@ -240,10 +234,11 @@ class BookingController extends Controller
                     'room_number' => $item['room_number'] ?? null,
                     'product_id' => $item['product_id'],
                     'is_excluded' => $is_excluded,
-                    'car_id' => isset($item['car_id']) ? $item['car_id'] : null,
-                    'room_id' => isset($item['room_id']) ? $item['room_id'] : null,
-                    'ticket_id' => isset($item['ticket_id']) ? $item['ticket_id'] : null,
-                    'variation_id' => isset($item['variation_id']) ? $item['variation_id'] : null,
+                    // Save these fields directly without isset check
+                    'car_id' => $item['car_id'] ?? null,
+                    'room_id' => $item['room_id'] ?? null,
+                    'ticket_id' => $item['ticket_id'] ?? null,
+                    'variation_id' => $item['variation_id'] ?? null,
                     'service_date' => $item['service_date'] ?? null,
                     'quantity' => $item['quantity'] ?? null,
                     'total_guest' => $item['total_guest'] ?? null,
@@ -258,19 +253,17 @@ class BookingController extends Controller
                     'amount' => $item['amount'] ?? null,
                     'discount' => $item['discount'] ?? null,
                     'days' => $item['days'] ?? null,
-                    'special_request' => isset($item['special_request']) ? $item['special_request'] : null,
-                    'route_plan' => isset($item['route_plan']) ? $item['route_plan'] : null,
-                    'pickup_location' => isset($item['pickup_location']) ? $item['pickup_location'] : null,
-                    'pickup_time' => isset($item['pickup_time']) ? $item['pickup_time'] : null,
-                    'dropoff_location' => isset($item['dropoff_location']) ? $item['dropoff_location'] : null,
-                    'checkin_date' => isset($item['checkin_date']) ? $item['checkin_date'] : null,
-                    'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
+                    'special_request' => $item['special_request'] ?? null,
+                    'route_plan' => $item['route_plan'] ?? null,
+                    'pickup_location' => $item['pickup_location'] ?? null,
+                    'pickup_time' => $item['pickup_time'] ?? null,
+                    'dropoff_location' => $item['dropoff_location'] ?? null,
+                    'checkin_date' => $item['checkin_date'] ?? null,
+                    'checkout_date' => $item['checkout_date'] ?? null,
                     'reservation_status' => $item['reservation_status'] ?? "awaiting",
                     'slip_code' => $request->slip_code,
                     'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
-                    // 'is_driver_collect' => $request->is_driver_collect,
                     'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
-                    // 'individual_pricing' => null,
                     'cancellation' => $item['cancellation'] ?? null,
                     'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                 ];
@@ -378,7 +371,6 @@ class BookingController extends Controller
                 'discount' => $request->discount ?? $find->discount,
                 'reservation_status' => 'awaiting',
                 'payment_notes' => $request->payment_notes,
-
                 'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : $find->is_inclusive,
                 'inclusive_name' => $request->inclusive_name ?? $find->inclusive_name,
                 'inclusive_description' => $request->inclusive_description ?? $find->inclusive_description,
@@ -407,27 +399,30 @@ class BookingController extends Controller
 
             if ($request->items) {
                 $booking_item_ids = $find->items()->pluck('id')->toArray();
-                $request_item_ids = collect($request->items)->pluck('reservation_id')->toArray();
-                $delete_item_ids = [];
+                $request_item_ids = collect($request->items)
+                    ->pluck('reservation_id')
+                    ->filter(function($value) {
+                        return $value && $value !== 'undefined' && $value !== 'null';
+                    })
+                    ->toArray();
 
-                foreach ($booking_item_ids as $booking_item_id) {
-                    if (!in_array($booking_item_id, $request_item_ids)) {
-                        $delete_item_ids[] = $booking_item_id;
-                    }
-                }
+                $delete_item_ids = array_diff($booking_item_ids, $request_item_ids);
 
+                // Delete items that are no longer in the request
                 foreach ($delete_item_ids as $delete_item) {
                     $d_item = BookingItem::find($delete_item);
 
-                    if ($d_item->receipt_image) {
-                        Storage::delete('images/' . $d_item->receipt_image);
-                    }
+                    if ($d_item) {
+                        if ($d_item->receipt_image) {
+                            Storage::delete('images/' . $d_item->receipt_image);
+                        }
 
-                    if ($d_item->confirmation_letter) {
-                        Storage::delete('files/' . $d_item->confirmation_letter);
-                    }
+                        if ($d_item->confirmation_letter) {
+                            Storage::delete('files/' . $d_item->confirmation_letter);
+                        }
 
-                    $d_item->delete();
+                        $d_item->delete();
+                    }
                 }
 
                 $booking_items = collect($request->items)->whereNotNull('product_type')->toArray();
@@ -439,19 +434,20 @@ class BookingController extends Controller
                         'product_type' => $item['product_type'],
                         'room_number' => $item['room_number'] ?? null,
                         'product_id' => $item['product_id'],
-                        'car_id' => isset($item['car_id']) ? $item['car_id'] : null,
-                        'room_id' => isset($item['room_id']) ? $item['room_id'] : null,
-                        'ticket_id' => isset($item['ticket_id']) ? $item['ticket_id'] : null,
-                        'variation_id' => isset($item['variation_id']) ? $item['variation_id'] : null,
-                        'service_date' => $item['service_date'],
-                        'quantity' => $item['quantity'],
+                        // Save these fields directly without isset check
+                        'car_id' => $item['car_id'] ?? null,
+                        'room_id' => $item['room_id'] ?? null,
+                        'ticket_id' => $item['ticket_id'] ?? null,
+                        'variation_id' => $item['variation_id'] ?? null,
+                        'service_date' => $item['service_date'] ?? null,
+                        'quantity' => $item['quantity'] ?? null,
                         'total_guest' => $item['total_guest'] ?? null,
-                        'days' => isset($item['days']) ? $item['days'] : null,
-                        'special_request' => isset($item['special_request']) ? $item['special_request'] : null,
-                        'route_plan' => isset($item['route_plan']) ? $item['route_plan'] : null,
-                        'pickup_location' => isset($item['pickup_location']) ? $item['pickup_location'] : null,
-                        'pickup_time' => isset($item['pickup_time']) ? $item['pickup_time'] : null,
-                        'dropoff_location' => isset($item['dropoff_location']) ? $item['dropoff_location'] : null,
+                        'days' => $item['days'] ?? null,
+                        'special_request' => $item['special_request'] ?? null,
+                        'route_plan' => $item['route_plan'] ?? null,
+                        'pickup_location' => $item['pickup_location'] ?? null,
+                        'pickup_time' => $item['pickup_time'] ?? null,
+                        'dropoff_location' => $item['dropoff_location'] ?? null,
                         'duration' => $item['duration'] ?? null,
                         'selling_price' => $item['selling_price'] ?? null,
                         'total_cost_price' => $item['total_cost_price'] ?? null,
@@ -462,13 +458,11 @@ class BookingController extends Controller
                         'payment_status' => $item['payment_status'] ?? 'not_paid',
                         'exchange_rate' => $item['exchange_rate'] ?? null,
                         'comment' => $item['comment'] ?? null,
-                        'checkin_date' => isset($item['checkin_date']) ? $item['checkin_date'] : null,
-                        'checkout_date' => isset($item['checkout_date']) ? $item['checkout_date'] : null,
+                        'checkin_date' => $item['checkin_date'] ?? null,
+                        'checkout_date' => $item['checkout_date'] ?? null,
                         'reservation_status' => $item['reservation_status'] ?? "awaiting",
                         'is_inclusive' => (isset($item['reservation_status']) && $item['reservation_status'] == 'undefined') ? "1" : "0",
-                        // 'is_driver_collect' => $item['is_driver_collect'],
                         'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
-                        // 'individual_pricing' => null,
                         'cancellation' => $item['cancellation'] ?? null,
                         'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
                     ];
@@ -495,16 +489,20 @@ class BookingController extends Controller
                         }
                     }
 
+                    // Fixed the check for new vs existing items
                     if (
-                        !isset($item['reservation_id']) ||
+                        empty($item['reservation_id']) ||
                         $item['reservation_id'] === 'undefined' ||
-                        $item['reservation_id'] == 'null'
+                        $item['reservation_id'] === 'null'
                     ) {
+                        // Create new item
                         BookingItem::create($data);
                     } else {
+                        // Update existing item
                         $booking_item = BookingItem::find($item['reservation_id']);
-
-                        $booking_item->update($data);
+                        if ($booking_item) {
+                            $booking_item->update($data);
+                        }
                     }
                 }
             }
