@@ -6,21 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ChartOfAccountResource;
 use App\Models\AccountClass;
 use App\Models\AccountHead;
+use App\Models\BookingItem;
 use App\Models\ChartOfAccount;
 use App\Traits\HttpResponses;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ChartOfAccountController extends Controller
 {
     use HttpResponses;
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $month = $request->query('month', date('Y-m'));  // Default to current month if not provided
 
         $query = ChartOfAccount::query()->with('accountClass', 'accountHead');
 
@@ -29,14 +29,134 @@ class ChartOfAccountController extends Controller
         }
 
         $data = $query->paginate($limit);
-        return $this->success(ChartOfAccountResource::collection($data)
-            ->additional([
+        $collection = ChartOfAccountResource::collection($data);
+
+        // Process and add total amounts for specific connections
+        $collection->each(function ($item) use ($month) {
+            // Handle price connection_detail
+            if ($item->connection_detail === 'price') {
+                $totalAmount = 0;
+                $totalUnverifyAmount = 0;
+
+                // For VanTour connection
+                if ($item->connection === 'vantour') {
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'fully_paid');
+                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'not_fully_paid');
+                }
+
+                // For Hotel connection
+                else if ($item->connection === 'hotel') {
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'fully_paid');
+                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'not_fully_paid');
+                }
+
+                // For Ticket connection
+                else if ($item->connection === 'ticket') {
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'fully_paid');
+                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'not_fully_paid');
+                }
+
+                $item->total_amount = $totalAmount;
+                $item->total_unverify_amount = $totalUnverifyAmount;
+            }
+            // Handle expense connection_detail
+            else if ($item->connection_detail === 'expense') {
+                $verifiedCostPrice = 0;
+                $unverifiedCostPrice = 0;
+
+                // For VanTour connection
+                if ($item->connection === 'vantour') {
+                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\PrivateVanTour', $month, 'fully_paid');
+                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\PrivateVanTour', $month, 'not_fully_paid');
+                }
+
+                // For Hotel connection
+                else if ($item->connection === 'hotel') {
+                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\Hotel', $month, 'fully_paid');
+                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\Hotel', $month, 'not_fully_paid');
+                }
+
+                // For Ticket connection
+                else if ($item->connection === 'ticket') {
+                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\EntranceTicket', $month, 'fully_paid');
+                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\EntranceTicket', $month, 'not_fully_paid');
+                }
+
+                $item->total_cost_price = $verifiedCostPrice;
+                $item->total_unverify_cost_price = $unverifiedCostPrice;
+            }
+        });
+
+        return $this->success(
+            $collection->additional([
                 'meta' => [
                     'total_page' => (int) ceil($data->total() / $data->perPage()),
                 ],
-            ])
-            ->response()
-            ->getData(), 'Account Class List');
+            ])->response()->getData(),
+            'Account Class List'
+        );
+    }
+
+    /**
+     * Calculate total amount for a specific product type in the given month based on booking payment status
+     *
+     * @param string $productType The fully qualified class name of the product type
+     * @param string $month The month in YYYY-MM format
+     * @param string $paymentStatus Booking payment status to filter by ('fully_paid' or 'not_fully_paid')
+     * @return float The total amount
+     */
+    private function calculateTotalForProductType($productType, $month, $paymentStatus)
+    {
+        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+
+        $query = BookingItem::where('product_type', $productType)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotNull('amount')
+            ->whereHas('booking', function ($query) use ($paymentStatus) {
+                // Only include booking items whose related booking is not inclusive
+                $query->where('is_inclusive', '!=', 1);
+
+                // Filter by booking payment status
+                if ($paymentStatus === 'fully_paid') {
+                    $query->where('payment_status', 'fully_paid');
+                } else {
+                    $query->where('payment_status', '!=', 'fully_paid');
+                }
+            });
+
+        return $query->sum('amount');
+    }
+
+    /**
+     * Calculate total cost price for a specific product type in the given month based on booking payment status
+     *
+     * @param string $productType The fully qualified class name of the product type
+     * @param string $month The month in YYYY-MM format
+     * @param string $paymentStatus Booking payment status to filter by ('fully_paid' or 'not_fully_paid')
+     * @return float The total cost price
+     */
+    private function calculateTotalCostPrice($productType, $month, $paymentStatus)
+    {
+        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+
+        $query = BookingItem::where('product_type', $productType)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotNull('total_cost_price')
+            ->whereHas('booking', function ($query) use ($paymentStatus) {
+                // Only include booking items whose related booking is not inclusive
+                $query->where('is_inclusive', '!=', 1);
+
+                // Filter by booking payment status
+                if ($paymentStatus === 'fully_paid') {
+                    $query->where('payment_status', 'fully_paid');
+                } else {
+                    $query->where('payment_status', '!=', 'fully_paid');
+                }
+            });
+
+        return $query->sum('total_cost_price');
     }
 
     public function store(Request $request)
