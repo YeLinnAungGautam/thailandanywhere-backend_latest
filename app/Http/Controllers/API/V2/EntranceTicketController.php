@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EntranceTicketListResource;
 use App\Http\Resources\EntranceTicketResource;
 use App\Models\EntranceTicket;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class EntranceTicketController extends Controller
     {
         $query = EntranceTicket::query()
             ->withCount('bookingItems')
-            ->with('tags', 'cities', 'categories', 'images', 'contracts', 'variations')
+            ->with('cities', 'categories', 'images', 'variations', 'activities')
             ->when($request->search, function ($query) use ($request) {
                 $query->where('name', 'LIKE', "{$request->search}%");
             })
@@ -51,7 +52,7 @@ class EntranceTicketController extends Controller
 
         $items = $query->paginate($limit ?? 10);
 
-        return EntranceTicketResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
+        return EntranceTicketListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
 
     public function show(string|int $entrance_ticket_id)

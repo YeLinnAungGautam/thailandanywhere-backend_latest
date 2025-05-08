@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\HotelListResource;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class HotelController extends Controller
                 'images',
                 // 'rooms.images',
                 // 'contracts',
-                // 'facilities',
+                'facilities',
             )
             ->when($request->search, function ($s_query) use ($request) {
                 $s_query->where('name', 'LIKE', "{$request->search}%");
@@ -70,7 +71,7 @@ class HotelController extends Controller
 
         $items = $query->paginate($limit ?? 10);
 
-        return HotelResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
+        return HotelListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
 
     public function show(string|int $hotel_id)
