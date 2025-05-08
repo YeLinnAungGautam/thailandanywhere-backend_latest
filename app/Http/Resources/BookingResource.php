@@ -58,6 +58,12 @@ class BookingResource extends JsonResource
             'inclusive_start_date' => $this->inclusive_start_date,
             'inclusive_end_date' => $this->inclusive_end_date,
 
+            // sale case
+            'cases' => isset($this->saleCases) ? CaseDetailResource::collection($this->saleCases) : '',
+
+            // verfiy status
+            'verify_status' => $this->verify_status,
+
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

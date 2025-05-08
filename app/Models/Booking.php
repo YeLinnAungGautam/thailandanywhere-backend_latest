@@ -120,4 +120,10 @@ class Booking extends Model
     {
         return $this->grand_total + $this->exclude_amount;
     }
+
+    public function saleCases()
+    {
+        return $this->hasMany(CaseTable::class, 'related_id')
+            ->where('case_type', 'sale');
+    }
 }
