@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingConfirmLetterController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\BookingItemVerifyController;
 use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
@@ -52,6 +53,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CaseController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
@@ -372,6 +374,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Amendment
     Route::apiResource('booking-item-amendments', AmendmentController::class);
     Route::post('booking-item-amendments/{id}/reject', [AmendmentController::class, 'rejectAmendment']);
+
+    # Case
+    Route::apiResource('cases', CaseController::class);
+
+    # Booking item verify
+    Route::put('/booking/{id}/verify_status',[BookingItemVerifyController::class, 'updateVerifyStatus']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

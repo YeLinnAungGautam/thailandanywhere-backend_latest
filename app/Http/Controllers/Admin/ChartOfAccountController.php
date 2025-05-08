@@ -20,12 +20,17 @@ class ChartOfAccountController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $searchCode = $request->query('search_code');
         $month = $request->query('month', date('Y-m'));  // Default to current month if not provided
 
         $query = ChartOfAccount::query()->with('accountClass', 'accountHead');
 
         if ($search) {
-            $query->where('name', 'LIKE', "%{$search}%");
+            $query->where('account_name', 'LIKE', "%{$search}%");
+        }
+
+        if ($searchCode) {
+            $query->where('account_code', 'LIKE', "%{$searchCode}%");
         }
 
         $data = $query->paginate($limit);
