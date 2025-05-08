@@ -3,6 +3,7 @@ namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\InclusiveListResource;
+use App\Http\Resources\InclusiveProductListResource;
 use App\Http\Resources\InclusiveResource;
 use App\Models\Inclusive;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class InclusiveController extends Controller
 
         $data = $query->paginate($limit);
 
-        return InclusiveListResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
+        return InclusiveProductListResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
     }
 
     public function show(string $id)
