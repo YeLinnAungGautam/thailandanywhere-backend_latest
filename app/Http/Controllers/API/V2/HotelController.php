@@ -17,10 +17,10 @@ class HotelController extends Controller
             ->with(
                 'city',
                 'rooms',
-                'rooms.images',
-                'contracts',
                 'images',
-                'facilities',
+                // 'rooms.images',
+                // 'contracts',
+                // 'facilities',
             )
             ->when($request->search, function ($s_query) use ($request) {
                 $s_query->where('name', 'LIKE', "{$request->search}%");

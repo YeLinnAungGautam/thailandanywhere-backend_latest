@@ -234,4 +234,10 @@ class BookingItem extends Model
 
         return '-';
     }
+
+    public function costCases()
+    {
+        return $this->hasMany(CaseTable::class, 'related_id')
+            ->where('case_type', 'cost');
+    }
 }

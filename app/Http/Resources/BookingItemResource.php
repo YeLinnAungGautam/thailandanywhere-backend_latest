@@ -153,6 +153,9 @@ class BookingItemResource extends JsonResource
             'is_expense_email_sent' => $this->is_expense_email_sent,
             'booking_requests' => ReservationBookingRequestResource::collection($this->requestProves),
             'expense_mail' => ReservationExpenseMailResource::collection($this->expenseMail),
+
+            // cost case
+            'cases' => isset($this->costCases) ? CaseDetailResource::collection($this->costCases) : '',
         ];
     }
 }
