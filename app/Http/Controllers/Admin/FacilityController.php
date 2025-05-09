@@ -53,7 +53,8 @@ class FacilityController extends Controller
         ]);
 
         if ($request->file('image')) {
-            $image = uploadFile($request->file('image'), 'images/facility/');
+            // $image = uploadFile($request->file('image'), 'images/facility/');
+            $image = $this->uploads($request->file('image'), 'images/facility/');
         }
 
         $save = Facility::create(['name' => $request->name, 'image' => $image]);
@@ -86,7 +87,8 @@ class FacilityController extends Controller
         }
 
         if ($request->file('image')) {
-            $image = uploadFile($request->file('image'), 'images/facility/');
+            // $image = uploadFile($request->file('image'), 'images/facility/');
+            $image = $this->uploads($request->file('image'), 'images/facility/');
 
             if ($find->image) {
                 Storage::delete('images/facility/' . $find->image);
