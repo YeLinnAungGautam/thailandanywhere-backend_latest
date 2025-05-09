@@ -53,12 +53,7 @@ class FacilityController extends Controller
         ]);
 
         if ($request->file('image')) {
-            // $image = uploadFile($request->file('image'), 'images/facility/');
-            // Get the upload result array
-            $uploadResult = $this->uploads($request->file('image'), 'images/facility/');
-
-            // Extract just the fileName from the result
-            $image = $uploadResult['fileName'];
+            $image = uploadFile($request->file('image'), 'images/facility/');
         }
 
         $save = Facility::create(['name' => $request->name, 'image' => $image]);
@@ -90,15 +85,9 @@ class FacilityController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        $image = $find->image;
         if ($request->file('image')) {
-            // Get the upload result array
-            $uploadResult = $this->uploads($request->file('image'), 'images/facility/');
+            $image = uploadFile($request->file('image'), 'images/facility/');
 
-            // Extract just the fileName from the result
-            $image = $uploadResult['fileName'];
-
-            // Delete old image if it exists
             if ($find->image) {
                 Storage::delete('images/facility/' . $find->image);
             }
