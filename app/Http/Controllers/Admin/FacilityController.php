@@ -52,27 +52,16 @@ class FacilityController extends Controller
             'image' => 'required'
         ]);
 
-        $image = null;
         if ($request->file('image')) {
-            // Get the uploaded image data
-            $uploadedImage = $this->uploads($request->file('image'), 'images/facility/');
+            // $image = uploadFile($request->file('image'), 'images/facility/');
+            // Get the upload result array
+            $uploadResult = $this->uploads($request->file('image'), 'images/facility/');
 
-            // Extract the filename from the return value
-            // This assumes your uploads method returns an array with a 'filename' key
-            // Adjust according to what your uploads method actually returns
-            if (is_array($uploadedImage)) {
-                // If uploads returns an array, extract the filename
-                $image = $uploadedImage['filename'] ?? $uploadedImage[0] ?? null;
-            } else {
-                // If uploads already returns a string (filename)
-                $image = $uploadedImage;
-            }
+            // Extract just the fileName from the result
+            $image = $uploadResult['fileName'];
         }
 
-        $save = Facility::create([
-            'name' => $request->name,
-            'image' => $image
-        ]);
+        $save = Facility::create(['name' => $request->name, 'image' => $image]);
 
         return $this->success(new FacilityResource($save), 'Successfully created');
     }
@@ -103,17 +92,11 @@ class FacilityController extends Controller
 
         $image = $find->image;
         if ($request->file('image')) {
-            // Get the uploaded image data
-            $uploadedImage = $this->uploads($request->file('image'), 'images/facility/');
+            // Get the upload result array
+            $uploadResult = $this->uploads($request->file('image'), 'images/facility/');
 
-            // Extract the filename from the return value
-            if (is_array($uploadedImage)) {
-                // If uploads returns an array, extract the filename
-                $image = $uploadedImage['filename'] ?? $uploadedImage[0] ?? null;
-            } else {
-                // If uploads already returns a string (filename)
-                $image = $uploadedImage;
-            }
+            // Extract just the fileName from the result
+            $image = $uploadResult['fileName'];
 
             // Delete old image if it exists
             if ($find->image) {
@@ -123,7 +106,7 @@ class FacilityController extends Controller
 
         $data = [
             'name' => $request->name ?? $find->name,
-            'image' => $image
+            'image' => $image ?? $find->image
         ];
 
         $find->update($data);
