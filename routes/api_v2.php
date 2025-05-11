@@ -7,6 +7,7 @@ use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
 use App\Http\Controllers\API\V2\BookingController;
 use App\Http\Controllers\API\V2\CarController;
+use App\Http\Controllers\Api\V2\CartController;
 use App\Http\Controllers\API\V2\CityController;
 use App\Http\Controllers\API\V2\DestinationController;
 use App\Http\Controllers\API\V2\EntranceTicketController;
@@ -108,5 +109,13 @@ Route::group([], function () {
         Route::get('bookings/{id}', [BookingController::class, 'show']);
         Route::post('bookings/{id}', [BookingController::class, 'store']);
         Route::get('bookings/{id}/check-user', [BookingController::class, 'checkBookingHasUser']);
+
+        # Cart
+        Route::get('carts', [CartController::class, 'index']);
+        Route::post('carts', [CartController::class, 'store']);
+        Route::get('carts/{id}', [CartController::class, 'show']);
+        Route::post('carts/{id}', [CartController::class, 'update']);
+        Route::delete('carts/{id}', [CartController::class, 'destroy']);
+        Route::delete('carts/clear', [CartController::class, 'clear']);
     });
 });
