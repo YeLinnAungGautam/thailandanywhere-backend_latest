@@ -7,7 +7,7 @@ use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
 use App\Http\Controllers\API\V2\BookingController;
 use App\Http\Controllers\API\V2\CarController;
-use App\Http\Controllers\Api\V2\CartController;
+use App\Http\Controllers\API\V2\CartController;
 use App\Http\Controllers\API\V2\CityController;
 use App\Http\Controllers\API\V2\DestinationController;
 use App\Http\Controllers\API\V2\EntranceTicketController;
