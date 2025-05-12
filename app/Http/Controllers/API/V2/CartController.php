@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\V2;
+namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CartResource;
@@ -27,7 +27,7 @@ class CartController extends Controller
     // Show single cart item
     public function show(Cart $cart)
     {
-        if($cart->user_id !== Auth::id()) {
+        if ($cart->user_id !== Auth::id()) {
             return $this->error(null, 'Unauthorized', 403);
         }
 
@@ -69,7 +69,7 @@ class CartController extends Controller
     public function destroy(Cart $cart)
     {
 
-        if($cart->user_id !== Auth::id()) {
+        if ($cart->user_id !== Auth::id()) {
             return $this->error(null, 'Unauthorized', 403);
         }
 
