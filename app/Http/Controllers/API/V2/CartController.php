@@ -13,10 +13,11 @@ use Illuminate\Validation\Rule;
 class CartController extends Controller
 {
     use HttpResponses;
+
     // List all cart items
     public function index()
     {
-        $cartItems = Cart::with(['product', 'variation'])
+        $cartItems = Cart::with('product')
             ->where('user_id', Auth::id())
             ->get();
 
@@ -26,50 +27,51 @@ class CartController extends Controller
     // Show single cart item
     public function show(Cart $cart)
     {
-        $this->authorize('view', $cart);
+        if($cart->user_id !== Auth::id()) {
+            return $this->error(null, 'Unauthorized', 403);
+        }
 
-        return $this->success(CartResource::make($cart->load(['product', 'variation'])), 'Cart item fetched successfully');
+        return $this->success(CartResource::make($cart), 'Cart item fetched successfully');
     }
 
     // Add to cart
     public function store(Request $request)
     {
-        $validated = $this->validateCartRequest($request);
+        try {
+            $validated = $this->validateCartRequest($request);
 
-        $existingItem = $this->findExistingCartItem($validated);
-
-        if ($existingItem) {
-            $existingItem->update([
-                'quantity' => $existingItem->quantity + $validated['quantity']
+            $cartItem = Cart::create([
+                'user_id' => Auth::id(),
+                ...$validated
             ]);
 
-            return new CartResource($existingItem->fresh());
+            return $this->success(CartResource::make($cartItem->fresh()), 'Cart item added successfully');
+        } catch (\Exception $e) {
+            return $this->error('Failed to add item to cart: ' . $e->getMessage(), 500);
         }
-
-        $cartItem = Cart::create([
-            'user_id' => Auth::id(),
-            ...$validated
-        ]);
-
-        return $this->success(CartResource::make($cartItem->fresh()), 'Cart item added successfully');
     }
 
     // Update cart item
     public function update(Request $request, Cart $cart)
     {
-        $this->authorize('update', $cart);
+        try {
+            $validated = $this->validateCartRequest($request);
 
-        $validated = $this->validateCartRequest($request);
+            $cart->update($validated);
 
-        $cart->update($validated);
-
-        return $this->success(CartResource::make($cart->fresh()), 'Cart item updated successfully');
+            return $this->success(CartResource::make($cart->fresh()), 'Cart item updated successfully');
+        } catch (\Exception $e) {
+            return $this->error('Failed to update cart item: ' . $e->getMessage(), 500);
+        }
     }
 
     // Remove from cart
     public function destroy(Cart $cart)
     {
-        $this->authorize('delete', $cart);
+
+        if($cart->user_id !== Auth::id()) {
+            return $this->error(null, 'Unauthorized', 403);
+        }
 
         $cart->delete();
 
@@ -126,39 +128,5 @@ class CartController extends Controller
             ],
             'options' => 'nullable|array'
         ]);
-    }
-
-    // Find existing cart item
-    protected function findExistingCartItem(array $validated)
-    {
-        $query = Cart::where('user_id', Auth::id())
-            ->where('product_id', $validated['product_id'])
-            ->where('product_type', $validated['product_type']);
-
-        // Inclusive မဟုတ်တဲ့ products အတွက် variation_id စစ်ဆေးခြင်း
-        if ($validated['product_type'] !== 'App\Models\Inclusive' && isset($validated['variation_id'])) {
-            $query->where('variation_id', $validated['variation_id']);
-        }
-
-        // EntranceTicket, PrivateVanTour, Inclusive တို့အတွက် service_date စစ်ဆေးခြင်း
-        if (in_array($validated['product_type'], [
-            'App\Models\EntranceTicket',
-            'App\Models\PrivateVanTour',
-            'App\Models\Inclusive'
-        ]) && isset($validated['service_date'])) {
-            $query->where('service_date', $validated['service_date']);
-        }
-
-        // Hotel products များအတွက် checkout_date စစ်ဆေးခြင်း
-        if ($validated['product_type'] === 'App\Models\Hotel' && isset($validated['checkout_date'])) {
-            $query->where('checkout_date', $validated['checkout_date']);
-        }
-
-        // Options များကိုစစ်ဆေးခြင်း
-        if (isset($validated['options'])) {
-            $query->where('options', json_encode($validated['options']));
-        }
-
-        return $query->first();
     }
 }

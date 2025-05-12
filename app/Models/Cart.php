@@ -26,6 +26,8 @@ class Cart extends Model
         'checkout_date' => 'date',
     ];
 
+    protected $appends = ['variation'];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -36,16 +38,20 @@ class Cart extends Model
         return $this->morphTo();
     }
 
-    // Helper method to get the variation based on product type
-    public function variation()
+    // Or define specific accessors for each variation type
+    public function getVariationAttribute()
     {
+        if (!$this->variation_id) {
+            return null;
+        }
+
         switch ($this->product_type) {
             case 'App\Models\Hotel':
-                return $this->belongsTo(Room::class, 'variation_id', 'id');
+                return Room::find($this->variation_id);
             case 'App\Models\PrivateVanTour':
-                return $this->belongsTo(PrivateVanTourCar::class, 'variation_id', 'id');
+                return PrivateVanTourCar::find($this->variation_id);
             case 'App\Models\EntranceTicket':
-                return $this->belongsTo(EntranceTicketVariation::class, 'variation_id', 'id');
+                return EntranceTicketVariation::find($this->variation_id);
             default:
                 return null;
         }
