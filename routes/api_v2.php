@@ -114,8 +114,8 @@ Route::group([], function () {
         Route::get('carts', [CartController::class, 'index']);
         Route::post('carts', [CartController::class, 'store']);
         Route::get('carts/{id}', [CartController::class, 'show']);
-        Route::post('carts/{id}', [CartController::class, 'update']);
-        Route::delete('carts/{id}', [CartController::class, 'destroy']);
+        Route::put('carts/{cart}', [CartController::class, 'update']);
+        Route::delete('carts/{cart}', [CartController::class, 'destroy']);
         Route::delete('carts/clear', [CartController::class, 'clear']);
     });
 });

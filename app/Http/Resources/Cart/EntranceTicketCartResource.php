@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\Cart;
 
+use App\Http\Resources\Frontend\ProductCategoryResource;
+use App\Http\Resources\PrivateVanTourCityResource;
 use App\Http\Resources\ProductImageResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,6 +21,8 @@ class EntranceTicketCartResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'price_name' => $this->price_name,
+            'cities' => PrivateVanTourCityResource::collection($this->cities),
+            'categories' => ProductCategoryResource::collection($this->categories),
             'price' => $this->price,
             'owner_price' => $this->owner_price,
             'images' => ProductImageResource::collection($this->images),
