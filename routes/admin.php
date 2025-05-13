@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingConfirmLetterController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\BookingItemGroupController;
 use App\Http\Controllers\Admin\BookingItemVerifyController;
 use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
@@ -379,7 +380,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('cases', CaseController::class);
 
     # Booking item verify
-    Route::put('/booking/{id}/verify_status',[BookingItemVerifyController::class, 'updateVerifyStatus']);
+    Route::put('/booking/{id}/verify_status', [BookingItemVerifyController::class, 'updateVerifyStatus']);
+
+    # Booking Item Group
+    Route::get('bookings/{booking}/groups', [BookingItemGroupController::class, 'index']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

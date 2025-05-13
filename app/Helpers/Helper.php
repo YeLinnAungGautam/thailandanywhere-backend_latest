@@ -26,10 +26,59 @@ if (!function_exists('get_file_link')) {
     }
 }
 
-
 if (!function_exists('make_title')) {
     function make_title($string)
     {
         return Str::of($string)->snake()->replace('_', ' ')->title();
+    }
+}
+
+if (!function_exists('upload_file')) {
+    function upload_file($file, $path)
+    {
+        if ($file) {
+            $fileName = time() . '_' . rand(00000, 99999) . '_' . uniqid();
+
+            Storage::put($path . $fileName, File::get($file));
+
+            $file_type = $file->getClientOriginalExtension();
+            $filePath = $path . $fileName;
+
+            return $file = [
+                'fileName' => $fileName,
+                'fileType' => $file_type,
+                'filePath' => $filePath,
+                'fileSize' => get_file_size($file)
+            ];
+        }
+    }
+}
+
+
+if (!function_exists('get_file_size')) {
+    function get_file_size($file, $precision = 2)
+    {
+        $size = $file->getSize();
+
+        if ($size > 0) {
+            $size = (int) $size;
+            $base = log($size) / log(1024);
+            $suffixes = [' bytes', ' KB', ' MB', ' GB', ' TB'];
+
+            return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
+        }
+
+        return $size;
+    }
+}
+
+if (!function_exists('get_file')) {
+    function get_file($file_name, $path)
+    {
+        if ($file_name) {
+            return Storage::url($path . '/' . $file_name);
+        }
+
+        return null;
     }
 }

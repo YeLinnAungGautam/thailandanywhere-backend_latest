@@ -55,6 +55,11 @@ class Booking extends Model
         return $this->hasMany(BookingReceipt::class);
     }
 
+    public function bookingItemGroups()
+    {
+        return $this->hasMany(BookingItemGroup::class);
+    }
+
     public function generateInvoiceNumber()
     {
         $number = date('YmdHis');

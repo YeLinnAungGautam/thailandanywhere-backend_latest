@@ -35,9 +35,6 @@ class ReservationController extends Controller
     use ImageManager;
     use HttpResponses;
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
@@ -205,9 +202,6 @@ class ReservationController extends Controller
             ->getData(), 'Reservation List');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $find = BookingItem::find($id);
@@ -234,9 +228,6 @@ class ReservationController extends Controller
         return $this->success(new BookingItemDetailResource($booking_item), 'Booking Item Detail Copy');
     }
 
-    /**
-    * Print Invoice for the reservation entrance category.
-    */
     public function printReservation(Request $request, string $id)
     {
 
@@ -299,9 +290,6 @@ class ReservationController extends Controller
         return $pdf->stream();
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $find = BookingItem::find($id);
@@ -705,7 +693,7 @@ class ReservationController extends Controller
                     $request->mail_body,
                     $booking_item,
                     $attachments,
-                    $ccEmail, // Pass the CC email address to the job
+                    $ccEmail,
                     $request->email_type
                 ));
             }
