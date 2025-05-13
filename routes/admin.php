@@ -384,6 +384,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Item Group
     Route::get('bookings/{booking}/groups', [BookingItemGroupController::class, 'index']);
+    Route::put('bookings/{booking}/groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
