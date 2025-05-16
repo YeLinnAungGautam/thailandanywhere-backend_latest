@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Http\Controllers\Admin\OrderAdminController;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -18,6 +19,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('send:reservation-report weekly')->weeklyOn(1, '9:00');
 
         $schedule->command('users:delete-unverified')->everyFiveMinutes();
+
+        $schedule->call(function () {
+            $controller = new OrderAdminController();
+            $controller->cleanupExpiredOrders();
+        })->hourly();
     }
 
     /**

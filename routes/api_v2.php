@@ -22,6 +22,7 @@ use App\Http\Controllers\API\V2\PrivateVanTourController;
 use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([], function () {
@@ -117,5 +118,11 @@ Route::group([], function () {
         Route::put('carts/{cart}', [CartController::class, 'update']);
         Route::delete('carts/{cart}', [CartController::class, 'destroy']);
         Route::delete('carts/clear', [CartController::class, 'clear']);
+
+        # Order
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{id}', [OrderController::class, 'show']);
+        Route::post('checkout', [OrderController::class, 'checkout']);
+        Route::delete('orders/{id}', [OrderController::class, 'cancelOrder']);
     });
 });
