@@ -247,4 +247,19 @@ class BookingItem extends Model
         return $this->hasMany(CaseTable::class, 'related_id')
             ->where('case_type', 'cost');
     }
+
+    public function getIndividualPricingAttribute($value)
+    {
+        // Add a custom accessor to decode the LONGTEXT JSON when accessed
+        return $value ? json_decode($value, true) : null;
+    }
+    public function setIndividualPricingAttribute($value)
+    {
+        // Add a custom mutator to encode arrays to JSON strings
+        if (is_array($value)) {
+            $this->attributes['individual_pricing'] = json_encode($value);
+        } else {
+            $this->attributes['individual_pricing'] = $value;
+        }
+    }
 }

@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
+use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PlaceController;
 use App\Http\Controllers\Admin\PostController;
@@ -389,6 +390,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Booking Item Group - Passport
     Route::get('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'getPassports']);
     Route::post('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'storePassports']);
+
+    # order part
+    Route::get('orders', [OrderAdminController::class, 'index']);
+    Route::post('orders/{id}/payment', [OrderAdminController::class, 'addPayment']);
+    Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
+
+    #order cancel auto
+    Route::get('/orders/expired-cleanup', [OrderAdminController::class, 'cleanupExpiredOrders']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
