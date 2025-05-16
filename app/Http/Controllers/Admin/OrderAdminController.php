@@ -25,24 +25,77 @@ class OrderAdminController extends Controller
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
+
+        // Get filter parameters
         $status = $request->query('status');
+        $orderNumber = $request->query('order_number');
+        $adminId = $request->query('admin_id');
+        $orderDatetime = $request->query('order_datetime');
+        $balanceDueDate = $request->query('balance_due_date');
 
-        $query = Order::with(['items', 'customer', 'admin','payments']);
+        // Initialize query with relationships
+        $query = Order::with(['items', 'customer', 'admin', 'payments']);
 
+        // Apply filters if provided
         if ($status) {
             $query->where('order_status', $status);
         }
 
+        if ($orderNumber) {
+            $query->where('order_number', 'like', "%{$orderNumber}%");
+        }
+
+        if ($adminId) {
+            $query->where('admin_id', $adminId);
+        }
+
+        // Date range filtering for order_datetime
+        if ($orderDatetime) {
+            // Check if it's a range or single date
+            if (strpos($orderDatetime, ',') !== false) {
+                // It's a range
+                list($startDate, $endDate) = explode(',', $orderDatetime);
+                $query->whereBetween('created_at', [
+                    date('Y-m-d 00:00:00', strtotime(trim($startDate))),
+                    date('Y-m-d 23:59:59', strtotime(trim($endDate)))
+                ]);
+            } else {
+                // It's a single date
+                $query->whereDate('created_at', date('Y-m-d', strtotime($orderDatetime)));
+            }
+        }
+
+        // Date range filtering for balance_due_date
+        if ($balanceDueDate) {
+            // Check if it's a range or single date
+            if (strpos($balanceDueDate, ',') !== false) {
+                // It's a range
+                list($startDate, $endDate) = explode(',', $balanceDueDate);
+                $query->whereBetween('balance_due_date', [
+                    date('Y-m-d 00:00:00', strtotime(trim($startDate))),
+                    date('Y-m-d 23:59:59', strtotime(trim($endDate)))
+                ]);
+            } else {
+                // It's a single date
+                $query->whereDate('balance_due_date', date('Y-m-d', strtotime($balanceDueDate)));
+            }
+        }
+
+        // Get paginated results
         $orders = $query->orderBy('created_at', 'desc')->paginate($limit);
 
-        return $this->success(OrderResource::collection($orders)
-        ->additional([
-            'meta' => [
-                'total_page' => (int)ceil($orders->total() / $orders->perPage()),
-            ],
-        ])
-        ->response()
-        ->getData(), 'Booking List');
+        // Return formatted response
+        return $this->success(
+            OrderResource::collection($orders)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int)ceil($orders->total() / $orders->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(),
+            'Booking List'
+        );
     }
 
     public function addPayment (Request $request, $id){
@@ -175,6 +228,13 @@ class OrderAdminController extends Controller
 
     private function convertOrderItemsToBookingItems (Order $order, $booking){
         foreach ($order->items as $key => $item) {
+            $individualPricing = null;
+            if ($item->individual_pricing) {
+                // For booking_items (LONGTEXT), we need to ensure it's a JSON string
+                $individualPricing = is_array($item->individual_pricing) ?
+                    json_encode($item->individual_pricing) :
+                    $item->individual_pricing;
+            }
             $data = [
                 'booking_id' => $booking->id,
                 'crm_id' => $booking->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
@@ -193,7 +253,7 @@ class OrderAdminController extends Controller
                 'payment_status' => $item->payment_status ?? null,
                 'exchange_rate' => $item->exchange_rate ?? null,
                 'comment' => $item->comment ?? null,
-                'amount' => $item->total_cost_price,
+                'amount' => $item->total_selling_price,
                 'discount' => $item->discount,
                 'special_request' => $item->special_request ?? null,
                 'route_plan' => $item->route_plan ?? null,
@@ -203,7 +263,7 @@ class OrderAdminController extends Controller
                 'checkin_date' => $item->checkin_date ?? null,
                 'checkout_date' => $item->checkout_date ?? null,
                 'reservation_status' => 'pending',
-                'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
+                'individual_pricing' => $individualPricing,
             ];
 
             BookingItem::create($data);

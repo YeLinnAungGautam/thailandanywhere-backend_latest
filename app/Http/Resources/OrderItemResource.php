@@ -55,6 +55,7 @@ class OrderItemResource extends JsonResource
             'route_price' => $this->route_price,
             'pickup_location' => $this->pickup_location,
             'pickup_time' => $this->pickup_time,
+            'individual_pricing' => $this->individual_pricing,
             'car' => new CarResource($this->car),
             'room' => new RoomResource($this->room),
             'variation' => new EntranceTicketVariationResource($this->variation),

@@ -95,6 +95,12 @@ class OrderController extends Controller
         $createdItems = [];
 
         foreach ($items as $item) {
+            $individualPricing = null;
+            if (isset($item['individual_pricing'])) {
+                // Keep as an array for the JSON column in order_items
+                $individualPricing = $item['individual_pricing'];
+            }
+
             $orderItem = new OrderItem([
                 'order_id' => $order->id,
                 'product_type' => $item['product_type'] ?? 'App\Models\Product',
@@ -115,6 +121,7 @@ class OrderController extends Controller
                 'route_plan' => $item['route_plan'] ?? null,
                 'pickup_location' => $item['pickup_location'] ?? null,
                 'pickup_time' => $item['pickup_time'] ?? null,
+                'individual_pricing' => $individualPricing,
             ]);
 
             $order->items()->save($orderItem);
@@ -143,7 +150,7 @@ class OrderController extends Controller
             ->findOrFail($id);
 
         return $this->success([
-            'order' => $order,
+            'order' => new OrderResource($order),
             'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
         ], 'အော်ဒါအသေးစိတ်');
     }

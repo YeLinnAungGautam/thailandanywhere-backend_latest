@@ -146,7 +146,7 @@ class BookingItemResource extends JsonResource
             // 'paid_slip' => $this->paid_slip ? Storage::url('images/' . $this->paid_slip) : null,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-            'individual_pricing' => $this->individual_pricing ? json_decode($this->individual_pricing) : null,
+            'individual_pricing' => $this->individual_pricing ? (is_string($this->individual_pricing) ? json_decode($this->individual_pricing) : $this->individual_pricing) : null,
             'cancellation' => $this->cancellation,
             'addon' => $this->addon ? json_decode($this->addon) : null,
             'is_booking_request' => $this->is_booking_request,

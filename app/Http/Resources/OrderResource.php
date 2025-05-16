@@ -32,6 +32,7 @@ class OrderResource extends JsonResource
             'sub_total' => $this->sub_total,
             'grand_total' => $this->grand_total,
             'deposit_amount' => $this->deposit_amount,
+
             'comment' => $this->comment,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

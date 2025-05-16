@@ -15,6 +15,7 @@ class OrderItem extends Model
         'checkin_date' => 'date',
         'checkout_date' => 'date',
         'service_date' => 'date',
+        'individual_pricing' => 'json'
     ];
 
     public function order()
