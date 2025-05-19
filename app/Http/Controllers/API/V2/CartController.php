@@ -18,7 +18,8 @@ class CartController extends Controller
     public function index()
     {
         $cartItems = Cart::with('product')
-            ->where('user_id', Auth::id())
+            ->where('owner_id', Auth::id())
+            ->where('owner_type', get_class(Auth::user()))
             ->get();
 
         return CartResource::collection($cartItems);
@@ -27,12 +28,13 @@ class CartController extends Controller
     // Show single cart item
     public function show(Cart $cart)
     {
-        if ($cart->user_id !== Auth::id()) {
+        if ($cart->owner_id !== Auth::id() || $cart->owner_type !== get_class(Auth::user())) {
             return $this->error(null, 'Unauthorized', 403);
         }
 
         return $this->success(CartResource::make($cart), 'Cart item fetched successfully');
     }
+
 
     // Add to cart
     public function store(Request $request)
@@ -40,8 +42,11 @@ class CartController extends Controller
         try {
             $validated = $this->validateCartRequest($request);
 
+            $owner = Auth::user();
+
             $cartItem = Cart::create([
-                'user_id' => Auth::id(),
+                'owner_id' => $owner->id,
+                'owner_type' => get_class($owner),
                 ...$validated
             ]);
 
@@ -55,6 +60,10 @@ class CartController extends Controller
     public function update(Request $request, Cart $cart)
     {
         try {
+            if ($cart->owner_id !== Auth::id() || $cart->owner_type !== get_class(Auth::user())) {
+                return $this->error(null, 'Unauthorized', 403);
+            }
+
             $validated = $this->validateCartRequest($request);
 
             $cart->update($validated);
@@ -69,7 +78,7 @@ class CartController extends Controller
     public function destroy(Cart $cart)
     {
 
-        if ($cart->user_id !== Auth::id()) {
+        if ($cart->owner_id !== Auth::id() || $cart->owner_type !== get_class(Auth::user())) {
             return $this->error(null, 'Unauthorized', 403);
         }
 

@@ -24,9 +24,16 @@ class OrderController extends Controller
     {
         $limit = $request->query('limit', 10);
         $status = $request->query('status');
+        $userType = $request->query('type', 'user');
 
         $query = Order::with(['items', 'customer', 'admin', 'payments','user'])
-            ->where('user_id', Auth::id());
+        ->when($userType === 'user', function($q) {
+            $q->where('user_id', Auth::id());
+        })
+        ->when($userType === 'admin', function($q) {
+            $q->where('admin_id', Auth::id());
+        });
+
 
         if ($status) {
             $query->where('order_status', $status);
@@ -49,10 +56,10 @@ class OrderController extends Controller
     public function checkout(Request $request)
     {
         try {
+            $userType = $request->input('type', 'user'); // Default to 'user'
             // အော်ဒါဒေတာပြင်ဆင်ခြင်း
-            $order = [
-                'user_id' => Auth::id(),
-                'customer_id' => $request->customer_id,
+
+            $orderData = [
                 'phone_number' => $request->phone_number,
                 'email' => $request->email,
                 'sold_from' => $request->sold_from,
@@ -68,12 +75,22 @@ class OrderController extends Controller
                 'comment' => $request->comment ?? null,
             ];
 
+            // Set user_id or admin_id based on type
+            if ($userType === 'user') {
+                $orderData['user_id'] = Auth::id();
+                $orderData['customer_id'] = $request->customer_id;
+            } else {
+                $orderData['admin_id'] = Auth::id();
+                // You might want to handle customer_id differently for admin
+                $orderData['customer_id'] = $request->customer_id;
+            }
+
             // အော်ဒါဖန်တီးခြင်း
-            $order = Order::create($order);
+            $order = Order::create($orderData);
 
             // ပစ္စည်းများထည့်သွင်းခြင်း
             if ($request->has('items') && is_array($request->items)) {
-                $orderItems = $this->assignOrderItems($order, $request->items);
+                $this->assignOrderItems($order, $request->items, $userType);
             }
 
             // ပြန်လည်ဆွဲယူခြင်း (refresh) ဖြင့် အချက်အလက်အားလုံးပါဝင်မှုကိုသေချာစေခြင်း
@@ -90,7 +107,7 @@ class OrderController extends Controller
     /**
      * အော်ဒါပစ္စည်းများထည့်သွင်းခြင်း
      */
-    private function assignOrderItems($order, $items)
+    private function assignOrderItems($order, $items, $userType)
     {
         $createdItems = [];
 
@@ -131,7 +148,7 @@ class OrderController extends Controller
         // Cart ကို ရှင်းလင်းရန် (လိုအပ်ပါက)
 
         try {
-            Cart::where('user_id', Auth::id())->delete();
+            Cart::where('owner_id', Auth::id())->where('owner_type', get_class(Auth::user()))->delete();
         } catch (\Exception $e) {
             return $this->error(null, $e->getMessage());
         }
@@ -140,44 +157,53 @@ class OrderController extends Controller
     }
 
 
-    /**
-     * အော်ဒါအသေးစိတ်ကြည့်ရှုခြင်း
-     */
-    public function show($id)
-    {
-        $order = Order::with(['items', 'customer', 'admin', 'payments', 'booking','user'])
-            ->where('user_id', Auth::id())
-            ->findOrFail($id);
+    public function show(Request $request, $id)
+        {
+            $userType = $request->query('type', 'user'); // Default to 'user'
 
-        return $this->success([
-            'order' => new OrderResource($order),
-            'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
-        ], 'အော်ဒါအသေးစိတ်');
-    }
+            $order = Order::with(['items', 'customer', 'admin', 'payments', 'booking', 'user'])
+                ->when($userType === 'user', function($q) {
+                    $q->where('user_id', Auth::id());
+                })
+                ->when($userType === 'admin', function($q) {
+                    $q->where('admin_id', Auth::id());
+                })
+                ->findOrFail($id);
 
-    /**
-     * အော်ဒါကို ပယ်ဖျက်ခြင်း
-     */
-    public function cancelOrder(Request $request, $id)
-    {
-        $order = Order::where('user_id', Auth::id())->findOrFail($id);
-
-        if ($order->order_status !== 'pending' && $order->order_status !== 'processing') {
-            return $this->error('ဤအော်ဒါကို ယခုအချိန်တွင် ပယ်ဖျက်ခွင့်မရှိပါ', 400);
+            return $this->success([
+                'order' => new OrderResource($order),
+                'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
+            ], 'Order details');
         }
 
-        if ($order->booking_id) {
-            return $this->error('ဘွတ်ကင်အဖြစ်ပြောင်းလဲပြီးသော အော်ဒါကို ပယ်ဖျက်၍မရပါ', 400);
+        /**
+         * Cancel order with proper authorization
+         */
+        public function cancelOrder(Request $request, $id)
+        {
+            $userType = $request->query('type', 'user'); // Default to 'user'
+
+            $order = Order::when($userType === 'user', function($q) {
+                    $q->where('user_id', Auth::id());
+                })
+                ->when($userType === 'admin', function($q) {
+                    $q->where('admin_id', Auth::id());
+                })
+                ->findOrFail($id);
+
+            if ($order->order_status != 'pending') {
+                return $this->error('This order cannot be cancelled at this time', 400);
+            }
+
+            if ($order->booking_id) {
+                return $this->error('Cannot cancel order that has been converted to booking', 400);
+            }
+
+            $order->update([
+                'order_status' => 'cancelled',
+                'comment' => $request->comment ?? $order->comment,
+            ]);
+
+            return $this->success(new OrderResource($order), 'Order cancelled successfully');
         }
-
-        $order->update([
-            'order_status' => 'cancelled',
-            'comment' => $request->comment ?? $order->comment,
-        ]);
-
-        // return $this->success([
-        //     'order' => $order,
-        // ], 'အော်ဒါကို အောင်မြင်စွာ ပယ်ဖျက်ပြီးပါပြီ။');
-        return $this->success(new OrderResource($order), 'အော်ဒါကို အောင်မြင်စွာ ပယ်ဖျက်ပြီးပါပြီ။');
-    }
 }
