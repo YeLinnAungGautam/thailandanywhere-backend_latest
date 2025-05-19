@@ -62,11 +62,13 @@ class BookingItem extends Model
         return $this->hasOne(ReservationInfo::class, 'booking_item_id');
     }
 
-    public function requestProves(){
+    public function requestProves()
+    {
         return $this->hasMany(ReservationBookingRequest::class, 'booking_item_id');
     }
 
-    public function expenseMail(){
+    public function expenseMail()
+    {
         return $this->hasMany(ReservationExpenseMail::class, 'booking_item_id');
     }
 
@@ -123,6 +125,11 @@ class BookingItem extends Model
     protected function calcSalePrice(): Attribute
     {
         return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(BookingItemGroup::class, 'group_id');
     }
 
     public function scopePrivateVanTour($query)

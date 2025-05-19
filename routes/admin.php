@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AttractionActivityController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingConfirmLetterController;
 use App\Http\Controllers\Admin\BookingController;
+use App\Http\Controllers\Admin\BookingItemGroupController;
 use App\Http\Controllers\Admin\BookingItemVerifyController;
 use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
@@ -380,7 +381,15 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('cases', CaseController::class);
 
     # Booking item verify
-    Route::put('/booking/{id}/verify_status',[BookingItemVerifyController::class, 'updateVerifyStatus']);
+    Route::put('/booking/{id}/verify_status', [BookingItemVerifyController::class, 'updateVerifyStatus']);
+
+    # Booking Item Group
+    Route::get('booking-item-groups', [BookingItemGroupController::class, 'index']);
+    Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
+
+    # Booking Item Group - Passport
+    Route::get('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'getPassports']);
+    Route::post('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'storePassports']);
 
     # order part
     Route::get('orders', [OrderAdminController::class, 'index']);
