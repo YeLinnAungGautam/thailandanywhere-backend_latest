@@ -395,6 +395,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('orders', [OrderAdminController::class, 'index']);
     Route::post('orders/{id}/payment', [OrderAdminController::class, 'addPayment']);
     Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
+    Route::post('orders/{id}/change-status', [OrderAdminController::class, 'changeStatus']);
+    Route::delete('orders/{id}', [OrderAdminController::class, 'deleteOrder']);
 
     #order cancel auto
     Route::get('/orders/expired-cleanup', [OrderAdminController::class, 'cleanupExpiredOrders']);

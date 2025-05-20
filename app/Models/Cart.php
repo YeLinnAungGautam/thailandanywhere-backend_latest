@@ -10,7 +10,8 @@ class Cart extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'owner_id',
+        'owner_type',
         'product_id',
         'product_type',
         'variation_id',
@@ -28,9 +29,9 @@ class Cart extends Model
 
     protected $appends = ['variation'];
 
-    public function user()
+    public function owner()
     {
-        return $this->belongsTo(User::class);
+        return $this->morphTo();
     }
 
     public function product()
