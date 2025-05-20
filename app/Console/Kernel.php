@@ -20,6 +20,8 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('users:delete-unverified')->everyFiveMinutes();
 
+        $schedule->command('app:delete-expired-cart-items')->daily();
+
         $schedule->call(function () {
             $controller = new OrderAdminController();
             $controller->cleanupExpiredOrders();

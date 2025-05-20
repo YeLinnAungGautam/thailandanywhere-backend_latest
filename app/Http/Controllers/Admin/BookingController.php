@@ -13,6 +13,7 @@ use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
 use App\Models\InclusiveProduct;
+use App\Models\Order;
 use App\Models\ReservationBookingConfirmLetter;
 use App\Services\Manager\BookingManager;
 use App\Traits\HttpResponses;
@@ -546,6 +547,11 @@ class BookingController extends Controller
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
+
+        Order::where('booking_id', $id)->update([
+            'order_status' => 'cancelled',
+            'booking_id' => null
+        ]);
 
         foreach ($find->items as $item) {
             if ($item->receipt_image) {
