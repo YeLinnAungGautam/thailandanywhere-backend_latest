@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,6 +15,8 @@ class BookingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $sourceOrder = Order::where('booking_id', $this->id)->first();
+
         return [
             'id' => $this->id,
             'invoice_number' => $this->invoice_number,
@@ -63,6 +66,14 @@ class BookingResource extends JsonResource
 
             // verfiy status
             'verify_status' => $this->verify_status,
+
+            // from order
+            'is_from_order' => !is_null($sourceOrder),
+            'source_order' => $sourceOrder ? [
+                'id' => $sourceOrder->id,
+                'order_number' => $sourceOrder->order_number,
+                'order_status' => $sourceOrder->order_status,
+            ] : null,
 
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
