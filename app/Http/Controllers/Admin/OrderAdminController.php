@@ -153,7 +153,6 @@ class OrderAdminController extends Controller
                 // Convert order to booking
                 $booking = $this->convertOrderToBooking($order, $request);
 
-
                 DB::table('orders')
                 ->where('id', $order->id)
                 ->update([
