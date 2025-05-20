@@ -146,7 +146,7 @@ class OrderAdminController extends Controller
                 $order = Order::with(['items', 'customer'])->findOrFail($id);
 
                 // Check if order is already approved
-                if ($order->order_status === 'confirmed') {
+                if ($order->order_status === 'sale_convert') {
                     return $this->error(null, 'Order is already approved');
                 }
 
@@ -157,7 +157,7 @@ class OrderAdminController extends Controller
                 DB::table('orders')
                 ->where('id', $order->id)
                 ->update([
-                    'order_status' => 'confirmed',
+                    'order_status' => 'sale_convert',
                     'booking_id' => $booking->id,
                     'updated_at' => now()
                 ]);
@@ -298,5 +298,19 @@ class OrderAdminController extends Controller
                 'message' => $e->getMessage()
             ]);
         }
+    }
+
+    public function changeStatus(Request $request, $id){
+        $order = Order::findOrFail($id);
+        $order->update([
+            'order_status' => $request->status
+        ]);
+        return $this->success(new OrderResource($order), 'Order status changed successfully');
+    }
+
+    public function deleteOrder($id){
+        $order = Order::findOrFail($id);
+        $order->delete();
+        return $this->success(null, 'Order deleted successfully');
     }
 }

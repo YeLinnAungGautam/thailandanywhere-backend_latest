@@ -27,9 +27,17 @@ class CartResource extends JsonResource
         default => null,
     };
 
+    $ownerResource = match ($this->owner_type) {
+        'App\Models\User' => new UserResource($this->owner),
+        'App\Models\Admin' => new AdminResource($this->owner),
+        default => null,
+    };
+
     return [
         'id' => $this->id,
-        'user_id' => $this->user_id,
+        // 'user_id' => $this->user_id,
+        'owner_id' => $this->owner_id,
+        'owner' => $ownerResource,
         'product_type' => $this->product_type,
         'product_id' => $this->product_id,
         'product' => $productResource,
