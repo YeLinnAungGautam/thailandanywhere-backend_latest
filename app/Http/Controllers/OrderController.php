@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\OrderResource;
 use App\Models\Cart;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Traits\HttpResponses;
@@ -59,6 +60,19 @@ class OrderController extends Controller
             $userType = $request->input('type', 'user'); // Default to 'user'
             // အော်ဒါဒေတာပြင်ဆင်ခြင်း
 
+            $customer = Customer::where('name', $request->customer_name)->first();
+
+            if (!$customer) {
+                $customer = Customer::create([
+                    'name' => $request->customer_name,
+                    'phone_number' => $request->phone_number,
+                ]);
+
+                $request->merge(['customer_id' => $customer->id]);
+            }else{
+                $request->merge(['customer_id' => $customer->id]);
+            }
+
             $orderData = [
                 'phone_number' => $request->phone_number,
                 'email' => $request->email,
@@ -67,7 +81,7 @@ class OrderController extends Controller
                 'expire_datetime' => Carbon::now()->addHours(24),
                 'order_number' => 'ORD-'.Carbon::now()->format('Ymd-His').'-'.Auth::id(),
                 'balance_due_date' => $request->balance_due_date,
-                'order_status' => 'pending',
+                'customer_id' => $request->customer_id,
                 'discount' => $request->discount ?? 0,
                 'sub_total' => $request->total_amount,
                 'grand_total' => $request->grand_total,
@@ -78,11 +92,10 @@ class OrderController extends Controller
             // Set user_id or admin_id based on type
             if ($userType === 'user') {
                 $orderData['user_id'] = Auth::id();
-                $orderData['customer_id'] = $request->customer_id;
+                $orderData['order_status'] = 'pending';
             } else {
                 $orderData['admin_id'] = Auth::id();
-                // You might want to handle customer_id differently for admin
-                $orderData['customer_id'] = $request->customer_id;
+                $orderData['order_status'] = 'confirmed';
             }
 
             // အော်ဒါဖန်တီးခြင်း
@@ -143,14 +156,25 @@ class OrderController extends Controller
 
             $order->items()->save($orderItem);
             $createdItems[] = $orderItem;
+
+            //cart clean
+            if (isset($item['cart_id'])) {
+                $cartIdsToDelete[] = $item['cart_id'];
+            }
         }
 
         // Cart ကို ရှင်းလင်းရန် (လိုအပ်ပါက)
 
-        try {
-            Cart::where('owner_id', Auth::id())->where('owner_type', get_class(Auth::user()))->delete();
-        } catch (\Exception $e) {
-            return $this->error(null, $e->getMessage());
+        if (!empty($cartIdsToDelete)) {
+            try {
+                Cart::where('owner_id', Auth::id())
+                    ->where('owner_type', get_class(Auth::user()))
+                    ->whereIn('id', $cartIdsToDelete)
+                    ->delete();
+            } catch (\Exception $e) {
+                // Log error but don't stop the process
+                return $this->error('Failed to delete cart items: ' . $e->getMessage(), 500);
+            }
         }
 
         return $createdItems;
