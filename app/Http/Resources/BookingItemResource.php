@@ -156,6 +156,8 @@ class BookingItemResource extends JsonResource
 
             // cost case
             'cases' => isset($this->costCases) ? CaseDetailResource::collection($this->costCases) : '',
+
+            'group_id' => $this->group_id,
         ];
     }
 }
