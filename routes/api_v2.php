@@ -102,7 +102,7 @@ Route::group([], function () {
     # Reservation Information
     Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
 
-    Route::middleware(['auth:sanctum', 'abilities:user'])->group(function () {
+    Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
 
         # Bookings

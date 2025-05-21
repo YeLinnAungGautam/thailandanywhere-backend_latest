@@ -185,8 +185,8 @@ class OrderAdminController extends Controller
             'user_id' => $order->user_id, // Current admin user
             'sold_from' => $order->sold_from,
             'payment_method' => $request->payment_method ?? 'bank_transfer',
-            'payment_status' => $request->payment_status ?? 'partially_paid',
-            'payment_currency' => $request->payment_currency ?? 'USD',
+            'payment_status' => $request->payment_status ? 'partially_paid' : 'not_paid',
+            'payment_currency' => $request->payment_currency ?? 'THB',
             'booking_date' => Carbon::now(),
             'bank_name' => $request->bank_name ?? 'bank',
             'transfer_code' => $request->transfer_code ?? null,
@@ -243,6 +243,7 @@ class OrderAdminController extends Controller
                 'room_id' => $item->room_id ?? null,
                 'variation_id' => $item->variation_id ?? null,
                 'service_date' => $item->service_date,
+                'checkin_date' => $item->product_type == 'App\\Models\\Hotel' ? $item->service_date : null,
                 'quantity' => $item->quantity,
                 'duration' => $item->duration ?? null,
                 'selling_price' => $item->selling_price,
