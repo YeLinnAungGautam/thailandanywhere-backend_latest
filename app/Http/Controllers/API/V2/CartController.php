@@ -17,6 +17,10 @@ class CartController extends Controller
     // List all cart items
     public function index()
     {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
         $cartItems = Cart::with('product')
             ->where('owner_id', Auth::id())
             ->where('owner_type', get_class(Auth::user()))
