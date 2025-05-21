@@ -171,7 +171,8 @@ class BookingController extends Controller
     public function store(BookingRequest $request)
     {
         try {
-            BookingManager::createBookingWithReservation($request);
+            $booking = BookingManager::createBookingWithReservation($request);
+            return $this->success(new BookingResource($booking), 'Booking created successfully');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage());
         }
