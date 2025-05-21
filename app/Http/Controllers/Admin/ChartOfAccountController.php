@@ -39,56 +39,72 @@ class ChartOfAccountController extends Controller
         // Process and add total amounts for specific connections
         $collection->each(function ($item) use ($month) {
             // Handle price connection_detail
-            if ($item->connection_detail === 'price') {
+            if ($item->connection_detail == 'price') {
                 $totalAmount = 0;
-                $totalUnverifyAmount = 0;
+                $verifiedAmount = 0;
+                $unverifiedAmount = 0;
+                $pendingAmount = 0;
 
                 // For VanTour connection
                 if ($item->connection === 'vantour') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'fully_paid');
-                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'not_fully_paid');
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid');
+                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'verified');
+                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'unverified');
+                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'pending');
                 }
-
                 // For Hotel connection
                 else if ($item->connection === 'hotel') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'fully_paid');
-                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'not_fully_paid');
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid');
+                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'verified');
+                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'unverified');
+                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'pending');
                 }
-
                 // For Ticket connection
                 else if ($item->connection === 'ticket') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'fully_paid');
-                    $totalUnverifyAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'not_fully_paid');
+                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid');
+                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'verified');
+                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'unverified');
+                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'pending');
                 }
 
                 $item->total_amount = $totalAmount;
-                $item->total_unverify_amount = $totalUnverifyAmount;
+                $item->verified_amount = $verifiedAmount;
+                $item->unverified_amount = $unverifiedAmount;
+                $item->pending_amount = $pendingAmount;
             }
             // Handle expense connection_detail
             else if ($item->connection_detail === 'expense') {
+                $totalCostPrice = 0;
                 $verifiedCostPrice = 0;
                 $unverifiedCostPrice = 0;
+                $pendingCostPrice = 0;
 
                 // For VanTour connection
                 if ($item->connection === 'vantour') {
-                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\PrivateVanTour', $month, 'fully_paid');
-                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\PrivateVanTour', $month, 'not_fully_paid');
+                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid');
+                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'verified');
+                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'unverified');
+                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'pending');
                 }
-
                 // For Hotel connection
                 else if ($item->connection === 'hotel') {
-                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\Hotel', $month, 'fully_paid');
-                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\Hotel', $month, 'not_fully_paid');
+                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid');
+                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'verified');
+                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'unverified');
+                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'pending');
                 }
-
                 // For Ticket connection
                 else if ($item->connection === 'ticket') {
-                    $verifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\EntranceTicket', $month, 'fully_paid');
-                    $unverifiedCostPrice = $this->calculateTotalCostPrice('App\\Models\\EntranceTicket', $month, 'not_fully_paid');
+                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid');
+                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'verified');
+                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'unverified');
+                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'pending');
                 }
 
-                $item->total_cost_price = $verifiedCostPrice;
-                $item->total_unverify_cost_price = $unverifiedCostPrice;
+                $item->total_cost_amount = $totalCostPrice;
+                $item->verified_cost_price = $verifiedCostPrice;
+                $item->unverified_cost_price = $unverifiedCostPrice;
+                $item->pending_cost_price = $pendingCostPrice;
             }
         });
 
@@ -103,65 +119,37 @@ class ChartOfAccountController extends Controller
     }
 
     /**
-     * Calculate total amount for a specific product type in the given month based on booking payment status
+     * Calculate total for a specific product type in the given month based on booking payment status and verify status
      *
      * @param string $productType The fully qualified class name of the product type
      * @param string $month The month in YYYY-MM format
-     * @param string $paymentStatus Booking payment status to filter by ('fully_paid' or 'not_fully_paid')
+     * @param string $field The field to sum ('amount' or 'total_cost_price')
+     * @param string $paymentStatus Booking payment status to filter by ('fully_paid')
+     * @param string|null $verifyStatus Booking verify status to filter by (null, 'verified', 'unverified', 'pending')
      * @return float The total amount
      */
-    private function calculateTotalForProductType($productType, $month, $paymentStatus)
+    private function calculateTotalForProductType($productType, $month, $field, $paymentStatus, $verifyStatus = null)
     {
         $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
 
         $query = BookingItem::where('product_type', $productType)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotNull('amount')
-            ->whereHas('booking', function ($query) use ($paymentStatus) {
+            ->whereNotNull($field)
+            ->whereHas('booking', function ($query) use ($paymentStatus, $verifyStatus) {
                 // Only include booking items whose related booking is not inclusive
                 $query->where('is_inclusive', '!=', 1);
 
                 // Filter by booking payment status
-                if ($paymentStatus === 'fully_paid') {
-                    $query->where('payment_status', 'fully_paid');
-                } else {
-                    $query->where('payment_status', '!=', 'fully_paid');
+                $query->where('payment_status', $paymentStatus);
+
+                // Filter by verify status if provided
+                if ($verifyStatus !== null) {
+                    $query->where('verify_status', $verifyStatus);
                 }
             });
 
-        return $query->sum('amount');
-    }
-
-    /**
-     * Calculate total cost price for a specific product type in the given month based on booking payment status
-     *
-     * @param string $productType The fully qualified class name of the product type
-     * @param string $month The month in YYYY-MM format
-     * @param string $paymentStatus Booking payment status to filter by ('fully_paid' or 'not_fully_paid')
-     * @return float The total cost price
-     */
-    private function calculateTotalCostPrice($productType, $month, $paymentStatus)
-    {
-        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
-
-        $query = BookingItem::where('product_type', $productType)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotNull('total_cost_price')
-            ->whereHas('booking', function ($query) use ($paymentStatus) {
-                // Only include booking items whose related booking is not inclusive
-                $query->where('is_inclusive', '!=', 1);
-
-                // Filter by booking payment status
-                if ($paymentStatus === 'fully_paid') {
-                    $query->where('payment_status', 'fully_paid');
-                } else {
-                    $query->where('payment_status', '!=', 'fully_paid');
-                }
-            });
-
-        return $query->sum('total_cost_price');
+        return $query->sum($field) * 1 ?? 0;
     }
 
     public function store(Request $request)
