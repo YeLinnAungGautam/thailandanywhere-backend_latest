@@ -34,10 +34,11 @@ if (!function_exists('make_title')) {
 }
 
 if (!function_exists('upload_file')) {
-    function upload_file($file, $path)
+    function upload_file($file, $path, ?string $upload_file_name = null)
     {
         if ($file) {
-            $fileName = time() . '_' . rand(00000, 99999) . '_' . uniqid();
+            // $fileName = time() . '_' . rand(00000, 99999) . '_' . uniqid();
+            $fileName = $upload_file_name ?? uniqid().'_'.date('Y-m-d-H-i-s').'.'.$file->getClientOriginalExtension();
 
             Storage::put($path . $fileName, File::get($file));
 
@@ -48,7 +49,8 @@ if (!function_exists('upload_file')) {
                 'fileName' => $fileName,
                 'fileType' => $file_type,
                 'filePath' => $filePath,
-                'fileSize' => get_file_size($file)
+                'fileSize' => get_file_size($file),
+                'file' => $fileName,
             ];
         }
     }
@@ -80,5 +82,12 @@ if (!function_exists('get_file')) {
         }
 
         return null;
+    }
+}
+
+if (!function_exists('delete_file')) {
+    function delete_file($path, $file_name)
+    {
+        Storage::delete("/$path/$file_name");
     }
 }

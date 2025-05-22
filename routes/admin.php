@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\CustomerDocumentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
@@ -390,6 +391,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Booking Item Group - Passport
     Route::get('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'getPassports']);
     Route::post('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'storePassports']);
+    Route::put('booking-item-groups/{booking_item_group}/passports/{passport}', [BookingItemGroupController::class, 'updatePassports']);
+
+    # Delete customer document
+    Route::delete('booking-item-groups/{booking_item_group}/customer-documents/{customer_document}', [CustomerDocumentController::class, 'delete']);
 
     # order part
     Route::get('orders', [OrderAdminController::class, 'index']);

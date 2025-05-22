@@ -21,4 +21,14 @@ class BookingItemGroup extends Model
     {
         return $this->belongsTo(Booking::class);
     }
+
+    public function customerDocuments()
+    {
+        return $this->hasMany(CustomerDocument::class, 'booking_item_group_id');
+    }
+
+    public function passports()
+    {
+        return $this->hasMany(CustomerDocument::class, 'booking_item_group_id')->where('type', 'passport');
+    }
 }
