@@ -18,7 +18,7 @@ class BookingItemGroupController extends Controller
     {
         $groups = $booking->bookingItemGroups()
             ->with('bookingItems', 'booking')
-            ->get();
+            ->paginate(10);
 
         return $this->success(BookingItemGroupResource::collection($groups)
             ->additional([
