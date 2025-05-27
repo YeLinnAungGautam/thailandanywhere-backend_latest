@@ -5,17 +5,56 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
     public function index(Request $request)
     {
-        $items = Booking::query()
-            ->where('user_id', $request->user()->id)
-            ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "%{$request->search}%"))
-            ->paginate($request->limit ?? 10);
+        // Validate and get request parameters
+        $validated = $request->validate([
+            'limit' => 'sometimes|integer|min:1|max:100',
+            'app_show_status' => 'string',
+            'type' => 'sometimes|string|in:user,admin',
+            'converted_only' => 'sometimes|boolean' // New parameter to filter converted bookings
+        ]);
 
-        return BookingResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
+        // Set default values
+        $limit = $validated['limit'] ?? 10;
+        $userType = $validated['type'] ?? 'user';
+        $appShowStatus = $validated['app_show_status'] ?? 'upcoming';
+
+        // Base query with eager loading
+        $query = Booking::when(in_array($userType, ['user', 'admin']), function($q) use ($userType) {
+                $column = $userType === 'user' ? 'user_id' : 'created_by';
+                $q->where($column, Auth::id());
+            })
+            ->when($appShowStatus, fn($q) => $q->where('app_show_status', $appShowStatus))
+            ->when($userType == 'admin', function($q) {
+                // Only include bookings that have corresponding orders
+                $q->whereHas('orders', function($subQuery) {
+                    $subQuery->whereNotNull('booking_id');
+                });
+            });
+
+        // Execute query with pagination
+        $bookings = $query->with(['orders']) // Eager load orders relationship
+            ->latest()
+            ->paginate($limit);
+
+        // Prepare response
+        return $this->success(
+            BookingResource::collection($bookings)
+                ->additional([
+                    'meta' => [
+                        'total_page' => $bookings->lastPage(),
+                        'current_page' => $bookings->currentPage(),
+                        'per_page' => $bookings->perPage(),
+                        'total_items' => $bookings->total(),
+                    ],
+                ]),
+            'Booking list retrieved successfully'
+        );
     }
 
     public function show(string $id)

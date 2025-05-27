@@ -25,6 +25,7 @@ class OrderController extends Controller
     {
         $limit = $request->query('limit', 10);
         $status = $request->query('status');
+        $app_show = $request->query('app_show_status');
         $userType = $request->query('type', 'user');
 
         $query = Order::with(['items', 'customer', 'admin', 'payments','user'])
@@ -38,6 +39,10 @@ class OrderController extends Controller
 
         if ($status) {
             $query->where('order_status', $status);
+        }
+
+        if ($app_show) {
+            $query->where('app_show_status', $app_show);
         }
 
         $data = $query->orderBy('created_at', 'desc')->paginate($limit);
