@@ -50,6 +50,11 @@ class Order extends Model
         return $this->hasMany(OrderPayment::class);
     }
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     // အခြေအနေစစ်ဆေးခြင်း
     public function isExpired()
     {

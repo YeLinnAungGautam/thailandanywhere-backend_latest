@@ -2,7 +2,7 @@
 
 namespace App\Console;
 
-use App\Http\Controllers\Admin\OrderAdminController;
+use App\Services\OrderService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -18,13 +18,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('send:reservation-report daily')->dailyAt('9:00');
         $schedule->command('send:reservation-report weekly')->weeklyOn(1, '9:00');
 
+        $schedule->command('status:update')->dailyAt('3:00');
+
         $schedule->command('users:delete-unverified')->everyFiveMinutes();
 
         $schedule->command('app:delete-expired-cart-items')->daily();
 
         $schedule->call(function () {
-            $controller = new OrderAdminController();
-            $controller->cleanupExpiredOrders();
+            (new OrderService)->cleanupExpiredOrders();
         })->hourly();
     }
 

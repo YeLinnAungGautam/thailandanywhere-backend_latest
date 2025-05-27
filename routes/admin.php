@@ -398,8 +398,5 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('orders/{id}/change-status', [OrderAdminController::class, 'changeStatus']);
     Route::delete('orders/{id}', [OrderAdminController::class, 'deleteOrder']);
 
-    #order cancel auto
-    Route::get('/orders/expired-cleanup', [OrderAdminController::class, 'cleanupExpiredOrders']);
-
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
