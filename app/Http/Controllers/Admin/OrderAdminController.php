@@ -253,7 +253,7 @@ class OrderAdminController extends Controller
                 'payment_status' => $item->payment_status ?? null,
                 'exchange_rate' => $item->exchange_rate ?? null,
                 'comment' => $item->comment ?? null,
-                'amount' => $item->total_selling_price,
+                'amount' => $item->total_selling_price - $item->discount,
                 'discount' => $item->discount,
                 'special_request' => $item->special_request ?? null,
                 'route_plan' => $item->route_plan ?? null,
