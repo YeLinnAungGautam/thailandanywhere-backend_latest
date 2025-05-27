@@ -76,18 +76,44 @@ class BookingItemGroupController extends Controller
 
         try {
             foreach ($request->passports as $passport) {
-                $passport_file = upload_file($passport->file, 'booking_item_groups/passports/');
+                $passport_file = upload_file($passport->file, 'booking_item_groups/');
 
                 $booking_item_group->customerDocuments()->create([
                     'type' => 'passport',
-                    'file' => $passport_file['fileName'],
-                    'file_name' => $passport_file['filePath'],
-                    'mime_type' => $passport_file['fileType'],
-                    'file_size' => $passport_file['fileSize'],
+                    'file' => $passport_file['file'] ?? null,
+                    'file_name' => $passport_file['filePath'] ?? null,
+                    'mime_type' => $passport_file['fileType'] ?? null,
+                    'file_size' => $passport_file['fileSize'] ?? null,
                 ]);
             }
 
             return $this->success(null, 'Passport uploaded successfully');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function updatePassports(BookingItemGroup $booking_item_group, string $passport_id, Request $request)
+    {
+        try {
+            $passport = $booking_item_group->passports()->find($passport_id);
+
+            if (!$passport) {
+                return $this->error(null, 'Passport not found', 404);
+            }
+
+            if ($request->hasFile('file')) {
+                $passport_file = upload_file($request->file, 'booking_item_groups/');
+            }
+
+            $passport->update([
+                'type' => 'passport',
+                'file' => $passport_file['file'] ?? $passport->file,
+                'file_name' => $passport_file['filePath'] ?? null,
+                'mime_type' => $passport_file['fileType'] ?? null,
+                'file_size' => $passport_file['fileSize'] ?? null,
+            ]);
+
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
