@@ -194,7 +194,7 @@ class OrderAdminController extends Controller
             'sub_total' => $order->sub_total,
             'grand_total' => $order->grand_total,
             'exclude_amount' => $request->exclude_amount ?? 0,
-            'deposit' => $order->deposit_amount,
+            'deposit' => $request->deposit ?? $order->deposit_amount,
             'balance_due' => $order->grand_total - $order->deposit_amount,
             'balance_due_date' => $order->balance_due_date,
             'discount' => $order->discount,
@@ -205,20 +205,20 @@ class OrderAdminController extends Controller
 
         $booking = Booking::create($bookingData);
 
-        if ($request->has('receipt_image')) {
-            foreach ($request->receipt_image as $receipt) {
-                $image = $receipt['file'];
-                $amount = $receipt['amount'];
+        // if ($request->has('receipt_image')) {
+        //     foreach ($request->receipt_image as $receipt) {
+        //         $image = $receipt['file'];
+        //         $amount = $receipt['amount'];
 
-                $fileData = $this->uploads($image, 'images/');
+        //         $fileData = $this->uploads($image, 'images/');
 
-                BookingReceipt::create([
-                    'booking_id' => $booking->id,
-                    'image' => $fileData['fileName'],
-                    'amount' => $amount
-                ]);
-            }
-        }
+        //         BookingReceipt::create([
+        //             'booking_id' => $booking->id,
+        //             'image' => $fileData['fileName'],
+        //             'amount' => $amount
+        //         ]);
+        //     }
+        // }
 
         $this->convertOrderItemsToBookingItems($order, $booking);
 

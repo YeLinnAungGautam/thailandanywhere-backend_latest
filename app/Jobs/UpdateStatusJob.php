@@ -15,70 +15,85 @@ class UpdateStatusJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
-     * Execute the job.
-     */
     public function handle()
     {
+        $now = Carbon::now();
 
         // Order Status Update
-        Order::whereIn('app_show_status', [null, 'upcoming', 'cancelled'])
-             ->chunk(200, function ($orders) {
-                foreach ($orders as $order) {
-                    if ($order->order_status === 'cancelled') {
-                        $order->update(['app_show_status' => 'cancelled']);
-                        continue;
-                    }
+        Order::with('orderItems')->chunk(200, function ($orders) use ($now) {
+            foreach ($orders as $order) {
+                // Skip cancelled orders
+                if ($order->order_status === 'cancelled') {
+                    $order->update(['app_show_status' => 'cancelled']);
+                    continue;
+                }
 
-                    $hasUpcomingItems = $order->orderItems()
-                        ->where('service_date', '>=', Carbon::now())
-                        ->exists();
+                $items = $order->orderItems;
 
-                    $hasCompletedItems = $order->orderItems()
-                        ->where('service_date', '<', Carbon::now())
-                        ->exists();
+                // No items case
+                if ($items->isEmpty()) {
+                    $order->update(['app_show_status' => 'upcoming']);
+                    continue;
+                }
 
-                    if ($hasUpcomingItems && !$hasCompletedItems) {
-                        $order->update(['app_show_status' => 'upcoming']);
-                    } elseif ($hasCompletedItems && !in_array($order->order_status, ['pending', 'cancelled'])) {
-                        $order->update(['app_show_status' => 'completed']);
+                // Check service dates for all items
+                $allCompleted = true;
+                $allUpcoming = true;
+
+                foreach ($items as $item) {
+                    if ($item->service_date >= $now) {
+                        $allCompleted = false;
+                    } else {
+                        $allUpcoming = false;
                     }
                 }
-             });
 
-        // Booking Status Update
-        Booking::whereIn('app_show_status', [null, 'upcoming', 'ongoing'])
-               ->chunk(200, function ($bookings) {
-                foreach ($bookings as $booking) {
-                    if ($booking->payment_status === 'cancelled') {
-                        $booking->update(['app_show_status' => 'cancelled']);
-                        continue;
-                    }
+                // Determine status
+                if ($allUpcoming) {
+                    $order->update(['app_show_status' => 'upcoming']);
+                } elseif ($allCompleted && $order->order_status !== 'pending') {
+                    $order->update(['app_show_status' => 'completed']);
+                } else {
+                    // Mixed status or pending orders
+                    $order->update(['app_show_status' => 'ongoing']);
+                }
+            }
+        });
 
-                    $allItemsCount = $booking->items()->count();
-                    $upcomingItemsCount = $booking->items()
-                        ->where('service_date', '>=', Carbon::now())
-                        ->count();
-                    $completedItemsCount = $booking->items()
-                        ->where('service_date', '<', Carbon::now())
-                        ->count();
+        // Booking Status Update (similar logic)
+        Booking::with('items')->chunk(200, function ($bookings) use ($now) {
+            foreach ($bookings as $booking) {
+                if ($booking->payment_status === 'cancelled') {
+                    $booking->update(['app_show_status' => 'cancelled']);
+                    continue;
+                }
 
-                    if ($upcomingItemsCount === $allItemsCount) {
-                        $booking->update(['app_show_status' => 'upcoming']);
-                    } elseif ($completedItemsCount === $allItemsCount && $booking->payment_status !== 'not_paid') {
-                        $booking->update(['app_show_status' => 'completed']);
-                    } elseif ($completedItemsCount > 0 && $booking->payment_status !== 'not_paid') {
-                        $booking->update(['app_show_status' => 'ongoing']);
+                $items = $booking->items;
+
+                if ($items->isEmpty()) {
+                    $booking->update(['app_show_status' => 'upcoming']);
+                    continue;
+                }
+
+                $allCompleted = true;
+                $allUpcoming = true;
+
+                foreach ($items as $item) {
+                    if ($item->service_date >= $now) {
+                        $allCompleted = false;
+                    } else {
+                        $allUpcoming = false;
                     }
                 }
-               });
+
+                if ($allUpcoming) {
+                    $booking->update(['app_show_status' => 'upcoming']);
+                } elseif ($allCompleted && $booking->payment_status !== 'not_paid') {
+                    $booking->update(['app_show_status' => 'completed']);
+                } else {
+                    $booking->update(['app_show_status' => 'ongoing']);
+                }
+            }
+        });
     }
 }

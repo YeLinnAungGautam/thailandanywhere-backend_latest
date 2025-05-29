@@ -41,11 +41,17 @@ class OrderController extends Controller
             $query->where('order_status', $status);
         }
 
-        if ($app_show) {
+        if ($app_show == 'upcoming') {
+            // $query->whereIn('app_show_status', [$app_show,null]);
+            $query->where(function($q) use ($app_show) {
+                $q->where('app_show_status', $app_show)
+                  ->orWhereNull('app_show_status');
+            });
+        }else if ($app_show != 'upcoming' && $app_show != '') {
             $query->where('app_show_status', $app_show);
         }
 
-        $data = $query->orderBy('created_at', 'desc')->paginate($limit);
+        $data = $query->orderBy('balance_due_date', 'desc')->paginate($limit);
         return $this->success(OrderResource::collection($data)
         ->additional([
             'meta' => [
@@ -118,6 +124,54 @@ class OrderController extends Controller
             return $this->success(new OrderResource($order), 'အော်ဒါအောင်မြင်စွာ ဖန်တီးပြီးပါပြီ။');
         } catch (\Exception $e) {
 
+            return $this->error(null, $e->getMessage());
+        }
+    }
+
+    /**
+     * အော်ဒါအချက်အလက်များကို ပြင်ဆင်ခြင်း
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $userType = Auth::user()->role ? 'admin' : 'user'; // Default to 'admin'
+
+            // Find the order with authorization check
+            $order = Order::when($userType === 'user', function($q) {
+                    $q->where('user_id', Auth::user()->id);
+                })
+                ->when($userType === 'admin', function($q) {
+                    $q->where('admin_id', Auth::user()->id);
+                })
+                ->with(['items']) // Eager load items for calculation
+                ->findOrFail($id);
+
+            // Validate request has item_id and discount
+            $request->validate([
+                'item_id' => 'required|exists:order_items,id,order_id,'.$order->id,
+                'discount' => 'required|numeric|min:0'
+            ]);
+
+            // Update the specific item's discount
+            $orderItem = $order->items()->findOrFail($request->item_id);
+            $orderItem->update(['discount' => $request->discount]);
+
+            // Recalculate total discount from all items
+            $totalDiscount = $order->items()->sum('discount');
+
+            // Update order with new totals
+            $order->update([
+                'discount' => $totalDiscount,
+                'grand_total' => $order->sub_total - $totalDiscount,
+                // Keep existing comment if not provided
+                'comment' => $request->comment ?? $order->comment
+            ]);
+
+            // Refresh with all relationships
+            $order = Order::with(['items', 'customer'])->find($order->id);
+
+            return $this->success(new OrderResource($order), 'Item discount updated successfully and order totals recalculated.');
+        } catch (\Exception $e) {
             return $this->error(null, $e->getMessage());
         }
     }

@@ -4,38 +4,49 @@ namespace App\Http\Controllers\API\V2;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
+    use HttpResponses;
     public function index(Request $request)
     {
         // Validate and get request parameters
         $validated = $request->validate([
-            'limit' => 'sometimes|integer|min:1|max:100',
             'app_show_status' => 'string',
             'type' => 'sometimes|string|in:user,admin',
-            'converted_only' => 'sometimes|boolean' // New parameter to filter converted bookings
+            'converted_only' => 'string' // New parameter to filter converted bookings
         ]);
 
         // Set default values
         $limit = $validated['limit'] ?? 10;
         $userType = $validated['type'] ?? 'user';
-        $appShowStatus = $validated['app_show_status'] ?? 'upcoming';
+        $appShowStatus = $validated['app_show_status'] ?? '';
+        $convertedOnly = $validated['converted_only'] ?? 'false';
 
         // Base query with eager loading
         $query = Booking::when(in_array($userType, ['user', 'admin']), function($q) use ($userType) {
                 $column = $userType === 'user' ? 'user_id' : 'created_by';
-                $q->where($column, Auth::id());
+                $q->where($column, Auth::user()->id);
             })
-            ->when($appShowStatus, fn($q) => $q->where('app_show_status', $appShowStatus))
-            ->when($userType == 'admin', function($q) {
+            ->when($appShowStatus == 'upcoming', function($q) use ($appShowStatus) {
+                // $q->whereIn('app_show_status', [$appShowStatus, null]);
+                $q->where(function($subQuery) use ($appShowStatus) {
+                    $subQuery->where('app_show_status', $appShowStatus)
+                        ->orWhereNull('app_show_status');
+                });
+            })
+            ->when($appShowStatus != '' && $appShowStatus != 'upcoming', function($q) use ($appShowStatus) {
+                $q->where('app_show_status', $appShowStatus);
+            })
+            ->when($convertedOnly == 'true', function($q) {
                 // Only include bookings that have corresponding orders
                 $q->whereHas('orders', function($subQuery) {
                     $subQuery->whereNotNull('booking_id');
                 });
-            });
+            })->orderBy('balance_due_date', 'desc');
 
         // Execute query with pagination
         $bookings = $query->with(['orders']) // Eager load orders relationship
@@ -65,7 +76,7 @@ class BookingController extends Controller
             return failedMessage('Data not found');
         }
 
-        return success(new BookingResource($find), 'Booking Detail');
+        return $this->success(new BookingResource($find), 'Data retrieved successfully');
     }
 
     public function store(Request $request, $id)

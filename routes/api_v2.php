@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\API\LoginController;
 use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\V2\AirlineController;
@@ -124,5 +125,7 @@ Route::group([], function () {
         Route::get('orders/{id}', [OrderController::class, 'show']);
         Route::post('checkout', [OrderController::class, 'checkout']);
         Route::delete('orders/{id}', [OrderController::class, 'cancelOrder']);
+        Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
+        Route::put('orders/{id}/update', [OrderController::class, 'update']);
     });
 });

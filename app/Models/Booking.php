@@ -50,6 +50,11 @@ class Booking extends Model
         //     ->whereNotIn('product_type', [Airline::class, AirportPickup::class]);
     }
 
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'booking_id');
+    }
+
     public function receipts()
     {
         return $this->hasMany(BookingReceipt::class);

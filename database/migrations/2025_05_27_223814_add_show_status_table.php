@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('orders', function (Blueprint $table) {
             $table->string('app_show_status')->nullable()->default(null)
-                  ->comment('upcoming, completing, cancelled');
+                  ->comment('upcoming, completed, cancelled');
         });
 
         Schema::table('bookings', function (Blueprint $table) {
