@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\OrderResource;
 use App\Jobs\ArchiveSaleJob;
+use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
@@ -165,6 +166,8 @@ class OrderAdminController extends Controller
 
                 // Dispatch archive job
                 ArchiveSaleJob::dispatch($booking);
+
+                UpdateBookingDatesJob::dispatch($booking->id);
 
                 return $this->success(
                     new BookingResource($booking),
