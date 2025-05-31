@@ -75,6 +75,7 @@ class RoomController extends Controller
             'agent_price' => $request->agent_price,
             'owner_price' => $request->owner_price,
             'amenities' => $request->amenities ? json_encode($request->amenities) : null,
+            'meta' => $request->meta ? json_encode($request->meta) : null,
         ]);
 
         if ($request->file('images')) {
@@ -123,6 +124,7 @@ class RoomController extends Controller
                 'agent_price' => $request->agent_price ?? $room->agent_price,
                 'owner_price' => $request->owner_price ?? $room->owner_price,
                 'amenities' => $request->amenities ? json_encode($request->amenities) : $room->amenities,
+                'meta' => $request->meta ? json_encode($request->meta) : $room->meta,
             ]);
 
             if ($request->file('images')) {

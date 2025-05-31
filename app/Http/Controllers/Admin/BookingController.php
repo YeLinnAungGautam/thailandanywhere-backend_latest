@@ -8,6 +8,7 @@ use App\Http\Resources\BookingResource;
 use App\Jobs\ArchiveSaleJob;
 use App\Jobs\PersistBookingItemGroupJob;
 use App\Jobs\SendSaleDepositUpdateEmailJob;
+use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Airline;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -532,6 +533,9 @@ class BookingController extends Controller
             if (Auth::user()->role === 'super_admin' && $request->required_archive) {
                 ArchiveSaleJob::dispatch($find);
             }
+
+            // Update booking dates
+            UpdateBookingDatesJob::dispatch($find->id);
 
             return $this->success(new BookingResource($find), 'Successfully updated');
         } catch (Exception $e) {

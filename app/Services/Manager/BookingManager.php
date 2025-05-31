@@ -4,6 +4,7 @@ namespace App\Services\Manager;
 use App\Http\Requests\BookingRequest;
 use App\Jobs\ArchiveSaleJob;
 use App\Jobs\PersistBookingItemGroupJob;
+use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Airline;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -91,6 +92,8 @@ class BookingManager
             DB::commit();
 
             ArchiveSaleJob::dispatch($booking);
+
+            UpdateBookingDatesJob::dispatch($booking->id);
 
             return $booking;
         } catch (Exception $e) {

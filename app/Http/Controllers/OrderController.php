@@ -24,7 +24,6 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
-        $status = $request->query('status');
         $app_show = $request->query('app_show_status');
         $userType = $request->query('type', 'user');
 
@@ -36,19 +35,15 @@ class OrderController extends Controller
             $q->where('admin_id', Auth::id());
         });
 
-
-        if ($status) {
-            $query->where('order_status', $status);
-        }
-
         if ($app_show == 'upcoming') {
             // $query->whereIn('app_show_status', [$app_show,null]);
             $query->where(function($q) use ($app_show) {
-                $q->where('app_show_status', $app_show)
-                  ->orWhereNull('app_show_status');
+                $q->where('order_status', 'pending')
+                  ->orWhere('order_status', 'confirmed')
+                  ->orWhere('order_status', 'processing');
             });
         }else if ($app_show != 'upcoming' && $app_show != '') {
-            $query->where('app_show_status', $app_show);
+            $query->where('order_status', $app_show);
         }
 
         $data = $query->orderBy('balance_due_date', 'desc')->paginate($limit);

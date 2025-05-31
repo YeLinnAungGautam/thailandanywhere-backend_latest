@@ -75,6 +75,11 @@ class BookingResource extends JsonResource
                 'order_status' => $sourceOrder->order_status,
             ] : null,
 
+            // start and end dates
+            'start_date' => $this->start_date ?? null,
+            'end_date' => $this->end_date ?? null,
+
+            // timestamps
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

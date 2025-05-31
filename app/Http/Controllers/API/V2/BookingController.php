@@ -7,64 +7,91 @@ use App\Models\Booking;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
     use HttpResponses;
     public function index(Request $request)
     {
-        // Validate and get request parameters
+        // Validate request
         $validated = $request->validate([
             'app_show_status' => 'string',
             'type' => 'sometimes|string|in:user,admin',
-            'converted_only' => 'string' // New parameter to filter converted bookings
+            'converted_only' => 'string',
+            'start_date' => 'date_format:Y-m-d', // New: Date range filter (e.g., 2025-01-01)
+            'end_date' => 'date_format:Y-m-d|after_or_equal:start_date', // Must be >= start_date
+            'limit' => 'integer|min:1' // Added validation for limit
         ]);
 
-        // Set default values
+        // Set defaults
         $limit = $validated['limit'] ?? 10;
         $userType = $validated['type'] ?? 'user';
         $appShowStatus = $validated['app_show_status'] ?? '';
         $convertedOnly = $validated['converted_only'] ?? 'false';
+        $startDate = $validated['start_date'] ?? null;
+        $endDate = $validated['end_date'] ?? null;
 
-        // Base query with eager loading
+        // Base query
         $query = Booking::when(in_array($userType, ['user', 'admin']), function($q) use ($userType) {
                 $column = $userType === 'user' ? 'user_id' : 'created_by';
                 $q->where($column, Auth::user()->id);
             })
-            ->when($appShowStatus == 'upcoming', function($q) use ($appShowStatus) {
-                // $q->whereIn('app_show_status', [$appShowStatus, null]);
-                $q->where(function($subQuery) use ($appShowStatus) {
-                    $subQuery->where('app_show_status', $appShowStatus)
+            ->when($appShowStatus == 'upcoming', function($q) {
+                $q->where(function($subQuery) {
+                    $subQuery->where('app_show_status', 'upcoming')
                         ->orWhereNull('app_show_status');
                 });
             })
-            ->when($appShowStatus != '' && $appShowStatus != 'upcoming', function($q) use ($appShowStatus) {
+            ->when($appShowStatus && $appShowStatus != 'upcoming', function($q) use ($appShowStatus) {
                 $q->where('app_show_status', $appShowStatus);
             })
             ->when($convertedOnly == 'true', function($q) {
-                // Only include bookings that have corresponding orders
                 $q->whereHas('orders', function($subQuery) {
                     $subQuery->whereNotNull('booking_id');
                 });
-            })->orderBy('balance_due_date', 'desc');
+            })
+            ->when($startDate && $endDate, function($q) use ($startDate, $endDate) {
+                // Date range filter: Bookings that overlap with the requested range
+                $q->where(function($subQuery) use ($startDate, $endDate) {
+                    $subQuery->whereBetween('start_date', [$startDate, $endDate])
+                        ->orWhereBetween('end_date', [$startDate, $endDate])
+                        ->orWhere(function($q) use ($startDate, $endDate) {
+                            // Case where booking spans the entire range
+                            $q->where('start_date', '<=', $startDate)
+                              ->where('end_date', '>=', $endDate);
+                        });
+                });
+            })
+            ->orderBy('start_date', 'asc');
 
-        // Execute query with pagination
-        $bookings = $query->with(['orders']) // Eager load orders relationship
+        // Get paginated results
+        $bookings = $query->with(['orders', 'items'])
             ->latest()
             ->paginate($limit);
 
+        // Count booking items by product type
+        $productTypeCounts = [];
+        if ($bookings->isNotEmpty()) {
+            $bookingIds = $bookings->pluck('id');
+            $productTypeCounts = DB::table('booking_items')
+                ->whereIn('booking_id', $bookingIds)
+                ->select('product_type', DB::raw('count(*) as count'))
+                ->groupBy('product_type')
+                ->pluck('count', 'product_type')
+                ->toArray();
+        }
+
         // Prepare response
         return $this->success(
-            BookingResource::collection($bookings)
-                ->additional([
-                    'meta' => [
-                        'total_page' => $bookings->lastPage(),
-                        'current_page' => $bookings->currentPage(),
-                        'per_page' => $bookings->perPage(),
-                        'total_items' => $bookings->total(),
-                    ],
-                ]),
-            'Booking list retrieved successfully'
+            BookingResource::collection($bookings)->additional([
+                'meta' => [
+                    'total_page' => $bookings->lastPage(),
+                    'product_type_counts' => $productTypeCounts,
+                ]
+            ])->response()
+            ->getData(),
+            'Bookings retrieved'
         );
     }
 
