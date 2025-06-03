@@ -52,6 +52,7 @@ use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\SaleManagerController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\TaxReceiptController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
@@ -402,6 +403,13 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
     Route::post('orders/{id}/change-status', [OrderAdminController::class, 'changeStatus']);
     Route::delete('orders/{id}', [OrderAdminController::class, 'deleteOrder']);
+
+    # Tax Receipt
+    Route::apiResource('tax-receipts', TaxReceiptController::class);
+    Route::post('tax-receipts/{tax_receipt}/attach-reservations', [TaxReceiptController::class, 'attachReservations']);
+    Route::post('tax-receipts/{tax_receipt}/detach-reservations', [TaxReceiptController::class, 'detachReservations']);
+    Route::post('tax-receipts/{tax_receipt}/async-reservations', [TaxReceiptController::class, 'asyncReservations']);
+
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
