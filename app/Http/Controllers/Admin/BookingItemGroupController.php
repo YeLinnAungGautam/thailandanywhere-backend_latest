@@ -3,9 +3,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingItemGroupRequest;
+use App\Http\Resources\BookingItem\BookingItemGroupListResource;
 use App\Http\Resources\BookingItemGroupResource;
 use App\Models\Booking;
 use App\Models\BookingItemGroup;
+use App\Services\API\BookingItemGroupService;
 use App\Traits\HttpResponses;
 use Exception;
 use Illuminate\Http\Request;
@@ -14,20 +16,37 @@ class BookingItemGroupController extends Controller
 {
     use HttpResponses;
 
-    public function index(Booking $booking)
+    public function index(Request $request)
     {
-        $groups = $booking->bookingItemGroups()
-            ->with('bookingItems', 'booking')
-            ->paginate(10);
+        $request->validate((['product_type' => 'required|in:attraction,hotel,private_van_tour']));
 
-        return $this->success(BookingItemGroupResource::collection($groups)
-            ->additional([
-                'meta' => [
-                    'total_page' => (int)ceil($groups->total() / $groups->perPage()),
-                ],
-            ])
-            ->response()
-            ->getData(), 'Group List');
+        try {
+            $groups = BookingItemGroup::query()
+                ->has('bookingItems')
+                ->with([
+                    'booking',
+                    'bookingItems',
+                ])
+                ->where('product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->when($request->crm_id, function ($query) use ($request) {
+                    $query->whereHas('booking', function ($q) use ($request) {
+                        $q->where('crm_id', $request->crm_id);
+                    });
+                })
+                ->latest()
+                ->paginate($request->get('per_page', 5));
+
+            return $this->success(BookingItemGroupListResource::collection($groups)
+                ->additional([
+                    'meta' => [
+                        'total_page' => (int)ceil($groups->total() / $groups->perPage()),
+                    ],
+                ])
+                ->response()
+                ->getData(), 'Group List');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage());
+        }
     }
 
     public function update(Booking $booking, BookingItemGroup $booking_item_group, BookingItemGroupRequest $request)

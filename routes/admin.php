@@ -386,7 +386,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::put('/booking/{id}/verify_status', [BookingItemVerifyController::class, 'updateVerifyStatus']);
 
     # Booking Item Group
-    Route::get('booking-item-groups', [BookingItemGroupController::class, 'index']);
+    Route::post('booking-item-groups', [BookingItemGroupController::class, 'index']);
     Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
     # Booking Item Group - Passport
