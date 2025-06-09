@@ -21,7 +21,7 @@ class TaxReceipt extends Model
         'total_tax_withold',
         'total_tax_amount',
         'total_after_tax',
-        'total',
+        'invoice_number',
     ];
 
     protected $casts = [
@@ -32,7 +32,6 @@ class TaxReceipt extends Model
         'total_tax_withold' => 'decimal:2',
         'total_tax_amount' => 'decimal:2',
         'total_after_tax' => 'decimal:2',
-        'total' => 'decimal:2',
     ];
 
 
