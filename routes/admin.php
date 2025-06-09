@@ -358,6 +358,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations/{reservation_id}/receipt-images', ReservationExpenseReceiptController::class);
     Route::apiResource('bookings/{booking_id}/receipts', BookingReceiptController::class);
 
+    Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
+
     # Expense Mail & Booking request methods
     Route::apiResource('reservations/{reservation_id}/expense-mails', ReservationExpenseMailController::class);
     Route::apiResource('reservations/{reservation_id}/booking-request', ReservationBookingRequestController::class);

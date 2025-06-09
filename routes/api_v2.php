@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\API\LoginController;
 use App\Http\Controllers\API\RegisterController;
@@ -99,6 +100,7 @@ Route::group([], function () {
 
     # Login
     Route::post('login', [LoginController::class, 'login']);
+    // Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
 
     # Reservation Information
     Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
@@ -127,5 +129,7 @@ Route::group([], function () {
         Route::delete('orders/{id}', [OrderController::class, 'cancelOrder']);
         Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
+
+
     });
 });

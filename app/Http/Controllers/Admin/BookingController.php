@@ -84,7 +84,7 @@ class BookingController extends Controller
             $query->whereDate('booking_date', '<=', $request->input('booking_date_to'));
         }
 
-        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation') {
+        if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'reservation' || Auth::user()->role === 'auditor') {
             if ($filter && $filter !== "") {
                 if ($filter === 'all') {
                     // No filter needed
