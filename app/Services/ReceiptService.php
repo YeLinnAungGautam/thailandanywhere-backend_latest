@@ -175,7 +175,7 @@ class ReceiptService
             'date' => $item->date,
             'created_at' => $item->created_at,
             'updated_at' => $item->updated_at,
-            'receipt_url' => $item->{$imageField} ? Storage::url($source === 'BookingReceipt' ? 'images/' . $item->image : 'files/' . $item->file) : null,
+            'receipt_url' => $item->{$imageField} ? Storage::url($source === 'BookingReceipt' ? 'images/' . $item->image : 'images/' . $item->file) : null,
             'receipt_type' => $source === 'BookingReceipt' ? 'customer_payment' : 'expense',
             'booking_id' => $source === 'BookingReceipt' ? ($item->booking ? $item->booking->id : null) : null,
             'reservation_id' => $source === 'ReservationExpenseReceipt' ? ($item->reservation ? $item->reservation->id : null) : null,
