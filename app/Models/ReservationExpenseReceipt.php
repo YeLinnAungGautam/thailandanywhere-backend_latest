@@ -11,4 +11,9 @@ class ReservationExpenseReceipt extends Model
 
     protected $guarded = [];
 
+    public function reservation()
+    {
+        return $this->belongsTo(BookingItem::class);
+    }
+
 }
