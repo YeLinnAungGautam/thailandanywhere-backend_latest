@@ -29,18 +29,34 @@ class MigrateBookingItemGroup extends Command
      */
     public function handle()
     {
+        $this->upsertBookingItemGroup();
+
+        $this->migrateCustomerPassport();
+    }
+
+    private function upsertBookingItemGroup()
+    {
         Booking::with('items')->chunk(100, function ($bookings) {
             foreach ($bookings as $booking) {
-                $grouped = $booking->items->groupBy('product_type');
+                $grouped = $booking->items->groupBy(function ($item) {
+                    return $item->product_type . ':' . $item->product_id;
+                });
 
-                foreach ($grouped as $type => $items) {
+                foreach ($grouped as $key => $items) {
+                    [$product_type, $product_id] = explode(':', $key);
+
                     $total_cost_price = $items->sum('cost_price');
 
-                    $group = BookingItemGroup::create([
-                        'booking_id' => $booking->id,
-                        'product_type' => $type,
-                        'total_cost_price' => $total_cost_price,
-                    ]);
+                    $group = BookingItemGroup::updateOrCreate(
+                        [
+                            'booking_id' => $booking->id,
+                            'product_type' => $product_type,
+                            'product_id' => $product_id,
+                        ],
+                        [
+                            'total_cost_price' => $total_cost_price,
+                        ]
+                    );
 
                     foreach ($items as $item) {
                         $item->update(['group_id' => $group->id]);
@@ -48,7 +64,10 @@ class MigrateBookingItemGroup extends Command
                 }
             }
         });
+    }
 
+    private function migrateCustomerPassport()
+    {
         DB::table('reservation_customer_passports')->orderBy('id')->chunk(100, function ($passports) {
             foreach ($passports as $passport) {
                 $bookingItem = BookingItem::find($passport->booking_item_id);
