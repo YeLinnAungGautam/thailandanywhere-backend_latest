@@ -21,13 +21,12 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\CustomerDocumentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
-use App\Http\Controllers\Admin\GroupItem\GroupItemPassportController;
+use App\Http\Controllers\Admin\GroupItem\CustomerDocumentController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
@@ -391,16 +390,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Booking Item Group
     Route::post('booking-item-groups', [BookingItemGroupController::class, 'index']);
     Route::get('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'detail']);
-    Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
-    # Booking Item Group - Customer Document
-    Route::get('booking-item-groups/{booking_item_group}/documents', [GroupItemPassportController::class, 'index']);
-    Route::post('booking-item-groups/{booking_item_group}/documents', [GroupItemPassportController::class, 'store']);
-    Route::put('booking-item-groups/{booking_item_group}/documents/{customer_document}', [GroupItemPassportController::class, 'update']);
-    Route::delete('booking-item-groups/{booking_item_group}/documents/{customer_document}', [GroupItemPassportController::class, 'delete']);
-
-    # Delete customer document
-    Route::delete('booking-item-groups/{booking_item_group}/customer-documents/{customer_document}', [CustomerDocumentController::class, 'delete']);
+    # Customer Document
+    Route::get('booking-item-groups/{booking_item_group}/documents', [CustomerDocumentController::class, 'index']);
+    Route::post('booking-item-groups/{booking_item_group}/documents', [CustomerDocumentController::class, 'store']);
+    Route::put('booking-item-groups/{booking_item_group}/documents/{customer_document}', [CustomerDocumentController::class, 'update']);
+    Route::delete('booking-item-groups/{booking_item_group}/documents/{customer_document}', [CustomerDocumentController::class, 'delete']);
 
     # order part
     Route::get('orders', [OrderAdminController::class, 'index']);
