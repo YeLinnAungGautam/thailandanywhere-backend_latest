@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingItemGroupRequest;
+use App\Http\Resources\BookingItem\BookingItemGroupDetailResource;
 use App\Http\Resources\BookingItem\BookingItemGroupListResource;
 use App\Http\Resources\BookingItemGroupResource;
 use App\Models\Booking;
@@ -139,6 +140,22 @@ class BookingItemGroupController extends Controller
                 ->getData(), 'Group List');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage());
+        }
+    }
+
+    public function detail(BookingItemGroup $booking_item_group)
+    {
+        try {
+            $booking_item_group->load([
+                'booking',
+                'bookingItems',
+                'bookingItems.product',
+                'customerDocuments'
+            ]);
+
+            return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
         }
     }
 

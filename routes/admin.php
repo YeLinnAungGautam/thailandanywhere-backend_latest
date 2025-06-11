@@ -358,7 +358,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations/{reservation_id}/receipt-images', ReservationExpenseReceiptController::class);
     Route::apiResource('bookings/{booking_id}/receipts', BookingReceiptController::class);
 
-    Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
+    Route::get('all/receipts', [BookingReceiptController::class, 'getall']);
 
     # Expense Mail & Booking request methods
     Route::apiResource('reservations/{reservation_id}/expense-mails', ReservationExpenseMailController::class);
@@ -389,6 +389,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Item Group
     Route::post('booking-item-groups', [BookingItemGroupController::class, 'index']);
+    Route::get('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'detail']);
     Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
     # Booking Item Group - Passport
