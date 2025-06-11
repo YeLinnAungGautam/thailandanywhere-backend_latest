@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
+use App\Http\Controllers\Admin\GroupItem\GroupItemPassportController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
@@ -392,10 +393,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'detail']);
     Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
-    # Booking Item Group - Passport
-    Route::get('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'getPassports']);
-    Route::post('booking-item-groups/{booking_item_group}/passports', [BookingItemGroupController::class, 'storePassports']);
-    Route::put('booking-item-groups/{booking_item_group}/passports/{passport}', [BookingItemGroupController::class, 'updatePassports']);
+    # Booking Item Group - Customer Document
+    Route::get('booking-item-groups/{booking_item_group}/documents', [GroupItemPassportController::class, 'index']);
+    Route::post('booking-item-groups/{booking_item_group}/documents', [GroupItemPassportController::class, 'store']);
+    Route::put('booking-item-groups/{booking_item_group}/documents/{customer_document}', [GroupItemPassportController::class, 'update']);
+    Route::delete('booking-item-groups/{booking_item_group}/documents/{customer_document}', [GroupItemPassportController::class, 'delete']);
 
     # Delete customer document
     Route::delete('booking-item-groups/{booking_item_group}/customer-documents/{customer_document}', [CustomerDocumentController::class, 'delete']);

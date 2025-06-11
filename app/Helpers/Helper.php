@@ -56,7 +56,6 @@ if (!function_exists('upload_file')) {
     }
 }
 
-
 if (!function_exists('get_file_size')) {
     function get_file_size($file, $precision = 2)
     {
