@@ -14,7 +14,7 @@ class CustomerDocumentController extends Controller
 {
     use HttpResponses;
 
-    protected $document_type_validation_rule = 'required|in:passport,tax_slip,paid_slip,receipt_image,booking_confirm_letter,confirmation_letter,car_photo';
+    protected $document_type_validation_rule = 'required|in:passport,tax_slip,paid_slip,receipt_image,booking_confirm_letter,confirmation_letter,car_photo,expense_receipt';
 
     public function index(BookingItemGroup $booking_item_group, Request $request)
     {
