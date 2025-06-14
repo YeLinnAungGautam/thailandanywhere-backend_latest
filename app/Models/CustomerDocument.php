@@ -37,6 +37,12 @@ class CustomerDocument extends Model
             case 'car_photo':
                 return 'images/';
 
+            case 'booking_request':
+                return 'files/';
+
+            case 'expense_receipt':
+                return 'images/';
+
             default:
                 throw new Exception('Invalid document type');
         }
