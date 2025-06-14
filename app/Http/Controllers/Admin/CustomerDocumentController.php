@@ -105,6 +105,7 @@ class CustomerDocumentController extends Controller
                 'meta' => $request->meta ?? $document->meta,
             ]);
 
+            return $this->success(null, 'Passport updated successfully');
         } catch (Exception $e) {
             Log::error('Error updating customer document: ' . $e->getMessage(), [
                 'booking_item_group_id' => $booking_item_group->id,
