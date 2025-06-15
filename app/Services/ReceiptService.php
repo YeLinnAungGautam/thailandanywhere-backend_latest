@@ -135,13 +135,18 @@ class ReceiptService
             'sender' => $request->sender,
             'amount' => $request->amount,
             'date' => $request->date,
-            'bank_name' => $request->bank_name
+            'bank_name' => $request->bank_name,
+            'crm_id' => $request->crm_id // Add this line
         ];
     }
 
     private function getReservationReceipts($filters)
     {
-        $query = ReservationExpenseReceipt::with('reservation'); // This loads BookingItem
+        $query = ReservationExpenseReceipt::with(['reservation' => function($q) use ($filters) {
+            if (!empty($filters['crm_id'])) {
+                $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
+            }
+        }]);
 
         $this->applyCommonFilters($query, $filters, false); // false = exclude sender
 
@@ -152,7 +157,11 @@ class ReceiptService
 
     private function getBookingReceipts($filters)
     {
-        $query = BookingReceipt::with('booking'); // Load booking relationship
+        $query = BookingReceipt::with(['booking' => function($q) use ($filters) {
+            if (!empty($filters['crm_id'])) {
+                $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
+            }
+        }]);
 
         $this->applyCommonFilters($query, $filters, true); // true = include sender
 
@@ -240,6 +249,18 @@ class ReceiptService
         // Date filter
         if ($filters['date']) {
             $this->applyDateFilter($query, $filters['date']);
+        }
+
+        if (!empty($filters['crm_id'])) {
+            if ($query->getModel() instanceof BookingReceipt) {
+                $query->whereHas('booking', function($q) use ($filters) {
+                    $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
+                });
+            } else if ($query->getModel() instanceof ReservationExpenseReceipt) {
+                $query->whereHas('reservation', function($q) use ($filters) {
+                    $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
+                });
+            }
         }
     }
 
