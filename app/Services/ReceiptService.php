@@ -223,7 +223,34 @@ class ReceiptService
                 'b.crm_id'
             ]);
 
-        // Apply filters to both queries
+        // Special handling for 'type' filters - they should search across all receipts
+        // regardless of receipt_type to give complete results
+        if (!empty($filters['type']) && in_array($filters['type'], ['complete', 'incomplete', 'missing'])) {
+            // For type filters, we want to search both tables regardless of receipt_type
+            // Apply non-type filters to both queries
+            $nonTypeFilters = $filters;
+            unset($nonTypeFilters['type'], $nonTypeFilters['receipt_type']);
+
+            $this->applyFiltersToQuery($bookingQuery, $nonTypeFilters, true);
+            $this->applyFiltersToQuery($reservationQuery, $nonTypeFilters, false);
+
+            // Apply type filter to both
+            $this->applyTypeFilter($bookingQuery, $filters['type'], true);
+            $this->applyTypeFilter($reservationQuery, $filters['type'], false);
+
+            // Still respect receipt_type filter if specified
+            if (!empty($filters['receipt_type']) && $filters['receipt_type'] !== 'all') {
+                if ($filters['receipt_type'] === 'expense') {
+                    return $reservationQuery;
+                } elseif ($filters['receipt_type'] === 'customer_payment') {
+                    return $bookingQuery;
+                }
+            }
+
+            return $bookingQuery->union($reservationQuery);
+        }
+
+        // Normal filtering for non-type searches
         $this->applyFiltersToQuery($bookingQuery, $filters, true);  // true = includeSender
         $this->applyFiltersToQuery($reservationQuery, $filters, false); // false = no sender field
 
@@ -243,6 +270,7 @@ class ReceiptService
     /**
      * Apply filters to query
      * Updated to match actual table structure
+     * Modified to exclude type filter from general application
      *
      * @param \Illuminate\Database\Query\Builder $query
      * @param array $filters
@@ -250,8 +278,11 @@ class ReceiptService
      */
     private function applyFiltersToQuery($query, $filters, $includeSender)
     {
-        // Type filter (complete/incomplete/missing)
-        $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
+        // Note: Type filter is now handled separately in buildUnionQuery()
+        // Only apply type filter if it's not a completion-type filter
+        if (isset($filters['type']) && !in_array($filters['type'], ['complete', 'incomplete', 'missing'])) {
+            $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
+        }
 
         // Sender filter (only for booking receipts)
         if ($includeSender && !empty($filters['sender'])) {
