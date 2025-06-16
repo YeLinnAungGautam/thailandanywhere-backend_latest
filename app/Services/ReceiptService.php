@@ -17,8 +17,13 @@ class ReceiptService
     const PER_PAGE = 10;
     const MAX_PER_PAGE = 100;
 
-    const VALID_TYPES = ['complete', 'incomplete', 'missing', 'missing_expense', 'missing_payment', 'complete_expense', 'complete_payment', 'incomplete_expense', 'incomplete_payment', 'all'];
-    const VALID_RECEIPT_TYPES = ['customer_payment', 'expense', 'all']; // Keep for backward compatibility
+    const VALID_TYPES = [
+        'complete', 'incomplete', 'missing',
+        'missing_expense', 'missing_payment',
+        'complete_expense', 'complete_payment',
+        'incomplete_expense', 'incomplete_payment',
+        'all'
+    ];
 
     /**
      * Get all receipts with filtering and pagination
@@ -171,7 +176,7 @@ class ReceiptService
 
     /**
      * Build union query for both receipt types
-     * Fixed to match actual table structure
+     * Updated with simplified type-based filtering
      *
      * @param array $filters
      * @return \Illuminate\Database\Query\Builder
@@ -179,7 +184,6 @@ class ReceiptService
     private function buildUnionQuery($filters)
     {
         // Booking receipts query (booking_receipts table)
-        // Columns: id, booking_id, image, amount, date, bank_name, sender, is_corporate, note, deleted_at, created_at, updated_at
         $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
             ->select([
@@ -195,13 +199,12 @@ class ReceiptService
                 DB::raw("'customer_payment' as receipt_type"),
                 'br.booking_id',
                 DB::raw('NULL as reservation_id'),
-                'br.booking_id as booking_item_id', // Using booking_id as booking_item_id
+                'br.booking_id as booking_item_id',
                 'b.crm_id'
             ])
-            ->whereNull('br.deleted_at'); // Only non-deleted records
+            ->whereNull('br.deleted_at');
 
-        // Reservation expense receipts query (reservation_expense_receipts table)
-        // Columns: id, booking_item_id, file, created_at, updated_at, amount, bank_name, date, is_corporate, comment
+        // Reservation expense receipts query
         $reservationQuery = DB::table('reservation_expense_receipts as rer')
             ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
             ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id')
@@ -216,54 +219,45 @@ class ReceiptService
                 'rer.updated_at',
                 'rer.file as image_file',
                 DB::raw("'expense' as receipt_type"),
-                'b.id as booking_id', // Get booking_id through booking_items
+                'b.id as booking_id',
                 DB::raw('NULL as reservation_id'),
                 'rer.booking_item_id',
                 'b.crm_id'
             ]);
 
-        // Special handling for 'type' filters - they should search across all receipts
-        // regardless of receipt_type to give complete results
-        if (!empty($filters['type']) && in_array($filters['type'], ['complete', 'incomplete', 'missing'])) {
-            // For type filters, we want to search both tables regardless of receipt_type
-            // Apply non-type filters to both queries
-            $nonTypeFilters = $filters;
-            unset($nonTypeFilters['type'], $nonTypeFilters['receipt_type']);
+        // Apply filters based on type
+        $type = $filters['type'] ?? 'all';
 
-            $this->applyFiltersToQuery($bookingQuery, $nonTypeFilters, true);
-            $this->applyFiltersToQuery($reservationQuery, $nonTypeFilters, false);
-
-            // Apply type filter to both
-            $this->applyTypeFilter($bookingQuery, $filters['type'], true);
-            $this->applyTypeFilter($reservationQuery, $filters['type'], false);
-
-            // Still respect receipt_type filter if specified
-            if (!empty($filters['receipt_type']) && $filters['receipt_type'] !== 'all') {
-                if ($filters['receipt_type'] === 'expense') {
-                    return $reservationQuery;
-                } elseif ($filters['receipt_type'] === 'customer_payment') {
-                    return $bookingQuery;
-                }
-            }
-
-            return $bookingQuery->union($reservationQuery);
-        }
-
-        // Normal filtering for non-type searches
-        $this->applyFiltersToQuery($bookingQuery, $filters, true);  // true = includeSender
-        $this->applyFiltersToQuery($reservationQuery, $filters, false); // false = no sender field
-
-        // Apply receipt type filter
-        if (!empty($filters['receipt_type']) && $filters['receipt_type'] !== 'all') {
-            if ($filters['receipt_type'] === 'expense') {
+        switch ($type) {
+            case 'missing_expense':
+            case 'complete_expense':
+            case 'incomplete_expense':
+                // Only search in expense receipts
+                $this->applyFiltersToQuery($reservationQuery, $filters, false);
                 return $reservationQuery;
-            } elseif ($filters['receipt_type'] === 'customer_payment') {
-                return $bookingQuery;
-            }
-        }
 
-        // Union both queries
-        return $bookingQuery->union($reservationQuery);
+            case 'missing_payment':
+            case 'complete_payment':
+            case 'incomplete_payment':
+                // Only search in customer payment receipts
+                $this->applyFiltersToQuery($bookingQuery, $filters, true);
+                return $bookingQuery;
+
+            case 'missing':
+            case 'complete':
+            case 'incomplete':
+                // Search in both tables
+                $this->applyFiltersToQuery($bookingQuery, $filters, true);
+                $this->applyFiltersToQuery($reservationQuery, $filters, false);
+                return $bookingQuery->union($reservationQuery);
+
+            case 'all':
+            default:
+                // Search in both tables with all filters
+                $this->applyFiltersToQuery($bookingQuery, $filters, true);
+                $this->applyFiltersToQuery($reservationQuery, $filters, false);
+                return $bookingQuery->union($reservationQuery);
+        }
     }
 
     /**
@@ -308,8 +302,7 @@ class ReceiptService
     }
 
     /**
-     * Apply type filter with improved logic
-     * Updated to use correct table aliases
+     * Apply type filter with new combined type system
      *
      * @param \Illuminate\Database\Query\Builder $query
      * @param string|null $type
@@ -328,7 +321,10 @@ class ReceiptService
             $requiredFields[] = "{$tableAlias}.sender";
         }
 
-        switch($type) {
+        // Extract the completion status from the type
+        $completionStatus = $this->extractCompletionStatus($type);
+
+        switch($completionStatus) {
             case 'complete':
                 foreach ($requiredFields as $field) {
                     $query->whereNotNull($field)
@@ -348,6 +344,28 @@ class ReceiptService
                 });
                 break;
         }
+    }
+
+    /**
+     * Extract completion status from combined type
+     *
+     * @param string $type
+     * @return string
+     */
+    private function extractCompletionStatus($type)
+    {
+        if (str_contains($type, 'complete')) {
+            return 'complete';
+        }
+        if (str_contains($type, 'incomplete')) {
+            return 'incomplete';
+        }
+        if (str_contains($type, 'missing')) {
+            return 'missing';
+        }
+
+        // For backward compatibility
+        return $type;
     }
 
     /**
