@@ -4,113 +4,472 @@ namespace App\Services;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use App\Models\ReservationExpenseReceipt;
 use App\Models\BookingReceipt;
 use Exception;
+use InvalidArgumentException;
+use Illuminate\Support\Collection;
 
 class ReceiptService
 {
+    const PER_PAGE = 10;
+    const MAX_PER_PAGE = 100;
+
+    const VALID_TYPES = ['complete', 'incomplete', 'missing', 'all'];
+    const VALID_RECEIPT_TYPES = ['customer_payment', 'expense', 'all'];
+
+    /**
+     * Get all receipts with filtering and pagination
+     *
+     * @param Request $request
+     * @return array
+     */
     public function getall(Request $request)
     {
         try {
-            $PER_PAGE = 10;
+            // Validate input parameters
+            $this->validateRequest($request);
+
+            $perPage = min((int) $request->get('per_page', self::PER_PAGE), self::MAX_PER_PAGE);
             $filters = $this->extractFilters($request);
 
-            // Get filtered data from both tables
-            $reservationReceipts = $this->getReservationReceipts($filters);
-            $bookingReceipts = $this->getBookingReceipts($filters);
-
-            // Combine and paginate results
-            $paginatedData = $this->paginateResults($reservationReceipts, $bookingReceipts, $request, $PER_PAGE);
+            // Use Union query for better performance
+            $results = $this->getUnifiedResults($filters, $request, $perPage);
 
             return [
                 'success' => true,
                 'data' => [
-                    'data' => $paginatedData['data'],
-                    'meta' => $this->buildMetaData($paginatedData),
-                    'summary' => [
-                        'reservation_expense_receipts' => $reservationReceipts->count(),
-                        'booking_receipts' => $bookingReceipts->count(),
-                        'total_records' => $paginatedData['total']
-                    ]
+                    'data' => $results['data'],
+                    'meta' => $this->buildMetaData($results, $request),
+                    'summary' => $results['summary']
                 ],
                 'message' => 'All receipts retrieved successfully'
             ];
 
-        } catch (Exception $e) {
+        } catch (InvalidArgumentException $e) {
             return [
                 'success' => false,
                 'data' => null,
-                'message' => $e->getMessage()
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'error_type' => 'validation'
+            ];
+        } catch (Exception $e) {
+            // \Log::error('ReceiptService::getall Error: ' . $e->getMessage(), [
+            //     'request' => $request->all(),
+            //     'trace' => $e->getTraceAsString()
+            // ]);
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'An error occurred while retrieving receipts. Error: ' . $e->getMessage(),
+                'error_type' => 'system'
             ];
         }
     }
 
-    private function buildMetaData($paginatedData)
+    /**
+     * Validate request parameters
+     *
+     * @param Request $request
+     * @throws InvalidArgumentException
+     */
+    private function validateRequest(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
+            'receipt_type' => 'nullable|in:' . implode(',', self::VALID_RECEIPT_TYPES),
+            'sender' => 'nullable|string|max:255',
+            'amount' => 'nullable|numeric|min:0',
+            'date' => 'nullable|string',
+            'bank_name' => 'nullable|string|max:255',
+            'crm_id' => 'nullable|string|max:255',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE
+        ]);
+
+        if ($validator->fails()) {
+            throw new InvalidArgumentException($validator->errors()->first());
+        }
+
+        // Validate date format if provided
+        if ($request->date) {
+            $this->validateDateFormat($request->date);
+        }
+    }
+
+    /**
+     * Validate date format
+     *
+     * @param string $date
+     * @throws InvalidArgumentException
+     */
+    private function validateDateFormat($date)
+    {
+        $dates = explode(',', $date);
+
+        foreach ($dates as $dateString) {
+            $dateString = trim($dateString);
+            if (!strtotime($dateString)) {
+                throw new InvalidArgumentException("Invalid date format: {$dateString}");
+            }
+        }
+
+        if (count($dates) > 2) {
+            throw new InvalidArgumentException("Date filter supports maximum 2 dates for range");
+        }
+    }
+
+    /**
+     * Get unified results using Union query for better performance
+     *
+     * @param array $filters
+     * @param Request $request
+     * @param int $perPage
+     * @return array
+     */
+    private function getUnifiedResults($filters, $request, $perPage)
+    {
+        // Get current page
+        $currentPage = (int) $request->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+
+        // Build union query
+        $unionQuery = $this->buildUnionQuery($filters);
+
+        // Get total count
+        $totalQuery = DB::query()
+            ->fromSub($unionQuery, 'combined_receipts');
+        $total = $totalQuery->count();
+
+        // Apply pagination and ordering
+        $paginatedResults = DB::query()
+            ->fromSub($unionQuery, 'combined_receipts')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc') // Secondary sort for consistency
+            ->offset($offset)
+            ->limit($perPage)
+            ->get();
+
+        // Get summary counts
+        $summary = $this->getSummary($filters);
+
+        return [
+            'data' => $paginatedResults->map(function($item) {
+                return $this->formatUnifiedReceipt($item);
+            }),
+            'current_page' => $currentPage,
+            'per_page' => $perPage,
+            'total' => $total,
+            'last_page' => max(1, ceil($total / $perPage)),
+            'from' => $total > 0 ? $offset + 1 : null,
+            'to' => min($offset + $perPage, $total),
+            'summary' => $summary
+        ];
+    }
+
+    /**
+     * Build union query for both receipt types
+     * Fixed to match actual table structure
+     *
+     * @param array $filters
+     * @return \Illuminate\Database\Query\Builder
+     */
+    private function buildUnionQuery($filters)
+    {
+        // Booking receipts query (booking_receipts table)
+        // Columns: id, booking_id, image, amount, date, bank_name, sender, is_corporate, note, deleted_at, created_at, updated_at
+        $bookingQuery = DB::table('booking_receipts as br')
+            ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
+            ->select([
+                'br.id',
+                DB::raw("'BookingReceipt' as table_source"),
+                'br.sender',
+                'br.amount',
+                'br.bank_name',
+                'br.date',
+                'br.created_at',
+                'br.updated_at',
+                'br.image as image_file',
+                DB::raw("'customer_payment' as receipt_type"),
+                'br.booking_id',
+                DB::raw('NULL as reservation_id'),
+                'br.booking_id as booking_item_id', // Using booking_id as booking_item_id
+                'b.crm_id'
+            ])
+            ->whereNull('br.deleted_at'); // Only non-deleted records
+
+        // Reservation expense receipts query (reservation_expense_receipts table)
+        // Columns: id, booking_item_id, file, created_at, updated_at, amount, bank_name, date, is_corporate, comment
+        $reservationQuery = DB::table('reservation_expense_receipts as rer')
+            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
+            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id')
+            ->select([
+                'rer.id',
+                DB::raw("'ReservationExpenseReceipt' as table_source"),
+                DB::raw('NULL as sender'),
+                'rer.amount',
+                'rer.bank_name',
+                'rer.date',
+                'rer.created_at',
+                'rer.updated_at',
+                'rer.file as image_file',
+                DB::raw("'expense' as receipt_type"),
+                'b.id as booking_id', // Get booking_id through booking_items
+                DB::raw('NULL as reservation_id'),
+                'rer.booking_item_id',
+                'b.crm_id'
+            ]);
+
+        // Apply filters to both queries
+        $this->applyFiltersToQuery($bookingQuery, $filters, true);  // true = includeSender
+        $this->applyFiltersToQuery($reservationQuery, $filters, false); // false = no sender field
+
+        // Apply receipt type filter
+        if (!empty($filters['receipt_type']) && $filters['receipt_type'] !== 'all') {
+            if ($filters['receipt_type'] === 'expense') {
+                return $reservationQuery;
+            } elseif ($filters['receipt_type'] === 'customer_payment') {
+                return $bookingQuery;
+            }
+        }
+
+        // Union both queries
+        return $bookingQuery->union($reservationQuery);
+    }
+
+    /**
+     * Apply filters to query
+     * Updated to match actual table structure
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param array $filters
+     * @param bool $includeSender
+     */
+    private function applyFiltersToQuery($query, $filters, $includeSender)
+    {
+        // Type filter (complete/incomplete/missing)
+        $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
+
+        // Sender filter (only for booking receipts)
+        if ($includeSender && !empty($filters['sender'])) {
+            $query->where('br.sender', 'like', '%' . $filters['sender'] . '%');
+        }
+
+        // Amount filter
+        if (!empty($filters['amount'])) {
+            $tableAlias = $includeSender ? 'br' : 'rer';
+            $query->where("{$tableAlias}.amount", $filters['amount']);
+        }
+
+        // Bank name filter
+        if (!empty($filters['bank_name'])) {
+            $tableAlias = $includeSender ? 'br' : 'rer';
+            $query->where("{$tableAlias}.bank_name", 'like', '%' . $filters['bank_name'] . '%');
+        }
+
+        // Date filter
+        if (!empty($filters['date'])) {
+            $this->applyDateFilter($query, $filters['date'], $includeSender);
+        }
+
+        // CRM ID filter
+        if (!empty($filters['crm_id'])) {
+            $query->where('b.crm_id', 'like', '%' . $filters['crm_id'] . '%');
+        }
+    }
+
+    /**
+     * Apply type filter with improved logic
+     * Updated to use correct table aliases
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param string|null $type
+     * @param bool $includeSender
+     */
+    private function applyTypeFilter($query, $type, $includeSender)
+    {
+        if (empty($type) || $type === 'all') {
+            return;
+        }
+
+        $tableAlias = $includeSender ? 'br' : 'rer';
+        $requiredFields = ["{$tableAlias}.amount", "{$tableAlias}.bank_name", "{$tableAlias}.date"];
+
+        if ($includeSender) {
+            $requiredFields[] = "{$tableAlias}.sender";
+        }
+
+        switch($type) {
+            case 'complete':
+                foreach ($requiredFields as $field) {
+                    $query->whereNotNull($field)
+                          ->where($field, '!=', '')
+                          ->where($field, '!=', '0');
+                }
+                break;
+
+            case 'incomplete':
+            case 'missing':
+                $query->where(function($subQuery) use ($requiredFields) {
+                    foreach ($requiredFields as $field) {
+                        $subQuery->orWhereNull($field)
+                                ->orWhere($field, '')
+                                ->orWhere($field, '0');
+                    }
+                });
+                break;
+        }
+    }
+
+    /**
+     * Apply date filter with improved logic
+     * Updated to use correct table aliases
+     *
+     * @param \Illuminate\Database\Query\Builder $query
+     * @param string $date
+     * @param bool $includeSender
+     */
+    private function applyDateFilter($query, $date, $includeSender)
+    {
+        if (empty($date)) {
+            return;
+        }
+
+        $tableAlias = $includeSender ? 'br' : 'rer';
+        $dateField = "{$tableAlias}.date";
+        $dateArray = array_map('trim', explode(',', $date));
+
+        if (count($dateArray) === 2) {
+            // Date range
+            $startDate = $dateArray[0];
+            $endDate = $dateArray[1];
+
+            $query->whereDate($dateField, '>=', $startDate)
+                  ->whereDate($dateField, '<=', $endDate);
+        } else {
+            // Single date
+            $query->whereDate($dateField, $dateArray[0]);
+        }
+    }
+
+    /**
+     * Get summary counts
+     * Updated to match actual table structure
+     *
+     * @param array $filters
+     * @return array
+     */
+    private function getSummary($filters)
+    {
+        // Remove type and receipt_type filters for total counts
+        $summaryFilters = array_filter($filters, function($value, $key) {
+            return !in_array($key, ['type', 'receipt_type']) && !is_null($value);
+        }, ARRAY_FILTER_USE_BOTH);
+
+        // Get booking receipts count
+        $bookingQuery = DB::table('booking_receipts as br')
+            ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
+            ->whereNull('br.deleted_at');
+        $this->applyFiltersToQuery($bookingQuery, $summaryFilters, true);
+        $bookingCount = $bookingQuery->count();
+
+        // Get reservation expense receipts count
+        $reservationQuery = DB::table('reservation_expense_receipts as rer')
+            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
+            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
+        $this->applyFiltersToQuery($reservationQuery, $summaryFilters, false);
+        $reservationCount = $reservationQuery->count();
+
+        return [
+            'reservation_expense_receipts' => $reservationCount,
+            'booking_receipts' => $bookingCount,
+            'total_records' => $reservationCount + $bookingCount
+        ];
+    }
+
+    /**
+     * Format unified receipt data
+     *
+     * @param object $item
+     * @return array
+     */
+    private function formatUnifiedReceipt($item)
+    {
+        return [
+            'id' => $item->id,
+            'table_source' => $item->table_source,
+            'sender' => $item->sender,
+            'amount' => $item->amount ? (float) $item->amount : null,
+            'bank_name' => $item->bank_name,
+            'date' => $item->date,
+            'created_at' => $item->created_at,
+            'updated_at' => $item->updated_at,
+            'receipt_url' => $this->generateReceiptUrl($item),
+            'receipt_type' => $item->receipt_type,
+            'booking_id' => $item->booking_id,
+            'reservation_id' => $item->reservation_id,
+            'booking_item_id' => $item->booking_item_id,
+            'crm_id' => $item->crm_id,
+        ];
+    }
+
+    /**
+     * Generate receipt URL
+     *
+     * @param object $item
+     * @return string|null
+     */
+    private function generateReceiptUrl($item)
+    {
+        if (!$item->image_file) {
+            return null;
+        }
+
+        $path = 'images/' . $item->image_file;
+
+        // Check if file exists
+        if (!Storage::exists($path)) {
+            return null;
+        }
+
+        return Storage::url($path);
+    }
+
+    /**
+     * Build improved metadata with proper query parameter handling
+     *
+     * @param array $paginatedData
+     * @param Request $request
+     * @return array
+     */
+    private function buildMetaData($paginatedData, $request)
     {
         $currentPage = $paginatedData['current_page'];
         $lastPage = $paginatedData['last_page'];
-        $path = $paginatedData['path'];
+        $baseUrl = $request->url();
+
+        // Get all query parameters except page
+        $queryParams = $request->except('page');
+        $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
 
         $links = [];
 
         // Previous link
         $links[] = [
-            'url' => $currentPage > 1 ? $paginatedData['prev_page_url'] : null,
+            'url' => $currentPage > 1 ? ($baseUrl . '?page=' . ($currentPage - 1) . $queryString) : null,
             'label' => '&laquo; Previous',
             'active' => false
         ];
 
-        // First page
-        $links[] = [
-            'url' => $path . '?page=1',
-            'label' => '1',
-            'active' => $currentPage == 1
-        ];
-
-        // Calculate window of pages around current page
-        $start = max(2, $currentPage - 4);
-        $end = min($lastPage - 1, $currentPage + 4);
-
-        // Add pages before current if needed
-        if ($start > 2) {
-            $links[] = [
-                'url' => $path . '?page=' . ($start - 1),
-                'label' => ($start - 1),
-                'active' => false
-            ];
-        }
-
-        // Add pages in window
-        for ($i = $start; $i <= $end; $i++) {
-            $links[] = [
-                'url' => $path . '?page=' . $i,
-                'label' => (string)$i,
-                'active' => $i == $currentPage
-            ];
-        }
-
-        // Add pages after current if needed
-        if ($end < $lastPage - 1) {
-            $links[] = [
-                'url' => $path . '?page=' . ($end + 1),
-                'label' => ($end + 1),
-                'active' => false
-            ];
-        }
-
-        // Last page
-        if ($lastPage > 1) {
-            $links[] = [
-                'url' => $path . '?page=' . $lastPage,
-                'label' => (string)$lastPage,
-                'active' => $currentPage == $lastPage
-            ];
-        }
+        // Page links with intelligent windowing
+        $links = array_merge($links, $this->generatePageLinks($currentPage, $lastPage, $baseUrl, $queryString));
 
         // Next link
         $links[] = [
-            'url' => $currentPage < $lastPage ? $paginatedData['next_page_url'] : null,
+            'url' => $currentPage < $lastPage ? ($baseUrl . '?page=' . ($currentPage + 1) . $queryString) : null,
             'label' => 'Next &raquo;',
             'active' => false
         ];
@@ -120,7 +479,7 @@ class ReceiptService
             'from' => $paginatedData['from'],
             'last_page' => $lastPage,
             'links' => $links,
-            'path' => $path,
+            'path' => $baseUrl,
             'per_page' => $paginatedData['per_page'],
             'to' => $paginatedData['to'],
             'total' => $paginatedData['total'],
@@ -128,211 +487,88 @@ class ReceiptService
         ];
     }
 
+    /**
+     * Generate page links with intelligent windowing
+     *
+     * @param int $currentPage
+     * @param int $lastPage
+     * @param string $baseUrl
+     * @param string $queryString
+     * @return array
+     */
+    private function generatePageLinks($currentPage, $lastPage, $baseUrl, $queryString)
+    {
+        $links = [];
+        $window = 2; // Show 2 pages on each side of current page
+
+        // Always show first page
+        if ($lastPage > 0) {
+            $links[] = [
+                'url' => $baseUrl . '?page=1' . $queryString,
+                'label' => '1',
+                'active' => $currentPage == 1
+            ];
+        }
+
+        // Calculate window range
+        $start = max(2, $currentPage - $window);
+        $end = min($lastPage - 1, $currentPage + $window);
+
+        // Add ellipsis before window if needed
+        if ($start > 2) {
+            $links[] = [
+                'url' => null,
+                'label' => '...',
+                'active' => false
+            ];
+        }
+
+        // Add pages in window
+        for ($i = $start; $i <= $end; $i++) {
+            $links[] = [
+                'url' => $baseUrl . '?page=' . $i . $queryString,
+                'label' => (string)$i,
+                'active' => $i == $currentPage
+            ];
+        }
+
+        // Add ellipsis after window if needed
+        if ($end < $lastPage - 1) {
+            $links[] = [
+                'url' => null,
+                'label' => '...',
+                'active' => false
+            ];
+        }
+
+        // Always show last page (if different from first)
+        if ($lastPage > 1) {
+            $links[] = [
+                'url' => $baseUrl . '?page=' . $lastPage . $queryString,
+                'label' => (string)$lastPage,
+                'active' => $currentPage == $lastPage
+            ];
+        }
+
+        return $links;
+    }
+
+    /**
+     * Extract and sanitize filters from request
+     *
+     * @param Request $request
+     * @return array
+     */
     private function extractFilters(Request $request)
     {
         return [
-            'type' => $request->type,
-            'sender' => $request->sender,
-            'amount' => $request->amount,
-            'date' => $request->date,
-            'bank_name' => $request->bank_name,
-            'crm_id' => $request->crm_id // Add this line
-        ];
-    }
-
-    private function getReservationReceipts($filters)
-    {
-        $query = ReservationExpenseReceipt::with(['reservation' => function($q) use ($filters) {
-            if (!empty($filters['crm_id'])) {
-                $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
-            }
-        }]);
-
-        $this->applyCommonFilters($query, $filters, false); // false = exclude sender
-
-        return $query->get()->map(function($item) {
-            return $this->formatReceipt($item, 'ReservationExpenseReceipt');
-        });
-    }
-
-    private function getBookingReceipts($filters)
-    {
-        $query = BookingReceipt::with(['booking' => function($q) use ($filters) {
-            if (!empty($filters['crm_id'])) {
-                $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
-            }
-        }]);
-
-        $this->applyCommonFilters($query, $filters, true); // true = include sender
-
-        return $query->get()->map(function($item) {
-            return $this->formatReceipt($item, 'BookingReceipt');
-        });
-    }
-
-    private function formatReceipt($item, $source)
-    {
-        // Determine the image/file field name based on the source
-        $imageField = ($source === 'BookingReceipt') ? 'image' : 'file';
-
-        $formatted = [
-            'id' => $item->id,
-            'table_source' => $source,
-            'sender' => $item->sender ?? null,
-            'amount' => $item->amount,
-            'bank_name' => $item->bank_name,
-            'date' => $item->date,
-            'created_at' => $item->created_at,
-            'updated_at' => $item->updated_at,
-            'receipt_url' => $item->{$imageField} ? Storage::url($source === 'BookingReceipt' ? 'images/' . $item->image : 'images/' . $item->file) : null,
-            'receipt_type' => $source === 'BookingReceipt' ? 'customer_payment' : 'expense',
-            'booking_id' => $source === 'BookingReceipt' ? ($item->booking ? $item->booking->id : null) : null,
-            'reservation_id' => $source === 'ReservationExpenseReceipt' ? ($item->reservation ? $item->reservation->id : null) : null,
-            'booking_item_id' => $source === 'ReservationExpenseReceipt' ? ($item->reservation ? $item->reservation->id : null) : null,
-            'crm_id' => $source === 'BookingReceipt'
-                ? ($item->booking ? $item->booking->crm_id : null)
-                : ($item->reservation ? $item->reservation->crm_id : null),
-        ];
-
-        // Don't include toArray() as it breaks the object
-        return $formatted;
-    }
-
-    private function applyCommonFilters($query, $filters, $includeSender = false)
-    {
-        $this->applyTypeFilter($query, $filters['type'], $includeSender);
-        $this->applySearchFilters($query, $filters, $includeSender);
-
-        return $query;
-    }
-
-    private function applyTypeFilter($query, $type, $includeSender)
-    {
-        $requiredFields = ['amount', 'bank_name', 'date', 'created_at'];
-
-        if ($includeSender) {
-            $requiredFields[] = 'sender';
-        }
-
-        if ($type === 'complete') {
-            foreach ($requiredFields as $field) {
-                $query->whereNotNull($field)
-                      ->where($field, '!=', '')
-                      ->where($field, '!=', 'null');
-            }
-        } elseif (in_array($type, ['missing', 'incomplete'])) {
-            $query->where(function($subQuery) use ($requiredFields) {
-                foreach ($requiredFields as $field) {
-                    $subQuery->orWhereNull($field)
-                            ->orWhere($field, '')
-                            ->orWhere($field, 'null');
-                }
-            });
-        }
-    }
-
-    private function applySearchFilters($query, $filters, $includeSender)
-    {
-        // Sender filter (only for BookingReceipt)
-        if ($includeSender && $filters['sender']) {
-            $query->where('sender', 'like', '%' . $filters['sender'] . '%');
-        }
-
-        // Amount filter
-        if ($filters['amount']) {
-            $query->where('amount', $filters['amount']);
-        }
-
-        // Bank name filter
-        if ($filters['bank_name']) {
-            $query->where('bank_name', 'like', '%' . $filters['bank_name'] . '%');
-        }
-
-        // Date filter
-        if ($filters['date']) {
-            $this->applyDateFilter($query, $filters['date']);
-        }
-
-        if (!empty($filters['crm_id'])) {
-            if ($query->getModel() instanceof BookingReceipt) {
-                $query->whereHas('booking', function($q) use ($filters) {
-                    $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
-                });
-            } else if ($query->getModel() instanceof ReservationExpenseReceipt) {
-                $query->whereHas('reservation', function($q) use ($filters) {
-                    $q->where('crm_id', 'like', '%' . $filters['crm_id'] . '%');
-                });
-            }
-        }
-    }
-
-    private function applyDateFilter($query, $date)
-    {
-        if (!$date) return;
-
-        $dateArray = explode(',', $date);
-
-        if (count($dateArray) === 2) {
-            // Date range
-            $startDate = trim($dateArray[0]);
-            $endDate = trim($dateArray[1]);
-
-            // Try different approaches based on column type
-            // Approach 1: If date column is DATE or DATETIME
-            $query->where(function($q) use ($startDate, $endDate) {
-                $q->whereBetween('date', [$startDate, $endDate])
-                  ->orWhereBetween('date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                  ->orWhere(function($subQ) use ($startDate, $endDate) {
-                      $subQ->whereDate('date', '>=', $startDate)
-                           ->whereDate('date', '<=', $endDate);
-                  });
-            });
-        } else {
-            // Single date
-            $singleDate = trim($date);
-            $query->where(function($q) use ($singleDate) {
-                $q->whereDate('date', $singleDate)
-                  ->orWhere('date', 'like', $singleDate . '%')
-                  ->orWhere('date', $singleDate);
-            });
-        }
-    }
-
-    private function paginateResults($reservationReceipts, $bookingReceipts, $request, $perPage)
-    {
-        // Combine and convert to array first
-        $allReceipts = $reservationReceipts->merge($bookingReceipts)
-                                         ->sortByDesc('created_at')
-                                         ->values()
-                                         ->all(); // Convert to array
-
-        // Pagination calculations
-        $currentPage = (int) $request->get('page', 1);
-        $total = count($allReceipts);
-        $offset = ($currentPage - 1) * $perPage;
-        $lastPage = ceil($total / $perPage);
-
-        // Get paginated items
-        $paginatedItems = array_slice($allReceipts, $offset, $perPage);
-
-        // Build pagination URLs
-        $baseUrl = request()->url();
-        $queryParams = $request->except('page');
-        $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
-
-        return [
-            'current_page' => $currentPage,
-            'data' => $paginatedItems,
-            'first_page_url' => $baseUrl . '?page=1' . $queryString,
-            'from' => $total > 0 ? $offset + 1 : null,
-            'last_page' => $lastPage,
-            'last_page_url' => $baseUrl . '?page=' . $lastPage . $queryString,
-            'next_page_url' => $currentPage < $lastPage ? $baseUrl . '?page=' . ($currentPage + 1) . $queryString : null,
-            'path' => $baseUrl,
-            'per_page' => $perPage,
-            'prev_page_url' => $currentPage > 1 ? $baseUrl . '?page=' . ($currentPage - 1) . $queryString : null,
-            'to' => min($offset + $perPage, $total),
-            'total' => $total
+            'type' => $request->input('type'),
+            'receipt_type' => $request->input('receipt_type'),
+            'sender' => $request->input('sender'),
+            'amount' => $request->input('amount'),
+            'date' => $request->input('date'),
+            'bank_name' => $request->input('bank_name'),
+            'crm_id' => $request->input('crm_id')
         ];
     }
 }
