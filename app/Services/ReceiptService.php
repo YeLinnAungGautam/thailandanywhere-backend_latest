@@ -17,8 +17,8 @@ class ReceiptService
     const PER_PAGE = 10;
     const MAX_PER_PAGE = 100;
 
-    const VALID_TYPES = ['complete', 'incomplete', 'missing', 'all'];
-    const VALID_RECEIPT_TYPES = ['customer_payment', 'expense', 'all'];
+    const VALID_TYPES = ['complete', 'incomplete', 'missing', 'missing_expense', 'missing_payment', 'complete_expense', 'complete_payment', 'incomplete_expense', 'incomplete_payment', 'all'];
+    const VALID_RECEIPT_TYPES = ['customer_payment', 'expense', 'all']; // Keep for backward compatibility
 
     /**
      * Get all receipts with filtering and pagination
@@ -80,7 +80,6 @@ class ReceiptService
     {
         $validator = Validator::make($request->all(), [
             'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
-            'receipt_type' => 'nullable|in:' . implode(',', self::VALID_RECEIPT_TYPES),
             'sender' => 'nullable|string|max:255',
             'amount' => 'nullable|numeric|min:0',
             'date' => 'nullable|string',
@@ -269,8 +268,7 @@ class ReceiptService
 
     /**
      * Apply filters to query
-     * Updated to match actual table structure
-     * Modified to exclude type filter from general application
+     * Simplified version with new type system
      *
      * @param \Illuminate\Database\Query\Builder $query
      * @param array $filters
@@ -278,11 +276,8 @@ class ReceiptService
      */
     private function applyFiltersToQuery($query, $filters, $includeSender)
     {
-        // Note: Type filter is now handled separately in buildUnionQuery()
-        // Only apply type filter if it's not a completion-type filter
-        if (isset($filters['type']) && !in_array($filters['type'], ['complete', 'incomplete', 'missing'])) {
-            $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
-        }
+        // Apply type filter based on the new system
+        $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
 
         // Sender filter (only for booking receipts)
         if ($includeSender && !empty($filters['sender'])) {
@@ -388,16 +383,16 @@ class ReceiptService
 
     /**
      * Get summary counts
-     * Updated to match actual table structure
+     * Updated for new type system
      *
      * @param array $filters
      * @return array
      */
     private function getSummary($filters)
     {
-        // Remove type and receipt_type filters for total counts
+        // Remove type filters for total counts
         $summaryFilters = array_filter($filters, function($value, $key) {
-            return !in_array($key, ['type', 'receipt_type']) && !is_null($value);
+            return $key !== 'type' && !is_null($value);
         }, ARRAY_FILTER_USE_BOTH);
 
         // Get booking receipts count
@@ -594,7 +589,6 @@ class ReceiptService
     {
         return [
             'type' => $request->input('type'),
-            'receipt_type' => $request->input('receipt_type'),
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),
             'date' => $request->input('date'),
