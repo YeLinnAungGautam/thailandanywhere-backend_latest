@@ -175,7 +175,7 @@ class ReceiptService
         // Determine the image/file field name based on the source
         $imageField = ($source === 'BookingReceipt') ? 'image' : 'file';
 
-        return [
+        $formatted = [
             'id' => $item->id,
             'table_source' => $source,
             'sender' => $item->sender ?? null,
@@ -192,8 +192,10 @@ class ReceiptService
             'crm_id' => $source === 'BookingReceipt'
                 ? ($item->booking ? $item->booking->crm_id : null)
                 : ($item->reservation ? $item->reservation->crm_id : null),
-            'original_fields' => $item->toArray() // Include all original fields if needed
         ];
+
+        // Don't include toArray() as it breaks the object
+        return $formatted;
     }
 
     private function applyCommonFilters($query, $filters, $includeSender = false)
@@ -298,19 +300,20 @@ class ReceiptService
 
     private function paginateResults($reservationReceipts, $bookingReceipts, $request, $perPage)
     {
-        // Combine and sort
+        // Combine and convert to array first
         $allReceipts = $reservationReceipts->merge($bookingReceipts)
                                          ->sortByDesc('created_at')
-                                         ->values();
+                                         ->values()
+                                         ->all(); // Convert to array
 
         // Pagination calculations
         $currentPage = (int) $request->get('page', 1);
-        $total = $allReceipts->count();
+        $total = count($allReceipts);
         $offset = ($currentPage - 1) * $perPage;
         $lastPage = ceil($total / $perPage);
 
         // Get paginated items
-        $paginatedItems = $allReceipts->slice($offset, $perPage)->values();
+        $paginatedItems = array_slice($allReceipts, $offset, $perPage);
 
         // Build pagination URLs
         $baseUrl = request()->url();
