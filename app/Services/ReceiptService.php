@@ -6,11 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use App\Models\ReservationExpenseReceipt;
-use App\Models\BookingReceipt;
 use Exception;
 use InvalidArgumentException;
-use Illuminate\Support\Collection;
 
 class ReceiptService
 {
@@ -18,29 +15,20 @@ class ReceiptService
     const MAX_PER_PAGE = 100;
 
     const VALID_TYPES = [
-        'complete', 'incomplete', 'missing',
-        'missing_expense', 'missing_payment',
-        'complete_expense', 'complete_payment',
-        'incomplete_expense', 'incomplete_payment',
-        'all'
+        'complete', 'missing', 'all'
     ];
 
     /**
      * Get all receipts with filtering and pagination
-     *
-     * @param Request $request
-     * @return array
      */
     public function getall(Request $request)
     {
         try {
-            // Validate input parameters
             $this->validateRequest($request);
 
             $perPage = min((int) $request->get('per_page', self::PER_PAGE), self::MAX_PER_PAGE);
             $filters = $this->extractFilters($request);
 
-            // Use Union query for better performance
             $results = $this->getUnifiedResults($filters, $request, $perPage);
 
             return [
@@ -61,11 +49,6 @@ class ReceiptService
                 'error_type' => 'validation'
             ];
         } catch (Exception $e) {
-            // \Log::error('ReceiptService::getall Error: ' . $e->getMessage(), [
-            //     'request' => $request->all(),
-            //     'trace' => $e->getTraceAsString()
-            // ]);
-
             return [
                 'success' => false,
                 'data' => null,
@@ -77,9 +60,6 @@ class ReceiptService
 
     /**
      * Validate request parameters
-     *
-     * @param Request $request
-     * @throws InvalidArgumentException
      */
     private function validateRequest(Request $request)
     {
@@ -98,7 +78,6 @@ class ReceiptService
             throw new InvalidArgumentException($validator->errors()->first());
         }
 
-        // Validate date format if provided
         if ($request->date) {
             $this->validateDateFormat($request->date);
         }
@@ -106,9 +85,6 @@ class ReceiptService
 
     /**
      * Validate date format
-     *
-     * @param string $date
-     * @throws InvalidArgumentException
      */
     private function validateDateFormat($date)
     {
@@ -127,43 +103,28 @@ class ReceiptService
     }
 
     /**
-     * Get unified results using Union query for better performance
-     *
-     * @param array $filters
-     * @param Request $request
-     * @param int $perPage
-     * @return array
+     * Get unified results
      */
     private function getUnifiedResults($filters, $request, $perPage)
     {
-        // Get current page
+        // Get ALL data from both tables
+        $allData = $this->getAllUnifiedData();
+
+        // Apply filters
+        $filteredData = $this->applyFilters($allData, $filters);
+
+        // Apply pagination
         $currentPage = (int) $request->get('page', 1);
         $offset = ($currentPage - 1) * $perPage;
+        $total = $filteredData->count();
 
-        // Build union query
-        $unionQuery = $this->buildUnionQuery($filters);
+        $paginatedData = $filteredData->slice($offset, $perPage)->values();
 
-        // Get total count
-        $totalQuery = DB::query()
-            ->fromSub($unionQuery, 'combined_receipts');
-        $total = $totalQuery->count();
-
-        // Apply pagination and ordering
-        $paginatedResults = DB::query()
-            ->fromSub($unionQuery, 'combined_receipts')
-            ->orderBy('created_at', 'desc')
-            ->orderBy('id', 'desc') // Secondary sort for consistency
-            ->offset($offset)
-            ->limit($perPage)
-            ->get();
-
-        // Get summary counts
-        $summary = $this->getSummary($filters);
+        // Get summary
+        $summary = $this->getSummary($allData, $filters);
 
         return [
-            'data' => $paginatedResults->map(function($item) {
-                return $this->formatUnifiedReceipt($item);
-            }),
+            'data' => $paginatedData,
             'current_page' => $currentPage,
             'per_page' => $perPage,
             'total' => $total,
@@ -175,272 +136,183 @@ class ReceiptService
     }
 
     /**
-     * Build union query for both receipt types
-     * Updated with simplified type-based filtering
-     *
-     * @param array $filters
-     * @return \Illuminate\Database\Query\Builder
+     * Get ALL data from both tables
      */
-    private function buildUnionQuery($filters)
+    private function getAllUnifiedData()
     {
-        // Booking receipts query (booking_receipts table)
-        $bookingQuery = DB::table('booking_receipts as br')
+        // Get ALL booking receipts
+        $bookingReceipts = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
             ->select([
                 'br.id',
-                DB::raw("'BookingReceipt' as table_source"),
+                DB::raw("'booking_receipt' as table_source"),
                 'br.sender',
                 'br.amount',
                 'br.bank_name',
                 'br.date',
                 'br.created_at',
                 'br.updated_at',
-                'br.image as image_file',
-                DB::raw("'customer_payment' as receipt_type"),
+                'br.image as file_name',
                 'br.booking_id',
-                DB::raw('NULL as reservation_id'),
-                'br.booking_id as booking_item_id',
                 'b.crm_id'
             ])
-            ->whereNull('br.deleted_at');
+            ->get();
 
-        // Reservation expense receipts query
-        $reservationQuery = DB::table('reservation_expense_receipts as rer')
+        // Get ALL reservation expense receipts
+        $expenseReceipts = DB::table('reservation_expense_receipts as rer')
             ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
             ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id')
             ->select([
                 'rer.id',
-                DB::raw("'ReservationExpenseReceipt' as table_source"),
+                DB::raw("'expense_receipt' as table_source"),
                 DB::raw('NULL as sender'),
                 'rer.amount',
                 'rer.bank_name',
                 'rer.date',
                 'rer.created_at',
                 'rer.updated_at',
-                'rer.file as image_file',
-                DB::raw("'expense' as receipt_type"),
+                'rer.file as file_name',
                 'b.id as booking_id',
-                DB::raw('NULL as reservation_id'),
-                'rer.booking_item_id',
                 'b.crm_id'
-            ]);
+            ])
+            ->get();
 
-        // Apply filters based on type
-        $type = $filters['type'] ?? 'all';
+        // Combine and format all data
+        $allData = collect();
+
+        foreach ($bookingReceipts as $item) {
+            $allData->push($this->formatReceipt($item));
+        }
+
+        foreach ($expenseReceipts as $item) {
+            $allData->push($this->formatReceipt($item));
+        }
+
+        // Sort by created_at desc
+        return $allData->sortByDesc('created_at')->values();
+    }
+
+    /**
+     * Apply filters to data
+     */
+    private function applyFilters($allData, $filters)
+    {
+        return $allData->filter(function ($item) use ($filters) {
+
+            // 1. Type filter (complete/missing/all)
+            if (!empty($filters['type']) && $filters['type'] !== 'all') {
+                if (!$this->matchesType($item, $filters['type'])) {
+                    return false;
+                }
+            }
+
+            // 2. Sender filter (only for booking receipts)
+            if (!empty($filters['sender'])) {
+                if ($item['table_source'] !== 'booking_receipt' ||
+                    empty($item['sender']) ||
+                    stripos($item['sender'], $filters['sender']) === false) {
+                    return false;
+                }
+            }
+
+            // 3. Amount filter
+            if (!empty($filters['amount'])) {
+                if ((float)$item['amount'] != (float)$filters['amount']) {
+                    return false;
+                }
+            }
+
+            // 4. Bank name filter
+            if (!empty($filters['bank_name'])) {
+                if (empty($item['bank_name']) ||
+                    stripos($item['bank_name'], $filters['bank_name']) === false) {
+                    return false;
+                }
+            }
+
+            // 5. CRM ID filter
+            if (!empty($filters['crm_id'])) {
+                if (empty($item['crm_id']) ||
+                    stripos($item['crm_id'], $filters['crm_id']) === false) {
+                    return false;
+                }
+            }
+
+            // 6. Date filter (only for complete records or when specifically searching by date)
+            if (!empty($filters['date'])) {
+                // If filtering by missing type, don't apply date filter
+                if (!empty($filters['type']) && $filters['type'] === 'missing') {
+                    return true; // Skip date filter for missing records
+                }
+
+                if (!$this->matchesDate($item, $filters['date'])) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Check if record matches type (complete/missing)
+     */
+    private function matchesType($item, $type)
+    {
+        $hasAmount = !empty($item['amount']) && (float)$item['amount'] > 0;
+        $hasBankName = !empty($item['bank_name']);
+        $hasDate = !empty($item['date']) &&
+                   $item['date'] !== '0000-00-00' &&
+                   $item['date'] !== '1970-01-01';
+
+        // For booking receipts, also check sender
+        $hasSender = true;
+        if ($item['table_source'] === 'booking_receipt') {
+            $hasSender = !empty($item['sender']);
+        }
+
+        $isComplete = $hasAmount && $hasBankName && $hasDate && $hasSender;
 
         switch ($type) {
-            case 'missing_expense':
-            case 'complete_expense':
-            case 'incomplete_expense':
-                // Only search in expense receipts
-                $this->applyFiltersToQuery($reservationQuery, $filters, false);
-                return $reservationQuery;
-
-            case 'missing_payment':
-            case 'complete_payment':
-            case 'incomplete_payment':
-                // Only search in customer payment receipts
-                $this->applyFiltersToQuery($bookingQuery, $filters, true);
-                return $bookingQuery;
-
-            case 'missing':
             case 'complete':
-            case 'incomplete':
-                // Search in both tables
-                $this->applyFiltersToQuery($bookingQuery, $filters, true);
-                $this->applyFiltersToQuery($reservationQuery, $filters, false);
-                return $bookingQuery->union($reservationQuery);
-
-            case 'all':
+                return $isComplete;
+            case 'missing':
+                return !$isComplete;
             default:
-                // Search in both tables with all filters
-                $this->applyFiltersToQuery($bookingQuery, $filters, true);
-                $this->applyFiltersToQuery($reservationQuery, $filters, false);
-                return $bookingQuery->union($reservationQuery);
+                return true;
         }
     }
 
     /**
-     * Apply filters to query
-     * Simplified version with new type system
-     *
-     * @param \Illuminate\Database\Query\Builder $query
-     * @param array $filters
-     * @param bool $includeSender
+     * Check if record matches date filter
      */
-    private function applyFiltersToQuery($query, $filters, $includeSender)
+    private function matchesDate($item, $dateFilter)
     {
-        // Apply type filter based on the new system
-        $this->applyTypeFilter($query, $filters['type'] ?? null, $includeSender);
-
-        // Sender filter (only for booking receipts)
-        if ($includeSender && !empty($filters['sender'])) {
-            $query->where('br.sender', 'like', '%' . $filters['sender'] . '%');
+        if (empty($item['date']) ||
+            $item['date'] === '0000-00-00' ||
+            $item['date'] === '1970-01-01') {
+            return false;
         }
 
-        // Amount filter
-        if (!empty($filters['amount'])) {
-            $tableAlias = $includeSender ? 'br' : 'rer';
-            $query->where("{$tableAlias}.amount", $filters['amount']);
-        }
-
-        // Bank name filter
-        if (!empty($filters['bank_name'])) {
-            $tableAlias = $includeSender ? 'br' : 'rer';
-            $query->where("{$tableAlias}.bank_name", 'like', '%' . $filters['bank_name'] . '%');
-        }
-
-        // Date filter
-        if (!empty($filters['date'])) {
-            $this->applyDateFilter($query, $filters['date'], $includeSender);
-        }
-
-        // CRM ID filter
-        if (!empty($filters['crm_id'])) {
-            $query->where('b.crm_id', 'like', '%' . $filters['crm_id'] . '%');
-        }
-    }
-
-    /**
-     * Apply type filter with new combined type system
-     *
-     * @param \Illuminate\Database\Query\Builder $query
-     * @param string|null $type
-     * @param bool $includeSender
-     */
-    private function applyTypeFilter($query, $type, $includeSender)
-    {
-        if (empty($type) || $type === 'all') {
-            return;
-        }
-
-        $tableAlias = $includeSender ? 'br' : 'rer';
-        $requiredFields = ["{$tableAlias}.amount", "{$tableAlias}.bank_name", "{$tableAlias}.date"];
-
-        if ($includeSender) {
-            $requiredFields[] = "{$tableAlias}.sender";
-        }
-
-        // Extract the completion status from the type
-        $completionStatus = $this->extractCompletionStatus($type);
-
-        switch($completionStatus) {
-            case 'complete':
-                foreach ($requiredFields as $field) {
-                    $query->whereNotNull($field)
-                          ->where($field, '!=', '')
-                          ->where($field, '!=', '0');
-                }
-                break;
-
-            case 'incomplete':
-            case 'missing':
-                $query->where(function($subQuery) use ($requiredFields) {
-                    foreach ($requiredFields as $field) {
-                        $subQuery->orWhereNull($field)
-                                ->orWhere($field, '')
-                                ->orWhere($field, '0');
-                    }
-                });
-                break;
-        }
-    }
-
-    /**
-     * Extract completion status from combined type
-     *
-     * @param string $type
-     * @return string
-     */
-    private function extractCompletionStatus($type)
-    {
-        if (str_contains($type, 'complete')) {
-            return 'complete';
-        }
-        if (str_contains($type, 'incomplete')) {
-            return 'incomplete';
-        }
-        if (str_contains($type, 'missing')) {
-            return 'missing';
-        }
-
-        // For backward compatibility
-        return $type;
-    }
-
-    /**
-     * Apply date filter with improved logic
-     * Updated to use correct table aliases
-     *
-     * @param \Illuminate\Database\Query\Builder $query
-     * @param string $date
-     * @param bool $includeSender
-     */
-    private function applyDateFilter($query, $date, $includeSender)
-    {
-        if (empty($date)) {
-            return;
-        }
-
-        $tableAlias = $includeSender ? 'br' : 'rer';
-        $dateField = "{$tableAlias}.date";
-        $dateArray = array_map('trim', explode(',', $date));
+        $dateArray = array_map('trim', explode(',', $dateFilter));
+        $itemDate = date('Y-m-d', strtotime($item['date']));
 
         if (count($dateArray) === 2) {
             // Date range
-            $startDate = $dateArray[0];
-            $endDate = $dateArray[1];
-
-            $query->whereDate($dateField, '>=', $startDate)
-                  ->whereDate($dateField, '<=', $endDate);
+            $startDate = date('Y-m-d', strtotime($dateArray[0]));
+            $endDate = date('Y-m-d', strtotime($dateArray[1]));
+            return $itemDate >= $startDate && $itemDate <= $endDate;
         } else {
             // Single date
-            $query->whereDate($dateField, $dateArray[0]);
+            $filterDate = date('Y-m-d', strtotime($dateArray[0]));
+            return $itemDate === $filterDate;
         }
     }
 
     /**
-     * Get summary counts
-     * Updated for new type system
-     *
-     * @param array $filters
-     * @return array
+     * Format receipt data
      */
-    private function getSummary($filters)
-    {
-        // Remove type filters for total counts
-        $summaryFilters = array_filter($filters, function($value, $key) {
-            return $key !== 'type' && !is_null($value);
-        }, ARRAY_FILTER_USE_BOTH);
-
-        // Get booking receipts count
-        $bookingQuery = DB::table('booking_receipts as br')
-            ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
-            ->whereNull('br.deleted_at');
-        $this->applyFiltersToQuery($bookingQuery, $summaryFilters, true);
-        $bookingCount = $bookingQuery->count();
-
-        // Get reservation expense receipts count
-        $reservationQuery = DB::table('reservation_expense_receipts as rer')
-            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
-            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
-        $this->applyFiltersToQuery($reservationQuery, $summaryFilters, false);
-        $reservationCount = $reservationQuery->count();
-
-        return [
-            'reservation_expense_receipts' => $reservationCount,
-            'booking_receipts' => $bookingCount,
-            'total_records' => $reservationCount + $bookingCount
-        ];
-    }
-
-    /**
-     * Format unified receipt data
-     *
-     * @param object $item
-     * @return array
-     */
-    private function formatUnifiedReceipt($item)
+    private function formatReceipt($item)
     {
         return [
             'id' => $item->id,
@@ -451,30 +323,23 @@ class ReceiptService
             'date' => $item->date,
             'created_at' => $item->created_at,
             'updated_at' => $item->updated_at,
-            'receipt_url' => $this->generateReceiptUrl($item),
-            'receipt_type' => $item->receipt_type,
+            'file_url' => $this->generateFileUrl($item->file_name),
             'booking_id' => $item->booking_id,
-            'reservation_id' => $item->reservation_id,
-            'booking_item_id' => $item->booking_item_id,
             'crm_id' => $item->crm_id,
         ];
     }
 
     /**
-     * Generate receipt URL
-     *
-     * @param object $item
-     * @return string|null
+     * Generate file URL
      */
-    private function generateReceiptUrl($item)
+    private function generateFileUrl($fileName)
     {
-        if (!$item->image_file) {
+        if (!$fileName) {
             return null;
         }
 
-        $path = 'images/' . $item->image_file;
+        $path = 'images/' . $fileName;
 
-        // Check if file exists
         if (!Storage::exists($path)) {
             return null;
         }
@@ -483,11 +348,28 @@ class ReceiptService
     }
 
     /**
-     * Build improved metadata with proper query parameter handling
-     *
-     * @param array $paginatedData
-     * @param Request $request
-     * @return array
+     * Get summary counts
+     */
+    private function getSummary($allData, $filters)
+    {
+        // Apply all filters except type
+        $baseFilters = $filters;
+        unset($baseFilters['type']);
+
+        $filteredForSummary = $this->applyFilters($allData, $baseFilters);
+
+        $bookingCount = $filteredForSummary->where('table_source', 'booking_receipt')->count();
+        $expenseCount = $filteredForSummary->where('table_source', 'expense_receipt')->count();
+
+        return [
+            'booking_receipts' => $bookingCount,
+            'expense_receipts' => $expenseCount,
+            'total_records' => $bookingCount + $expenseCount
+        ];
+    }
+
+    /**
+     * Build pagination metadata
      */
     private function buildMetaData($paginatedData, $request)
     {
@@ -495,7 +377,6 @@ class ReceiptService
         $lastPage = $paginatedData['last_page'];
         $baseUrl = $request->url();
 
-        // Get all query parameters except page
         $queryParams = $request->except('page');
         $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
 
@@ -508,7 +389,7 @@ class ReceiptService
             'active' => false
         ];
 
-        // Page links with intelligent windowing
+        // Page links
         $links = array_merge($links, $this->generatePageLinks($currentPage, $lastPage, $baseUrl, $queryString));
 
         // Next link
@@ -527,25 +408,17 @@ class ReceiptService
             'per_page' => $paginatedData['per_page'],
             'to' => $paginatedData['to'],
             'total' => $paginatedData['total'],
-            'total_page' => $lastPage,
         ];
     }
 
     /**
-     * Generate page links with intelligent windowing
-     *
-     * @param int $currentPage
-     * @param int $lastPage
-     * @param string $baseUrl
-     * @param string $queryString
-     * @return array
+     * Generate page links
      */
     private function generatePageLinks($currentPage, $lastPage, $baseUrl, $queryString)
     {
         $links = [];
-        $window = 2; // Show 2 pages on each side of current page
+        $window = 2;
 
-        // Always show first page
         if ($lastPage > 0) {
             $links[] = [
                 'url' => $baseUrl . '?page=1' . $queryString,
@@ -554,11 +427,9 @@ class ReceiptService
             ];
         }
 
-        // Calculate window range
         $start = max(2, $currentPage - $window);
         $end = min($lastPage - 1, $currentPage + $window);
 
-        // Add ellipsis before window if needed
         if ($start > 2) {
             $links[] = [
                 'url' => null,
@@ -567,7 +438,6 @@ class ReceiptService
             ];
         }
 
-        // Add pages in window
         for ($i = $start; $i <= $end; $i++) {
             $links[] = [
                 'url' => $baseUrl . '?page=' . $i . $queryString,
@@ -576,7 +446,6 @@ class ReceiptService
             ];
         }
 
-        // Add ellipsis after window if needed
         if ($end < $lastPage - 1) {
             $links[] = [
                 'url' => null,
@@ -585,7 +454,6 @@ class ReceiptService
             ];
         }
 
-        // Always show last page (if different from first)
         if ($lastPage > 1) {
             $links[] = [
                 'url' => $baseUrl . '?page=' . $lastPage . $queryString,
@@ -598,10 +466,7 @@ class ReceiptService
     }
 
     /**
-     * Extract and sanitize filters from request
-     *
-     * @param Request $request
-     * @return array
+     * Extract filters from request
      */
     private function extractFilters(Request $request)
     {

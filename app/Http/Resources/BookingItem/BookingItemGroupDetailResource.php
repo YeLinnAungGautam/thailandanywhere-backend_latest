@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\BookingItem;
 
+use App\Http\Resources\BookingResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,7 @@ class BookingItemGroupDetailResource extends JsonResource
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
             'customer_name' => $this->booking->customer->name ?? 'N/A',
 
-            'booking' => $this->whenLoaded('booking'),
+            'booking' => BookingResource::make($this->booking),
 
             'items' => $this->whenLoaded('bookingItems'),
         ];
