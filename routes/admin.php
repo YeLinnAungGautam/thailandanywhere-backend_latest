@@ -390,6 +390,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Booking Item Group
     Route::post('booking-item-groups', [BookingItemGroupController::class, 'index']);
     Route::get('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'detail']);
+    Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
 
     # Customer Document
     Route::get('booking-item-groups/{booking_item_group}/documents', [CustomerDocumentController::class, 'index']);

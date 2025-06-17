@@ -155,4 +155,36 @@ class BookingItemGroupController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    public function update(Request $request,BookingItemGroup $booking_item_group){
+        try {
+            $data = [];
+            if($request->sent_booking_request){
+                $data['sent_booking_request'] = $request->sent_booking_request;
+            }
+            if($request->send_expense_mail){
+                $data['sent_expense_mail'] = $request->sent_expense_mail;
+            }
+            if($request->expense_method){
+                $data['expense_method'] = $request->expense_method;
+            }
+            if($request->expense_status){
+                $data['expense_status'] = $request->expense_status;
+            }
+            if($request->expense_bank_name){
+                $data['expense_bank_name'] = $request->expense_bank_name;
+            }
+            if($request->expense_bank_account){
+                $data['expense_bank_account'] = $request->expense_bank_account;
+            }
+            if($request->expense_total_amount){
+                $data['expense_total_amount'] = $request->expense_total_amount;
+            }
+
+            $booking_item_group->update($data);
+            return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }

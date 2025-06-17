@@ -13,20 +13,13 @@ class CustomerDocument extends Model
         'meta' => 'array',
     ];
 
+    // protected $document_type_validation_rule = 'required|in:passport,booking_confirm_letter,expense_receipt,booking_request_proof,expense_mail_proof,confirmation_letter';
+
     public static function specificFolderPath(string $type): string
     {
         switch ($type) {
             case 'passport':
                 return 'passport/';
-
-            case 'tax_slip':
-                return 'images/';
-
-            case 'paid_slip':
-                return 'images/';
-
-            case 'receipt_image':
-                return 'images/';
 
             case 'booking_confirm_letter':
                 return 'images/';
@@ -34,13 +27,13 @@ class CustomerDocument extends Model
             case 'confirmation_letter':
                 return 'files/';
 
-            case 'car_photo':
+            case 'expense_receipt':
                 return 'images/';
 
-            case 'booking_request':
-                return 'files/';
+            case 'booking_request_proof':
+                return 'images/';
 
-            case 'expense_receipt':
+            case 'expense_mail_proof':
                 return 'images/';
 
             default:
