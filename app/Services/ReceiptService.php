@@ -29,7 +29,7 @@ class ReceiptService
             $perPage = min((int) $request->get('per_page', self::PER_PAGE), self::MAX_PER_PAGE);
             $filters = $this->extractFilters($request);
 
-            $results = $this->getUnifiedResults($filters, $request, $perPage);
+            $results = $this->getOptimizedResults($filters, $request, $perPage);
 
             return [
                 'success' => true,
@@ -103,28 +103,32 @@ class ReceiptService
     }
 
     /**
-     * Get unified results
+     * Get optimized results using database-level filtering
      */
-    private function getUnifiedResults($filters, $request, $perPage)
+    private function getOptimizedResults($filters, $request, $perPage)
     {
-        // Get ALL data from both tables
-        $allData = $this->getAllUnifiedData();
-
-        // Apply filters
-        $filteredData = $this->applyFilters($allData, $filters);
-
-        // Apply pagination
         $currentPage = (int) $request->get('page', 1);
         $offset = ($currentPage - 1) * $perPage;
-        $total = $filteredData->count();
 
-        $paginatedData = $filteredData->slice($offset, $perPage)->values();
+        // Build unified query with filters applied at database level
+        $query = $this->buildUnifiedQuery($filters);
+        
+        // Get total count
+        $total = $this->getTotalCount($filters);
+        
+        // Apply pagination and get results
+        $results = $query->offset($offset)->limit($perPage)->get();
+        
+        // Format results
+        $formattedData = $results->map(function ($item) {
+            return $this->formatReceipt($item);
+        });
 
         // Get summary
-        $summary = $this->getSummary($allData, $filters);
+        $summary = $this->getOptimizedSummary($filters);
 
         return [
-            'data' => $paginatedData,
+            'data' => $formattedData,
             'current_page' => $currentPage,
             'per_page' => $perPage,
             'total' => $total,
@@ -136,12 +140,12 @@ class ReceiptService
     }
 
     /**
-     * Get ALL data from both tables
+     * Build unified query with database-level filters
      */
-    private function getAllUnifiedData()
+    private function buildUnifiedQuery($filters)
     {
-        // Get ALL booking receipts
-        $bookingReceipts = DB::table('booking_receipts as br')
+        // Build booking receipts query
+        $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id')
             ->select([
                 'br.id',
@@ -155,11 +159,10 @@ class ReceiptService
                 'br.image as file_name',
                 'br.booking_id',
                 'b.crm_id'
-            ])
-            ->get();
+            ]);
 
-        // Get ALL reservation expense receipts
-        $expenseReceipts = DB::table('reservation_expense_receipts as rer')
+        // Build expense receipts query
+        $expenseQuery = DB::table('reservation_expense_receipts as rer')
             ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
             ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id')
             ->select([
@@ -174,139 +177,177 @@ class ReceiptService
                 'rer.file as file_name',
                 'b.id as booking_id',
                 'b.crm_id'
-            ])
-            ->get();
+            ]);
 
-        // Combine and format all data
-        $allData = collect();
+        // Apply filters to each query
+        $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $filters, 'booking');
+        $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $filters, 'expense');
 
-        foreach ($bookingReceipts as $item) {
-            $allData->push($this->formatReceipt($item));
-        }
-
-        foreach ($expenseReceipts as $item) {
-            $allData->push($this->formatReceipt($item));
-        }
-
-        // Sort by created_at desc
-        return $allData->sortByDesc('created_at')->values();
+        // Union the queries and order by created_at
+        return $bookingQuery->union($expenseQuery)
+            ->orderBy('created_at', 'desc');
     }
 
     /**
-     * Apply filters to data
+     * Apply database-level filters
      */
-    private function applyFilters($allData, $filters)
+    private function applyDatabaseFilters($query, $filters, $type)
     {
-        return $allData->filter(function ($item) use ($filters) {
+        // Basic filters that apply to both tables
+        if (!empty($filters['amount'])) {
+            $query->where($type === 'booking' ? 'br.amount' : 'rer.amount', $filters['amount']);
+        }
 
-            // 1. Type filter (complete/missing/all)
-            if (!empty($filters['type']) && $filters['type'] !== 'all') {
-                if (!$this->matchesType($item, $filters['type'])) {
-                    return false;
-                }
-            }
+        if (!empty($filters['bank_name'])) {
+            $query->where($type === 'booking' ? 'br.bank_name' : 'rer.bank_name', 'like', '%' . $filters['bank_name'] . '%');
+        }
 
-            // 2. Sender filter (only for booking receipts)
-            if (!empty($filters['sender'])) {
-                if ($item['table_source'] !== 'booking_receipt' ||
-                    empty($item['sender']) ||
-                    stripos($item['sender'], $filters['sender']) === false) {
-                    return false;
-                }
-            }
+        if (!empty($filters['crm_id'])) {
+            $query->where('b.crm_id', 'like', '%' . $filters['crm_id'] . '%');
+        }
 
-            // 3. Amount filter
-            if (!empty($filters['amount'])) {
-                if ((float)$item['amount'] != (float)$filters['amount']) {
-                    return false;
-                }
-            }
+        // Sender filter (only for booking receipts)
+        if (!empty($filters['sender']) && $type === 'booking') {
+            $query->where('br.sender', 'like', '%' . $filters['sender'] . '%');
+        }
 
-            // 4. Bank name filter
-            if (!empty($filters['bank_name'])) {
-                if (empty($item['bank_name']) ||
-                    stripos($item['bank_name'], $filters['bank_name']) === false) {
-                    return false;
-                }
-            }
+        // Date filter
+        if (!empty($filters['date']) && (!isset($filters['type']) || $filters['type'] !== 'missing')) {
+            $this->applyDateFilter($query, $filters['date'], $type);
+        }
 
-            // 5. CRM ID filter
-            if (!empty($filters['crm_id'])) {
-                if (empty($item['crm_id']) ||
-                    stripos($item['crm_id'], $filters['crm_id']) === false) {
-                    return false;
-                }
-            }
+        // Type filter (complete/missing)
+        if (!empty($filters['type']) && $filters['type'] !== 'all') {
+            $this->applyTypeFilter($query, $filters['type'], $type);
+        }
 
-            // 6. Date filter (only for complete records or when specifically searching by date)
-            if (!empty($filters['date'])) {
-                // If filtering by missing type, don't apply date filter
-                if (!empty($filters['type']) && $filters['type'] === 'missing') {
-                    return true; // Skip date filter for missing records
-                }
-
-                if (!$this->matchesDate($item, $filters['date'])) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
+        return $query;
     }
 
     /**
-     * Check if record matches type (complete/missing)
+     * Apply date filter at database level
      */
-    private function matchesType($item, $type)
+    private function applyDateFilter($query, $dateFilter, $type)
     {
-        $hasAmount = !empty($item['amount']) && (float)$item['amount'] > 0;
-        $hasBankName = !empty($item['bank_name']);
-        $hasDate = !empty($item['date']) &&
-                   $item['date'] !== '0000-00-00' &&
-                   $item['date'] !== '1970-01-01';
-
-        // For booking receipts, also check sender
-        $hasSender = true;
-        if ($item['table_source'] === 'booking_receipt') {
-            $hasSender = !empty($item['sender']);
-        }
-
-        $isComplete = $hasAmount && $hasBankName && $hasDate && $hasSender;
-
-        switch ($type) {
-            case 'complete':
-                return $isComplete;
-            case 'missing':
-                return !$isComplete;
-            default:
-                return true;
-        }
-    }
-
-    /**
-     * Check if record matches date filter
-     */
-    private function matchesDate($item, $dateFilter)
-    {
-        if (empty($item['date']) ||
-            $item['date'] === '0000-00-00' ||
-            $item['date'] === '1970-01-01') {
-            return false;
-        }
-
+        $dateField = $type === 'booking' ? 'br.date' : 'rer.date';
         $dateArray = array_map('trim', explode(',', $dateFilter));
-        $itemDate = date('Y-m-d', strtotime($item['date']));
 
         if (count($dateArray) === 2) {
             // Date range
             $startDate = date('Y-m-d', strtotime($dateArray[0]));
             $endDate = date('Y-m-d', strtotime($dateArray[1]));
-            return $itemDate >= $startDate && $itemDate <= $endDate;
+            $query->whereBetween($dateField, [$startDate, $endDate]);
         } else {
             // Single date
             $filterDate = date('Y-m-d', strtotime($dateArray[0]));
-            return $itemDate === $filterDate;
+            $query->whereDate($dateField, $filterDate);
         }
+
+        // Exclude invalid dates
+        $query->where($dateField, '!=', '0000-00-00')
+              ->where($dateField, '!=', '1970-01-01')
+              ->whereNotNull($dateField);
+    }
+
+    /**
+     * Apply type filter at database level
+     */
+    private function applyTypeFilter($query, $type, $tableType)
+    {
+        if ($type === 'complete') {
+            // Records with all required fields
+            if ($tableType === 'booking') {
+                $query->whereNotNull('br.amount')
+                      ->where('br.amount', '>', 0)
+                      ->whereNotNull('br.bank_name')
+                      ->where('br.bank_name', '!=', '')
+                      ->whereNotNull('br.sender')
+                      ->where('br.sender', '!=', '')
+                      ->whereNotNull('br.date')
+                      ->where('br.date', '!=', '0000-00-00')
+                      ->where('br.date', '!=', '1970-01-01');
+            } else {
+                $query->whereNotNull('rer.amount')
+                      ->where('rer.amount', '>', 0)
+                      ->whereNotNull('rer.bank_name')
+                      ->where('rer.bank_name', '!=', '')
+                      ->whereNotNull('rer.date')
+                      ->where('rer.date', '!=', '0000-00-00')
+                      ->where('rer.date', '!=', '1970-01-01');
+            }
+        } elseif ($type === 'missing') {
+            // Records missing required fields
+            if ($tableType === 'booking') {
+                $query->where(function ($q) {
+                    $q->whereNull('br.amount')
+                      ->orWhere('br.amount', '<=', 0)
+                      ->orWhereNull('br.bank_name')
+                      ->orWhere('br.bank_name', '')
+                      ->orWhereNull('br.sender')
+                      ->orWhere('br.sender', '')
+                      ->orWhereNull('br.date')
+                      ->orWhere('br.date', '0000-00-00')
+                      ->orWhere('br.date', '1970-01-01');
+                });
+            } else {
+                $query->where(function ($q) {
+                    $q->whereNull('rer.amount')
+                      ->orWhere('rer.amount', '<=', 0)
+                      ->orWhereNull('rer.bank_name')
+                      ->orWhere('rer.bank_name', '')
+                      ->orWhereNull('rer.date')
+                      ->orWhere('rer.date', '0000-00-00')
+                      ->orWhere('rer.date', '1970-01-01');
+                });
+            }
+        }
+    }
+
+    /**
+     * Get total count efficiently
+     */
+    private function getTotalCount($filters)
+    {
+        $bookingQuery = DB::table('booking_receipts as br')
+            ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
+        
+        $expenseQuery = DB::table('reservation_expense_receipts as rer')
+            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
+            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
+
+        $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $filters, 'booking');
+        $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $filters, 'expense');
+
+        return $bookingQuery->count() + $expenseQuery->count();
+    }
+
+    /**
+     * Get optimized summary
+     */
+    private function getOptimizedSummary($filters)
+    {
+        // Apply all filters except type for summary
+        $baseFilters = $filters;
+        unset($baseFilters['type']);
+
+        $bookingQuery = DB::table('booking_receipts as br')
+            ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
+        
+        $expenseQuery = DB::table('reservation_expense_receipts as rer')
+            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
+            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
+
+        $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $baseFilters, 'booking');
+        $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $baseFilters, 'expense');
+
+        $bookingCount = $bookingQuery->count();
+        $expenseCount = $expenseQuery->count();
+
+        return [
+            'booking_receipts' => $bookingCount,
+            'expense_receipts' => $expenseCount,
+            'total_records' => $bookingCount + $expenseCount
+        ];
     }
 
     /**
@@ -345,27 +386,6 @@ class ReceiptService
         }
 
         return Storage::url($path);
-    }
-
-    /**
-     * Get summary counts
-     */
-    private function getSummary($allData, $filters)
-    {
-        // Apply all filters except type
-        $baseFilters = $filters;
-        unset($baseFilters['type']);
-
-        $filteredForSummary = $this->applyFilters($allData, $baseFilters);
-
-        $bookingCount = $filteredForSummary->where('table_source', 'booking_receipt')->count();
-        $expenseCount = $filteredForSummary->where('table_source', 'expense_receipt')->count();
-
-        return [
-            'booking_receipts' => $bookingCount,
-            'expense_receipts' => $expenseCount,
-            'total_records' => $bookingCount + $expenseCount
-        ];
     }
 
     /**
