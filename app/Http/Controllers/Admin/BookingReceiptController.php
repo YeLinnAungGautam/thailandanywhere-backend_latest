@@ -65,6 +65,8 @@ class BookingReceiptController extends Controller
             'is_corporate' => 'nullable',
             'note' => 'nullable',
             'sender' => 'nullable',
+            'reciever' => 'nullable',
+            'interact_bank' => 'nullable',
         ]);
 
         try {
@@ -79,6 +81,8 @@ class BookingReceiptController extends Controller
                 'is_corporate' => $request->is_corporate,
                 'note' => $request->note,
                 'sender' => $request->sender,
+                'reciever' => $request->reciever,
+                'interact_bank' => $request->interact_bank ?? 'personal',
             ]);
 
             return $this->success(new BookingReceiptResource($passport), 'File Created');
@@ -97,6 +101,8 @@ class BookingReceiptController extends Controller
             'is_corporate' => 'nullable',
             'note' => 'nullable',
             'sender' => 'nullable',
+            'reciever' => 'nullable',
+            'interact_bank' => 'nullable',
         ]);
 
         try {
@@ -118,6 +124,8 @@ class BookingReceiptController extends Controller
                 'is_corporate' => $request->is_corporate ?? $passport->is_corporate,
                 'note' => $request->note ?? $passport->note,
                 'sender' => $request->sender ?? $passport->sender,
+                'reciever' => $request->reciever ?? $passport->reciever,
+                'interact_bank' => $request->interact_bank ?? $passport->interact_bank,
             ]);
 
             return $this->success(new BookingReceiptResource($passport), 'File Updated');

@@ -17,6 +17,9 @@ class ReceiptService
     const VALID_TYPES = [
         'complete', 'missing', 'all'
     ];
+    const VALID_INTERACT_BANK = [
+        'personal', 'company', 'all'
+    ];
 
     /**
      * Get all receipts with filtering and pagination
@@ -65,7 +68,9 @@ class ReceiptService
     {
         $validator = Validator::make($request->all(), [
             'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
+            'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK), // Add this
             'sender' => 'nullable|string|max:255',
+            'reciever' => 'nullable|string|max:255', // Add this
             'amount' => 'nullable|numeric|min:0',
             'date' => 'nullable|string',
             'bank_name' => 'nullable|string|max:255',
@@ -112,13 +117,13 @@ class ReceiptService
 
         // Build unified query with filters applied at database level
         $query = $this->buildUnifiedQuery($filters);
-        
+
         // Get total count
         $total = $this->getTotalCount($filters);
-        
+
         // Apply pagination and get results
         $results = $query->offset($offset)->limit($perPage)->get();
-        
+
         // Format results
         $formattedData = $results->map(function ($item) {
             return $this->formatReceipt($item);
@@ -142,6 +147,9 @@ class ReceiptService
     /**
      * Build unified query with database-level filters
      */
+    /**
+     * Build unified query with database-level filters
+     */
     private function buildUnifiedQuery($filters)
     {
         // Build booking receipts query
@@ -151,6 +159,8 @@ class ReceiptService
                 'br.id',
                 DB::raw("'booking_receipt' as table_source"),
                 'br.sender',
+                'br.reciever',        // Add this
+                'br.interact_bank',   // Add this
                 'br.amount',
                 'br.bank_name',
                 'br.date',
@@ -168,7 +178,9 @@ class ReceiptService
             ->select([
                 'rer.id',
                 DB::raw("'expense_receipt' as table_source"),
-                DB::raw('NULL as sender'),
+                'rer.sender',         // Add this
+                'rer.reciever',       // Add this
+                'rer.interact_bank',  // Add this
                 'rer.amount',
                 'rer.bank_name',
                 'rer.date',
@@ -191,6 +203,9 @@ class ReceiptService
     /**
      * Apply database-level filters
      */
+    /**
+     * Apply database-level filters
+     */
     private function applyDatabaseFilters($query, $filters, $type)
     {
         // Basic filters that apply to both tables
@@ -206,9 +221,19 @@ class ReceiptService
             $query->where('b.crm_id', 'like', '%' . $filters['crm_id'] . '%');
         }
 
-        // Sender filter (only for booking receipts)
-        if (!empty($filters['sender']) && $type === 'booking') {
-            $query->where('br.sender', 'like', '%' . $filters['sender'] . '%');
+        // Sender filter (applies to both tables now)
+        if (!empty($filters['sender'])) {
+            $query->where($type === 'booking' ? 'br.sender' : 'rer.sender', 'like', '%' . $filters['sender'] . '%');
+        }
+
+        // reciever filter (applies to both tables) - Add this
+        if (!empty($filters['reciever'])) {
+            $query->where($type === 'booking' ? 'br.reciever' : 'rer.reciever', 'like', '%' . $filters['reciever'] . '%');
+        }
+
+        // Interact bank filter (applies to both tables) - Add this
+        if (!empty($filters['interact_bank']) && $filters['interact_bank'] !== 'all') {
+            $query->where($type === 'booking' ? 'br.interact_bank' : 'rer.interact_bank', $filters['interact_bank']);
         }
 
         // Date filter
@@ -252,6 +277,9 @@ class ReceiptService
     /**
      * Apply type filter at database level
      */
+    /**
+     * Apply type filter at database level
+     */
     private function applyTypeFilter($query, $type, $tableType)
     {
         if ($type === 'complete') {
@@ -263,6 +291,8 @@ class ReceiptService
                       ->where('br.bank_name', '!=', '')
                       ->whereNotNull('br.sender')
                       ->where('br.sender', '!=', '')
+                      ->whereNotNull('br.reciever')        // Add receiver check
+                      ->where('br.reciever', '!=', '')     // Add receiver check
                       ->whereNotNull('br.date')
                       ->where('br.date', '!=', '0000-00-00')
                       ->where('br.date', '!=', '1970-01-01');
@@ -271,6 +301,10 @@ class ReceiptService
                       ->where('rer.amount', '>', 0)
                       ->whereNotNull('rer.bank_name')
                       ->where('rer.bank_name', '!=', '')
+                      ->whereNotNull('rer.sender')         // Add sender check for expense
+                      ->where('rer.sender', '!=', '')      // Add sender check for expense
+                      ->whereNotNull('rer.reciever')       // Add receiver check
+                      ->where('rer.reciever', '!=', '')    // Add receiver check
                       ->whereNotNull('rer.date')
                       ->where('rer.date', '!=', '0000-00-00')
                       ->where('rer.date', '!=', '1970-01-01');
@@ -285,6 +319,8 @@ class ReceiptService
                       ->orWhere('br.bank_name', '')
                       ->orWhereNull('br.sender')
                       ->orWhere('br.sender', '')
+                      ->orWhereNull('br.reciever')         // Add receiver missing check
+                      ->orWhere('br.reciever', '')         // Add receiver missing check
                       ->orWhereNull('br.date')
                       ->orWhere('br.date', '0000-00-00')
                       ->orWhere('br.date', '1970-01-01');
@@ -295,6 +331,10 @@ class ReceiptService
                       ->orWhere('rer.amount', '<=', 0)
                       ->orWhereNull('rer.bank_name')
                       ->orWhere('rer.bank_name', '')
+                      ->orWhereNull('rer.sender')          // Add sender missing check
+                      ->orWhere('rer.sender', '')          // Add sender missing check
+                      ->orWhereNull('rer.reciever')        // Add receiver missing check
+                      ->orWhere('rer.reciever', '')        // Add receiver missing check
                       ->orWhereNull('rer.date')
                       ->orWhere('rer.date', '0000-00-00')
                       ->orWhere('rer.date', '1970-01-01');
@@ -310,7 +350,7 @@ class ReceiptService
     {
         $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
-        
+
         $expenseQuery = DB::table('reservation_expense_receipts as rer')
             ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
             ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
@@ -332,7 +372,7 @@ class ReceiptService
 
         $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
-        
+
         $expenseQuery = DB::table('reservation_expense_receipts as rer')
             ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
             ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
@@ -359,6 +399,8 @@ class ReceiptService
             'id' => $item->id,
             'table_source' => $item->table_source,
             'sender' => $item->sender,
+            'reciever' => $item->reciever,
+            'interact_bank' => $item->interact_bank,
             'amount' => $item->amount ? (float) $item->amount : null,
             'bank_name' => $item->bank_name,
             'date' => $item->date,
@@ -492,6 +534,8 @@ class ReceiptService
     {
         return [
             'type' => $request->input('type'),
+            'interact_bank' => $request->input('interact_bank'),
+            'reciever' => $request->input('reciever'),
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),
             'date' => $request->input('date'),
