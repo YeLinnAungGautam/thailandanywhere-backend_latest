@@ -188,15 +188,29 @@ class ReservationController extends Controller
 
         $query->select('booking_items.*');
 
+        // Calculate totals before pagination
+        $totalAmount = $query->sum('booking_items.amount');
+        $totalCostPrice = $query->sum('booking_items.cost_price');
+        $totalExpenseAmount = BookingItemDataService::getTotalExpenseAmount($query);
+
         $data = $query->paginate($limit);
+
+        // Prepare meta data
+        $metaData = [
+            'total_page' => (int)ceil($data->total() / $data->perPage()),
+            'total_amount' => $totalAmount,
+            'total_expense_amount' => $totalExpenseAmount,
+        ];
+
+        // Add total profit if requested
+        if ($request->total_profit) {
+            $metaData['total_profit'] = $totalAmount - $totalCostPrice;
+            $metaData['total_cost_price'] = $totalCostPrice;
+        }
 
         return $this->success(BookingItemResource::collection($data)
             ->additional([
-                'meta' => [
-                    'total_page' => (int)ceil($data->total() / $data->perPage()),
-                    'total_amount' => $query->sum('booking_items.amount'),
-                    'total_expense_amount' => BookingItemDataService::getTotalExpenseAmount($query),
-                ],
+                'meta' => $metaData,
             ])
             ->response()
             ->getData(), 'Reservation List');

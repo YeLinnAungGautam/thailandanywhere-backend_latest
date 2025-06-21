@@ -129,7 +129,5 @@ Route::group([], function () {
         Route::delete('orders/{id}', [OrderController::class, 'cancelOrder']);
         Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
-
-
     });
 });
