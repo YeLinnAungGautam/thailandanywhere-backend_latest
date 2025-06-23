@@ -34,6 +34,11 @@ class BookingItemGroupListResource extends JsonResource
             'expense_status' => $this->calculateGroupExpenseStatus(),
 
             'items' => $this->transformedItems(),
+            'has_booking_confirm_letter' => $this->hasBookingConfirmLetter(),
+            'has_passport' => $this->hasPassport(),
+            'has_confirm_letter' => $this->hasConfirmLetter(),
+            'booking_items_payment_detail' => $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsPaymentDetail() : false,
+            'booking_items_assigned' =>  $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsAssigned() : false,
         ];
 
         return $result;
@@ -67,5 +72,42 @@ class BookingItemGroupListResource extends JsonResource
         }
 
         return 'fully_paid';
+    }
+
+    private function hasBookingConfirmLetter()
+    {
+        return $this->customerDocuments->contains('type', 'booking_confirm_letter');
+    }
+
+    private function hasPassport()
+    {
+        return $this->customerDocuments->contains('type', 'passport');
+    }
+
+    private function hasConfirmLetter()
+    {
+        return $this->customerDocuments->contains('type', 'confirmation_letter');
+    }
+
+    private function bookingItemsPaymentDetail()
+    {
+        foreach ($this->bookingItems as $item) {
+            if ($item->is_driver_collect === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function bookingItemsAssigned()
+    {
+        foreach ($this->bookingItems as $item) {
+            if ($item->reservationCarInfo?->supplier_id === null && $item->reservationCarInfo?->driver_id === null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

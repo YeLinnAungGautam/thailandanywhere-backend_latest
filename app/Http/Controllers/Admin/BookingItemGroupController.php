@@ -39,7 +39,7 @@ class BookingItemGroupController extends Controller
                             ->whereIn('product_id', function ($subQuery) use ($request) {
                                 if ($request->product_type == 'attraction') {
                                     $subQuery->select('id')
-                                        ->from('attractions')
+                                        ->from('entrance_tickets')
                                         ->where('name', 'like', '%' . $request->product_name . '%');
                                 } elseif ($request->product_type == 'hotel') {
                                     $subQuery->select('id')
@@ -55,18 +55,31 @@ class BookingItemGroupController extends Controller
                 })
                 ->when($request->invoice_status, function ($query) use ($request) {
                     if ($request->invoice_status == 'not_receive') {
-                        $query->whereIn('id', function ($q) {
-                            $q->select('group_id')
-                                ->from('booking_items')
-                                ->whereNull('booking_status')
-                                ->orWhere('booking_status', '')
-                                ->orWhere('booking_status', 'not_receive');
+                        $query->whereDoesntHave('customerDocuments', function ($q) {
+                            $q->where('type', 'booking_confirm_letter');
                         });
                     } else {
-                        $query->whereIn('id', function ($q) use ($request) {
-                            $q->select('group_id')
-                                ->from('booking_items')
-                                ->where('booking_status', $request->invoice_status);
+                        $query->whereHas('customerDocuments', function ($q) {
+                            $q->where('type', 'booking_confirm_letter');
+                        });
+                    }
+                })
+                ->when($request->vantour_payment_details, function ($query) use ($request) {
+                    if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
+                        $query->whereHas('bookingItems', function ($q) {
+                            $q->where(function ($subQuery) {
+                                // Case 1: is_driver_collect = 1 AND has valid extra_collect_amount
+                                $subQuery->where('is_driver_collect', NULL);
+                            });
+                        });
+                    }
+                })
+                ->when($request->assigned, function ($query) use ($request) {
+                    if ($request->assigned == 'not_have' && $request->product_type == 'private_van_tour') {
+                        // Groups that have booking items with reservationCarInfo where supplier_id AND driver_id are null
+                        $query->whereHas('bookingItems.reservationCarInfo', function ($q) {
+                            $q->whereNull('supplier_id')
+                              ->whereNull('driver_id');
                         });
                     }
                 })
@@ -162,7 +175,7 @@ class BookingItemGroupController extends Controller
             if($request->sent_booking_request){
                 $data['sent_booking_request'] = $request->sent_booking_request;
             }
-            if($request->send_expense_mail){
+            if($request->sent_expense_mail){
                 $data['sent_expense_mail'] = $request->sent_expense_mail;
             }
             if($request->expense_method){
@@ -179,6 +192,12 @@ class BookingItemGroupController extends Controller
             }
             if($request->expense_total_amount){
                 $data['expense_total_amount'] = $request->expense_total_amount;
+            }
+            if($request->confirmation_status){
+                $data['confirmation_status'] = $request->confirmation_status;
+            }
+            if($request->confirmation_code){
+                $data['confirmation_code'] = $request->confirmation_code;
             }
 
             $booking_item_group->update($data);
