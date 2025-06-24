@@ -2,15 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ReservationGroup\migrateBookingConfirmLetters;
-use App\Jobs\ReservationGroup\migrateBookingRequestDocuments;
-use App\Jobs\ReservationGroup\migrateCarInfos;
-use App\Jobs\ReservationGroup\migrateCustomerPassport;
-use App\Jobs\ReservationGroup\migrateExpenseMails;
-use App\Jobs\ReservationGroup\migrateExpenseReceipts;
-use App\Jobs\ReservationGroup\migratePaidSlips;
-use App\Jobs\ReservationGroup\migrateSupplierInfos;
-use App\Jobs\ReservationGroup\migrateTaxSlips;
 use App\Jobs\ReservationGroup\upsertBookingItemGroup;
 use Illuminate\Console\Command;
 
@@ -36,23 +27,5 @@ class MigrateBookingItemGroup extends Command
     public function handle()
     {
         upsertBookingItemGroup::dispatch();
-
-        migrateCustomerPassport::dispatch();
-
-        migrateBookingRequestDocuments::dispatch();
-
-        migrateBookingConfirmLetters::dispatch();
-
-        migrateExpenseReceipts::dispatch();
-
-        migrateExpenseMails::dispatch();
-
-        migratePaidSlips::dispatch();
-
-        migrateCarInfos::dispatch();
-
-        migrateSupplierInfos::dispatch();
-
-        migrateTaxSlips::dispatch();
     }
 }
