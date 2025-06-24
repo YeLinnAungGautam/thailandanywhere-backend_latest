@@ -25,7 +25,7 @@ class CustomerDocument extends Model
                 return 'images/';
 
             case 'confirmation_letter':
-                return 'files/';
+                return 'images/';
 
             case 'expense_receipt':
                 return 'images/';
