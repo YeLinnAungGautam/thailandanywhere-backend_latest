@@ -16,7 +16,7 @@ class CustomerDocumentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $file_path = $this->file ? Storage::url(CustomerDocument::specificFolderPath($this->type) . '/' . $this->file) : null;
+        $file_path = $this->file ? Storage::url(CustomerDocument::specificFolderPath($this->type) . $this->file) : null;
 
         return [
             'id' => $this->id,
