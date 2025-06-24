@@ -57,14 +57,17 @@ class ReservationController extends Controller
             ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
             ->join('customers', 'bookings.customer_id', '=', 'customers.id')
             ->when($request->sale_daterange, function ($q) use ($request) {
+                // Split "2024-01-01,2024-01-31" into ["2024-01-01", "2024-01-31"]
                 $dates = explode(',', $request->sale_daterange);
 
-                $q->whereBetween('booking_items.service_date', [$dates[0], $dates[1]]);
-                // $q->whereIn('booking_id', function ($q) use ($dates) {
-                //     $q->select('id')
-                //         ->from('bookings')
-                //         ->whereBetween('booking_date', [$dates[0], $dates[1]]);
-                // });
+                if($request->booking_date_search == true) {
+                    // Filter by booking creation date
+                    $q->whereBetween('bookings.booking_date', [$dates[0], $dates[1]]);
+                }
+                if($request->booking_date_search == false) {
+                    // Filter by service delivery date
+                    $q->whereBetween('booking_items.service_date', [$dates[0], $dates[1]]);
+                }
             })
             ->when($request->booking_date, function ($q) use ($request) {
                 $q->whereDate('booking_items.created_at', $request->booking_date);
