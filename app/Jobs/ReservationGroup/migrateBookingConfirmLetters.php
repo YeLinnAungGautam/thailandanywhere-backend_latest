@@ -46,6 +46,16 @@ class migrateBookingConfirmLetters implements ShouldQueue
                     'due_date' => $letter->due_date ?? null,
                     'customer' => $letter->customer ?? null,
                     'sender_name' => $letter->sender_name ?? null,
+                    'product_type' => $letter->product_type ?? null,
+                    'product_id' => $letter->product_id ?? null,
+                    'company_legal_name' => $letter->company_legal_name ?? null,
+                    'receipt_date' => $letter->receipt_date ?? null,
+                    'service_start_date' => $letter->service_start_date ?? null,
+                    'service_end_date' => $letter->service_end_date ?? null,
+                    'receipt_image' => $letter->receipt_image ?? null,
+                    'total_tax_withold' => $letter->total_tax_withold ?? null,
+                    'total_before_tax' => $letter->total_before_tax ?? null,
+                    'total_after_tax' => $letter->total_after_tax ?? null,
                 ];
 
                 DB::table('customer_documents')->updateOrInsert([
