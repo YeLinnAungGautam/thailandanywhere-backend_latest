@@ -31,10 +31,13 @@ class CustomerDocument extends Model
                 return 'images/';
 
             case 'booking_request_proof':
-                return 'images/';
+                return 'files/';
 
             case 'expense_mail_proof':
-                return 'images/';
+                return 'files/';
+
+            case 'invoice':
+                return 'invoices/';
 
             default:
                 throw new Exception('Invalid document type');
