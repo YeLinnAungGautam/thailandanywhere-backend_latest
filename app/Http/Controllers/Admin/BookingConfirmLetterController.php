@@ -54,6 +54,16 @@ class BookingConfirmLetterController extends Controller
                 'due_date' => $request->due_date ?? $request->due_date,
                 'customer' => $request->customer ?? $request->customer,
                 'sender_name' => $request->sender_name ?? $request->sender_name,
+                'product_type' => $request->product_type,
+                'product_id' => $request->product_id,
+                'company_legal_name' => $request->company_legal_name,
+                'receipt_date' => $request->receipt_date,
+                'service_start_date' => $request->service_start_date,
+                'service_end_date' => $request->service_end_date,
+                'total_tax_withold' => $request->total_tax_withold,
+                'total_before_tax' => $request->total_before_tax,
+                'total_after_tax' => $request->total_after_tax,
+                'total'=>$request->total,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Created');
@@ -92,6 +102,16 @@ class BookingConfirmLetterController extends Controller
                 'due_date' => $request->due_date ?? $passport->due_date,
                 'customer' => $request->customer ?? $passport->customer,
                 'sender_name' => $request->sender_name ?? $passport->sender_name,
+                'product_type' => $request->product_type ?? $passport->product_type,
+                'product_id' => $request->product_id ?? $passport->product_id,
+                'company_legal_name' => $request->company_legal_name ?? $passport->company_legal_name,
+                'receipt_date' => $request->receipt_date ?? $passport->receipt_date,
+                'service_start_date' => $request->service_start_date ?? $passport->service_start_date,
+                'service_end_date' => $request->service_end_date ?? $passport->service_end_date,
+                'total_tax_withold' => $request->total_tax_withold ?? $passport->total_tax_withold,
+                'total_before_tax' => $request->total_before_tax ?? $passport->total_before_tax,
+                'total_after_tax' => $request->total_after_tax ?? $passport->total_after_tax,
+                'total'=>$request->total,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Updated');
