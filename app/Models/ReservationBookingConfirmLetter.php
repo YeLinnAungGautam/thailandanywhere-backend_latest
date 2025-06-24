@@ -11,4 +11,10 @@ class ReservationBookingConfirmLetter extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'receipt_date' => 'date',
+        'service_start_date' => 'date',
+        'service_end_date' => 'date',
+    ];
+
 }
