@@ -33,32 +33,34 @@ class upsertBookingItemGroup implements ShouldQueue
     private function upsertBookingItemGroup()
     {
         Booking::with('items')->chunk(100, function ($bookings) {
-            foreach ($bookings as $booking) {
-                $grouped = $booking->items->groupBy(function ($item) {
-                    return $item->product_type . ':' . $item->product_id;
-                });
+            migrateBookingItemGroup::dispatch($bookings);
 
-                foreach ($grouped as $key => $items) {
-                    [$product_type, $product_id] = explode(':', $key);
+            // foreach ($bookings as $booking) {
+            //     $grouped = $booking->items->groupBy(function ($item) {
+            //         return $item->product_type . ':' . $item->product_id;
+            //     });
 
-                    $total_cost_price = $items->sum('cost_price');
+            //     foreach ($grouped as $key => $items) {
+            //         [$product_type, $product_id] = explode(':', $key);
 
-                    $group = BookingItemGroup::updateOrCreate(
-                        [
-                            'booking_id' => $booking->id,
-                            'product_type' => $product_type,
-                            'product_id' => $product_id,
-                        ],
-                        [
-                            'total_cost_price' => $total_cost_price,
-                        ]
-                    );
+            //         $total_cost_price = $items->sum('cost_price');
 
-                    foreach ($items as $item) {
-                        $item->update(['group_id' => $group->id]);
-                    }
-                }
-            }
+            //         $group = BookingItemGroup::updateOrCreate(
+            //             [
+            //                 'booking_id' => $booking->id,
+            //                 'product_type' => $product_type,
+            //                 'product_id' => $product_id,
+            //             ],
+            //             [
+            //                 'total_cost_price' => $total_cost_price,
+            //             ]
+            //         );
+
+            //         foreach ($items as $item) {
+            //             $item->update(['group_id' => $group->id]);
+            //         }
+            //     }
+            // }
         });
     }
 }
