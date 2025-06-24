@@ -2,12 +2,13 @@
 
 namespace App\Jobs\ReservationGroup;
 
-use App\Models\BookingItemGroup;
 use Illuminate\Bus\Queueable;
+use App\Models\BookingItemGroup;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use App\Action\UpsertBookingItemGroupAction;
 
 class migrateBookingItemGroup implements ShouldQueue
 {
@@ -27,30 +28,32 @@ class migrateBookingItemGroup implements ShouldQueue
     public function handle(): void
     {
         foreach ($this->bookings as $booking) {
-            $grouped = $booking->items->groupBy(function ($item) {
-                return $item->product_type . ':' . $item->product_id;
-            });
+            UpsertBookingItemGroupAction::execute($booking);
 
-            foreach ($grouped as $key => $items) {
-                [$product_type, $product_id] = explode(':', $key);
+            // $grouped = $booking->items->groupBy(function ($item) {
+            //     return $item->product_type . ':' . $item->product_id;
+            // });
 
-                $total_cost_price = $items->sum('cost_price');
+            // foreach ($grouped as $key => $items) {
+            //     [$product_type, $product_id] = explode(':', $key);
 
-                $group = BookingItemGroup::updateOrCreate(
-                    [
-                        'booking_id' => $booking->id,
-                        'product_type' => $product_type,
-                        'product_id' => $product_id,
-                    ],
-                    [
-                        'total_cost_price' => $total_cost_price,
-                    ]
-                );
+            //     $total_cost_price = $items->sum('cost_price');
 
-                foreach ($items as $item) {
-                    $item->update(['group_id' => $group->id]);
-                }
-            }
+            //     $group = BookingItemGroup::updateOrCreate(
+            //         [
+            //             'booking_id' => $booking->id,
+            //             'product_type' => $product_type,
+            //             'product_id' => $product_id,
+            //         ],
+            //         [
+            //             'total_cost_price' => $total_cost_price,
+            //         ]
+            //     );
+
+            //     foreach ($items as $item) {
+            //         $item->update(['group_id' => $group->id]);
+            //     }
+            // }
         }
     }
 }

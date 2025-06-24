@@ -1,21 +1,21 @@
 <?php
 namespace App\Services\Manager;
 
-use App\Http\Requests\BookingRequest;
-use App\Jobs\ArchiveSaleJob;
-use App\Jobs\PersistBookingItemGroupJob;
-use App\Jobs\UpdateBookingDatesJob;
+use Exception;
 use App\Models\Airline;
 use App\Models\Booking;
 use App\Models\BookingItem;
-use App\Models\BookingItemGroup;
+use App\Jobs\ArchiveSaleJob;
+use App\Traits\ImageManager;
 use App\Models\BookingReceipt;
 use App\Models\InclusiveProduct;
-use App\Traits\ImageManager;
-use Exception;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\UpdateBookingDatesJob;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\BookingRequest;
+use App\Jobs\PersistBookingItemGroupJob;
+use App\Action\UpsertBookingItemGroupAction;
 
 class BookingManager
 {
@@ -85,7 +85,6 @@ class BookingManager
 
             // Persist booking item groups
             if ($request->items) {
-                // self::persistBookingItemGroup($booking);
                 PersistBookingItemGroupJob::dispatch($booking);
             }
 
@@ -179,34 +178,7 @@ class BookingManager
 
     public static function persistBookingItemGroup(Booking $booking)
     {
-        $booking_items = $booking->items()
-            ->select('product_type', DB::raw('SUM(cost_price) as total_cost'))
-            ->groupBy('product_type')
-            ->get();
-
-        foreach ($booking_items as $item) {
-            BookingItemGroup::updateOrCreate(
-                [
-                    'booking_id' => $booking->id,
-                    'product_type' => $item->product_type,
-                ],
-                [
-                    'total_cost_price' => $item->total_cost,
-                ]
-            );
-        }
-
-        $booking->items()->each(function ($item) use ($booking) {
-            $group = BookingItemGroup::where('booking_id', $booking->id)
-                ->where('product_type', $item->product_type)
-                ->first();
-
-            if ($group) {
-                $item->update(['group_id' => $group->id]);
-            } else {
-                $item->update(['group_id' => null]);
-            }
-        });
+        UpsertBookingItemGroupAction::execute($booking);
     }
 
     private static function saveBookingReceipt(Booking $booking, array $receipt_images)
