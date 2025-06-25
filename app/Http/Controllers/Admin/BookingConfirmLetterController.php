@@ -63,7 +63,7 @@ class BookingConfirmLetterController extends Controller
                 'total_tax_withold' => $request->total_tax_withold,
                 'total_before_tax' => $request->total_before_tax,
                 'total_after_tax' => $request->total_after_tax,
-                'total'=>$request->total,
+                // 'total'=>$request->total,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Created');
@@ -111,7 +111,7 @@ class BookingConfirmLetterController extends Controller
                 'total_tax_withold' => $request->total_tax_withold ?? $passport->total_tax_withold,
                 'total_before_tax' => $request->total_before_tax ?? $passport->total_before_tax,
                 'total_after_tax' => $request->total_after_tax ?? $passport->total_after_tax,
-                'total'=>$request->total,
+                // 'total'=>$request->total,
             ]);
 
             return $this->success(new ReservationBookingConfirmLetterResource($passport), 'File Updated');
