@@ -19,7 +19,7 @@ class BookingItemGroupListResource extends JsonResource
         $result = [
             'id' => $this->id,
             'product_type' => class_basename($this->product_type),
-            'total_cost_price' => $this->total_cost_price,
+            'total_cost_price' => $this->totalExpenseAmount(),
             'reservation_count' => $this->bookingItems->count(),
             'booking_crm_id' => $this->booking->crm_id ?? null,
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
@@ -72,6 +72,10 @@ class BookingItemGroupListResource extends JsonResource
         }
 
         return 'fully_paid';
+    }
+
+    protected function totalExpenseAmount(){
+        return $this->bookingItems->sum('total_cost_price');
     }
 
     private function hasBookingConfirmLetter()

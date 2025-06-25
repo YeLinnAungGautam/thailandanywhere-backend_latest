@@ -33,11 +33,15 @@ class migrateExpenseMails implements ShouldQueue
     private function migrateExpenseMails()
     {
         DB::table('reservation_expense_mails')->orderBy('id')->chunk(100, function ($mails) {
+
+            $processedGroupIds = []; // Track processed group IDs
+
             foreach ($mails as $mail) {
                 $bookingItem = BookingItem::find($mail->booking_item_id);
                 if (!$bookingItem || !$bookingItem->group_id) {
                     continue;
                 }
+
                 DB::table('customer_documents')->updateOrInsert([
                     'booking_item_group_id' => $bookingItem->group_id,
                     'type' => 'expense_mail_proof',
@@ -46,6 +50,18 @@ class migrateExpenseMails implements ShouldQueue
                     'file_name' => $mail->file,
                     'meta' => null,
                 ]);
+
+                // Collect unique group IDs for batch update
+                if (!in_array($bookingItem->group_id, $processedGroupIds)) {
+                    $processedGroupIds[] = $bookingItem->group_id;
+                }
+            }
+
+            // Update sent_expense_mail = 1 for all processed group IDs in this chunk
+            if (!empty($processedGroupIds)) {
+                DB::table('booking_item_groups')
+                    ->whereIn('id', $processedGroupIds)
+                    ->update(['sent_expense_mail' => 1]);
             }
         });
     }

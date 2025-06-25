@@ -28,6 +28,7 @@ class ReservationReceiptImageResource extends JsonResource
             'sender' => $this->sender,
             'reciever' => $this->reciever,
             'interact_bank' => $this->interact_bank,
+            'currency' => $this->currency,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

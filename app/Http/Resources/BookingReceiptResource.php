@@ -25,6 +25,7 @@ class BookingReceiptResource extends JsonResource
             'sender' => $this->sender,
             'reciever' => $this->reciever,
             'interact_bank' => $this->interact_bank,
+            'currency' => $this->currency,
             'bank_name' => $this->bank_name,
             'date' => isset($this->date) ? Carbon::parse($this->date)->format('d-m-Y H:i:s') : null,
             'is_corporate' => $this->is_corporate,

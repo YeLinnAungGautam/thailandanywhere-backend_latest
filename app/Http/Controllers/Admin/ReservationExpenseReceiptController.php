@@ -47,6 +47,7 @@ class ReservationExpenseReceiptController extends Controller
             'sender' => 'nullable',
             'reciever' => 'nullable',
             'interact_bank' => 'nullable',
+            'currency' => 'nullable',
             'comment' => 'nullable',
         ]);
 
@@ -64,6 +65,7 @@ class ReservationExpenseReceiptController extends Controller
                 'sender' => $request->sender,
                 'reciever' => $request->reciever,
                 'interact_bank' => $request->interact_bank ?? 'personal',
+                'currency' => $request->currency ?? 'THB',
             ]);
 
             return $this->success(new ReservationReceiptImageResource($receipt), 'File Created');
@@ -88,6 +90,7 @@ class ReservationExpenseReceiptController extends Controller
             'sender' => 'nullable',
             'reciever' => 'nullable',
             'interact_bank' => 'nullable',
+            'currency' => 'nullable',
         ]);
 
         try {
@@ -111,6 +114,7 @@ class ReservationExpenseReceiptController extends Controller
                 'sender' => $request->sender ?? $receipt->sender,
                 'reciever' => $request->reciever ?? $receipt->reciever,
                 'interact_bank' => $request->interact_bank ?? $receipt->interact_bank,
+                'currency' => $request->currency ?? $receipt->currency,
             ]);
 
             return $this->success(new ReservationReceiptImageResource($receipt), 'File Updated');

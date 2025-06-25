@@ -67,6 +67,7 @@ class BookingReceiptController extends Controller
             'sender' => 'nullable',
             'reciever' => 'nullable',
             'interact_bank' => 'nullable',
+            'currency' => 'nullable',
         ]);
 
         try {
@@ -83,6 +84,7 @@ class BookingReceiptController extends Controller
                 'sender' => $request->sender,
                 'reciever' => $request->reciever,
                 'interact_bank' => $request->interact_bank ?? 'personal',
+                'currency' => $request->currency ?? 'THB',
             ]);
 
             return $this->success(new BookingReceiptResource($passport), 'File Created');
@@ -103,6 +105,7 @@ class BookingReceiptController extends Controller
             'sender' => 'nullable',
             'reciever' => 'nullable',
             'interact_bank' => 'nullable',
+            'currency' => 'nullable',
         ]);
 
         try {
@@ -126,6 +129,7 @@ class BookingReceiptController extends Controller
                 'sender' => $request->sender ?? $passport->sender,
                 'reciever' => $request->reciever ?? $passport->reciever,
                 'interact_bank' => $request->interact_bank ?? $passport->interact_bank,
+                'currency' => $request->currency ?? $passport->currency,
             ]);
 
             return $this->success(new BookingReceiptResource($passport), 'File Updated');
