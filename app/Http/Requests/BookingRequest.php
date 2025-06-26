@@ -32,7 +32,7 @@ class BookingRequest extends FormRequest
             'sub_total' => 'required|integer',
             'grand_total' => 'required|integer',
             'balance_due' => 'required',
-            'balance_due_date' => 'required',
+            // 'balance_due_date' => 'required',
             'transfer_code' => 'nullable|in:MMTT,TT,INTT'
         ];
     }

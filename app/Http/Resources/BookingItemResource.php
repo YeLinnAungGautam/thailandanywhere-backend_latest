@@ -73,7 +73,7 @@ class BookingItemResource extends JsonResource
             'room' => $this->room,
             'ticket' => $this->ticket,
             'variation' => $this->variation,
-            'service_date' => $this->service_date,
+            'service_date' => $this->service_date ? $this->service_date->format('Y-m-d') : null,
             'quantity' => $this->quantity,
             'total_guest' => $this->total_guest,
             'room_number' => $this->room_number,
