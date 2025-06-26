@@ -18,7 +18,10 @@ class ReceiptService
         'complete', 'missing', 'all'
     ];
     const VALID_INTERACT_BANK = [
-        'personal', 'company', 'all'
+        'personal', 'company', 'all', 'cash_at_office','to_money_changer'
+    ];
+    const VALID_CURRENCY = [
+        'MMK','THB','USD'
     ];
 
     /**
@@ -69,6 +72,7 @@ class ReceiptService
         $validator = Validator::make($request->all(), [
             'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
             'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK), // Add this
+            'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
             'sender' => 'nullable|string|max:255',
             'reciever' => 'nullable|string|max:255', // Add this
             'amount' => 'nullable|numeric|min:0',
@@ -161,6 +165,7 @@ class ReceiptService
                 'br.sender',
                 'br.reciever',        // Add this
                 'br.interact_bank',   // Add this
+                'br.currency',
                 'br.amount',
                 'br.bank_name',
                 'br.date',
@@ -181,6 +186,7 @@ class ReceiptService
                 'rer.sender',         // Add this
                 'rer.reciever',       // Add this
                 'rer.interact_bank',  // Add this
+                'rer.currency',
                 'rer.amount',
                 'rer.bank_name',
                 'rer.date',
@@ -236,6 +242,11 @@ class ReceiptService
             $query->where($type === 'booking' ? 'br.interact_bank' : 'rer.interact_bank', $filters['interact_bank']);
         }
 
+        // Currency filter (applies to both tables)
+        if (!empty($filters['currency'])) {
+            $query->where($type === 'booking' ? 'br.currency' : 'rer.currency', $filters['currency']);
+        }
+
         // Date filter
         if (!empty($filters['date']) && (!isset($filters['type']) || $filters['type'] !== 'missing')) {
             $this->applyDateFilter($query, $filters['date'], $type);
@@ -277,9 +288,6 @@ class ReceiptService
     /**
      * Apply type filter at database level
      */
-    /**
-     * Apply type filter at database level
-     */
     private function applyTypeFilter($query, $type, $tableType)
     {
         if ($type === 'complete') {
@@ -291,8 +299,8 @@ class ReceiptService
                       ->where('br.bank_name', '!=', '')
                       ->whereNotNull('br.sender')
                       ->where('br.sender', '!=', '')
-                      ->whereNotNull('br.reciever')        // Add receiver check
-                      ->where('br.reciever', '!=', '')     // Add receiver check
+                      ->whereNotNull('br.reciever')
+                      ->where('br.reciever', '!=', '')
                       ->whereNotNull('br.date')
                       ->where('br.date', '!=', '0000-00-00')
                       ->where('br.date', '!=', '1970-01-01');
@@ -301,16 +309,16 @@ class ReceiptService
                       ->where('rer.amount', '>', 0)
                       ->whereNotNull('rer.bank_name')
                       ->where('rer.bank_name', '!=', '')
-                      ->whereNotNull('rer.sender')         // Add sender check for expense
-                      ->where('rer.sender', '!=', '')      // Add sender check for expense
-                      ->whereNotNull('rer.reciever')       // Add receiver check
-                      ->where('rer.reciever', '!=', '')    // Add receiver check
+                      ->whereNotNull('rer.sender')
+                      ->where('rer.sender', '!=', '')
+                      ->whereNotNull('rer.reciever')
+                      ->where('rer.reciever', '!=', '')
                       ->whereNotNull('rer.date')
                       ->where('rer.date', '!=', '0000-00-00')
                       ->where('rer.date', '!=', '1970-01-01');
             }
         } elseif ($type === 'missing') {
-            // Records missing required fields
+            // Records missing required fields with booking date restrictions
             if ($tableType === 'booking') {
                 $query->where(function ($q) {
                     $q->whereNull('br.amount')
@@ -319,26 +327,30 @@ class ReceiptService
                       ->orWhere('br.bank_name', '')
                       ->orWhereNull('br.sender')
                       ->orWhere('br.sender', '')
-                      ->orWhereNull('br.reciever')         // Add receiver missing check
-                      ->orWhere('br.reciever', '')         // Add receiver missing check
+                      ->orWhereNull('br.reciever')
+                      ->orWhere('br.reciever', '')
                       ->orWhereNull('br.date')
                       ->orWhere('br.date', '0000-00-00')
                       ->orWhere('br.date', '1970-01-01');
-                });
+                })
+                // Only show bookings from Nov 2024 onwards
+                ->where('b.booking_date', '>=', '2024-11-01');
             } else {
                 $query->where(function ($q) {
                     $q->whereNull('rer.amount')
                       ->orWhere('rer.amount', '<=', 0)
                       ->orWhereNull('rer.bank_name')
                       ->orWhere('rer.bank_name', '')
-                      ->orWhereNull('rer.sender')          // Add sender missing check
-                      ->orWhere('rer.sender', '')          // Add sender missing check
-                      ->orWhereNull('rer.reciever')        // Add receiver missing check
-                      ->orWhere('rer.reciever', '')        // Add receiver missing check
+                      ->orWhereNull('rer.sender')
+                      ->orWhere('rer.sender', '')
+                      ->orWhereNull('rer.reciever')
+                      ->orWhere('rer.reciever', '')
                       ->orWhereNull('rer.date')
                       ->orWhere('rer.date', '0000-00-00')
                       ->orWhere('rer.date', '1970-01-01');
-                });
+                })
+                // Only show bookings from Nov 2024 onwards
+                ->where('b.booking_date', '>=', '2024-11-01');
             }
         }
     }
@@ -401,6 +413,7 @@ class ReceiptService
             'sender' => $item->sender,
             'reciever' => $item->reciever,
             'interact_bank' => $item->interact_bank,
+            'currency' => $item->currency,
             'amount' => $item->amount ? (float) $item->amount : null,
             'bank_name' => $item->bank_name,
             'date' => $item->date,
@@ -535,6 +548,7 @@ class ReceiptService
         return [
             'type' => $request->input('type'),
             'interact_bank' => $request->input('interact_bank'),
+            'currency' => $request->input('currency'),
             'reciever' => $request->input('reciever'),
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),

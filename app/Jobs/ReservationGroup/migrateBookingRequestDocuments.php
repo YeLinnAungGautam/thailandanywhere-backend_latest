@@ -33,6 +33,7 @@ class migrateBookingRequestDocuments implements ShouldQueue
     private function migrateBookingRequestDocuments()
     {
         DB::table('reservation_booking_requests')->orderBy('id')->chunk(100, function ($requests) {
+            $processedGroupIds = []; // Track processed group IDs
             foreach ($requests as $request) {
                 $bookingItem = BookingItem::find($request->booking_item_id);
 
@@ -52,6 +53,18 @@ class migrateBookingRequestDocuments implements ShouldQueue
                     'file' => $request->file,
                     'meta' => json_encode($meta),
                 ]);
+
+                // Collect unique group IDs for batch update
+                if (!in_array($bookingItem->group_id, $processedGroupIds)) {
+                    $processedGroupIds[] = $bookingItem->group_id;
+                }
+            }
+
+            // Update sent_booking_request = 1 for all processed group IDs in this chunk
+            if (!empty($processedGroupIds)) {
+                DB::table('booking_item_groups')
+                    ->whereIn('id', $processedGroupIds)
+                    ->update(['sent_booking_request' => 1]);
             }
         });
     }

@@ -4,13 +4,13 @@ namespace App\Console\Commands;
 
 use App\Jobs\ReservationGroup\migrateBookingConfirmLetters;
 use App\Jobs\ReservationGroup\migrateBookingRequestDocuments;
-use App\Jobs\ReservationGroup\migrateCarInfos;
+// use App\Jobs\ReservationGroup\migrateCarInfos;
 use App\Jobs\ReservationGroup\migrateCustomerPassport;
 use App\Jobs\ReservationGroup\migrateExpenseMails;
 use App\Jobs\ReservationGroup\migrateExpenseReceipts;
 use App\Jobs\ReservationGroup\migratePaidSlips;
-use App\Jobs\ReservationGroup\migrateSupplierInfos;
-use App\Jobs\ReservationGroup\migrateTaxSlips;
+// use App\Jobs\ReservationGroup\migrateSupplierInfos;
+// use App\Jobs\ReservationGroup\migrateTaxSlips;
 use Illuminate\Console\Command;
 
 class MigrateCustomerDocumentCommand extends Command
@@ -46,10 +46,13 @@ class MigrateCustomerDocumentCommand extends Command
 
         migratePaidSlips::dispatch();
 
-        migrateCarInfos::dispatch();
+        // this three don't need to run
+        // ----------------------------
 
-        migrateSupplierInfos::dispatch();
+        // migrateCarInfos::dispatch();
 
-        migrateTaxSlips::dispatch();
+        // migrateSupplierInfos::dispatch();
+
+        // migrateTaxSlips::dispatch();
     }
 }

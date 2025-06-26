@@ -239,13 +239,29 @@ class BookingController extends Controller
                 foreach ($request->receipt_image as $receipt) {
                     $image = $receipt['file'];
                     $amount = $receipt['amount'];
+                    $bank_name = $receipt['bank_name'];
+                    $date = $receipt['date'];
+                    $is_corporate = $receipt['is_corporate'];
+                    $note = $receipt['note'];
+                    $sender = $receipt['sender'];
+                    $reciever = $receipt['reciever'];
+                    $interact_bank = $receipt['interact_bank'];
+                    $currency = $receipt['currency'];
 
                     $fileData = $this->uploads($image, 'images/');
 
                     BookingReceipt::create([
                         'booking_id' => $find->id,
                         'image' => $fileData['fileName'],
-                        'amount' => $amount
+                        'amount' => $amount,
+                        'bank_name' => $bank_name,
+                        'date' => $date,
+                        'is_corporate' => $is_corporate,
+                        'note' => $note,
+                        'sender' => $sender,
+                        'reciever' => $reciever,
+                        'interact_bank' => $interact_bank ?? 'personal',
+                        'currency' => $currency ?? 'THB',
                     ]);
                 }
             }
