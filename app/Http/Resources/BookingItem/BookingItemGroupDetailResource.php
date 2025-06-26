@@ -19,7 +19,7 @@ class BookingItemGroupDetailResource extends JsonResource
         return [
             'id' => $this->id,
             'product_type' => class_basename($this->product_type),
-            'total_cost_price' => $this->total_cost_price,
+            'total_cost_price' => $this->totalExpenseAmount(),
             'reservation_count' => $this->bookingItems->count(),
             'booking_crm_id' => $this->booking->crm_id ?? null,
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
@@ -56,6 +56,10 @@ class BookingItemGroupDetailResource extends JsonResource
     private function hasConfirmLetter()
     {
         return $this->customerDocuments->contains('type', 'confirmation_letter');
+    }
+
+    protected function totalExpenseAmount(){
+        return $this->bookingItems->sum('total_cost_price');
     }
 
     private function bookingItemsPaymentDetail()
