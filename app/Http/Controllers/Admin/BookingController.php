@@ -8,6 +8,7 @@ use App\Http\Resources\BookingResource;
 use App\Jobs\ArchiveSaleJob;
 use App\Jobs\PersistBookingItemGroupJob;
 use App\Jobs\SendSaleDepositUpdateEmailJob;
+use App\Jobs\UpdateBalanceDueDateJob;
 use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -173,6 +174,9 @@ class BookingController extends Controller
         try {
             $booking = BookingManager::createBookingWithReservation($request);
 
+            // Auto-set balance_due_date
+            UpdateBalanceDueDateJob::dispatch($booking->id);
+
             return $this->success(new BookingResource($booking), 'Booking created successfully');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage());
@@ -220,7 +224,7 @@ class BookingController extends Controller
                 'exclude_amount' => $request->exclude_amount ?? $find->exclude_amount,
                 'deposit' => $request->deposit ?? $find->deposit,
                 'balance_due' => $request->balance_due ?? $find->balance_due,
-                'balance_due_date' => $request->balance_due_date ?? $find->balance_due_date,
+                // 'balance_due_date' => $request->balance_due_date ?? $find->balance_due_date,
                 'discount' => $request->discount ?? $find->discount,
                 'reservation_status' => 'awaiting',
                 'payment_notes' => $request->payment_notes,
@@ -234,6 +238,8 @@ class BookingController extends Controller
             ];
 
             $find->update($data);
+
+
 
             if ($request->receipt_image) {
                 foreach ($request->receipt_image as $receipt) {
@@ -389,9 +395,14 @@ class BookingController extends Controller
                 }
             }
 
+
+
             if ($find->wasChanged('deposit')) {
                 dispatch(new SendSaleDepositUpdateEmailJob($find));
             }
+
+            // balance due auto set
+            UpdateBalanceDueDateJob::dispatch($find->id);
 
             // Persist booking item groups
             PersistBookingItemGroupJob::dispatch($find);

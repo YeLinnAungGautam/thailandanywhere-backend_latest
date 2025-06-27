@@ -12,6 +12,11 @@ class Booking extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'balance_due_date' => 'date:Y-m-d',
+        // ... other casts
+    ];
+
     public static function boot()
     {
         parent::boot();

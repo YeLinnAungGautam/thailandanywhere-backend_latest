@@ -18,7 +18,7 @@ class ReceiptService
         'complete', 'missing', 'all'
     ];
     const VALID_INTERACT_BANK = [
-        'personal', 'company', 'all', 'cash_at_office','to_money_changer'
+        'personal', 'company', 'all', 'cash_at_office','to_money_changer', 'deposit_management'
     ];
     const VALID_CURRENCY = [
         'MMK','THB','USD'

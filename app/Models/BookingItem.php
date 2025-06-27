@@ -17,6 +17,11 @@ class BookingItem extends Model
         'laravel_through_key'
     ];
 
+    protected $casts = [
+        'service_date' => 'date:Y-m-d',
+    ];
+
+
     public function product()
     {
         return $this->morphTo()->withTrashed();
