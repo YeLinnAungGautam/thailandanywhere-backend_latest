@@ -71,10 +71,10 @@ class ReceiptService
     {
         $validator = Validator::make($request->all(), [
             'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
-            'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK), // Add this
+            'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK),
             'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
             'sender' => 'nullable|string|max:255',
-            'reciever' => 'nullable|string|max:255', // Add this
+            'reciever' => 'nullable|string|max:255',
             'amount' => 'nullable|numeric|min:0',
             'date' => 'nullable|string',
             'bank_name' => 'nullable|string|max:255',
@@ -151,9 +151,6 @@ class ReceiptService
     /**
      * Build unified query with database-level filters
      */
-    /**
-     * Build unified query with database-level filters
-     */
     private function buildUnifiedQuery($filters)
     {
         // Build booking receipts query
@@ -163,8 +160,8 @@ class ReceiptService
                 'br.id',
                 DB::raw("'booking_receipt' as table_source"),
                 'br.sender',
-                'br.reciever',        // Add this
-                'br.interact_bank',   // Add this
+                'br.reciever',
+                'br.interact_bank',
                 'br.currency',
                 'br.amount',
                 'br.bank_name',
@@ -176,23 +173,24 @@ class ReceiptService
                 'b.crm_id'
             ]);
 
-        // Build expense receipts query
-        $expenseQuery = DB::table('reservation_expense_receipts as rer')
-            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
-            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id')
+        // Build customer documents query for expense receipts
+        $expenseQuery = DB::table('customer_documents as cd')
+            ->leftJoin('booking_item_groups as big', 'cd.booking_item_group_id', '=', 'big.id')
+            ->leftJoin('bookings as b', 'big.booking_id', '=', 'b.id')
+            ->where('cd.type', 'expense_receipt')
             ->select([
-                'rer.id',
+                'cd.id',
                 DB::raw("'expense_receipt' as table_source"),
-                'rer.sender',         // Add this
-                'rer.reciever',       // Add this
-                'rer.interact_bank',  // Add this
-                'rer.currency',
-                'rer.amount',
-                'rer.bank_name',
-                'rer.date',
-                'rer.created_at',
-                'rer.updated_at',
-                'rer.file as file_name',
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) as sender"),
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) as reciever"),
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.interact_bank')) as interact_bank"),
+                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.currency')), 'THB') as currency"),
+                DB::raw("CAST(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.amount')) AS DECIMAL(10,2)) as amount"),
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) as bank_name"),
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) as date"),
+                'cd.created_at',
+                'cd.updated_at',
+                'cd.file_name',
                 'b.id as booking_id',
                 'b.crm_id'
             ]);
@@ -201,14 +199,12 @@ class ReceiptService
         $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $filters, 'booking');
         $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $filters, 'expense');
 
-        // Union the queries and order by created_at
-        return $bookingQuery->union($expenseQuery)
-            ->orderBy('created_at', 'desc');
+        // Union the queries and order by date DESC, then created_at DESC
+        return DB::query()->fromSub(
+            $bookingQuery->union($expenseQuery), 'combined_results'
+        )->orderBy('date', 'desc')->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Apply database-level filters
-     */
     /**
      * Apply database-level filters
      */
@@ -216,35 +212,59 @@ class ReceiptService
     {
         // Basic filters that apply to both tables
         if (!empty($filters['amount'])) {
-            $query->where($type === 'booking' ? 'br.amount' : 'rer.amount', $filters['amount']);
+            if ($type === 'booking') {
+                $query->where('br.amount', $filters['amount']);
+            } else {
+                $query->whereRaw("CAST(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.amount')) AS DECIMAL(10,2)) = ?", [$filters['amount']]);
+            }
         }
 
         if (!empty($filters['bank_name'])) {
-            $query->where($type === 'booking' ? 'br.bank_name' : 'rer.bank_name', 'like', '%' . $filters['bank_name'] . '%');
+            if ($type === 'booking') {
+                $query->where('br.bank_name', 'like', '%' . $filters['bank_name'] . '%');
+            } else {
+                $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) LIKE ?", ['%' . $filters['bank_name'] . '%']);
+            }
         }
 
         if (!empty($filters['crm_id'])) {
             $query->where('b.crm_id', 'like', '%' . $filters['crm_id'] . '%');
         }
 
-        // Sender filter (applies to both tables now)
+        // Sender filter
         if (!empty($filters['sender'])) {
-            $query->where($type === 'booking' ? 'br.sender' : 'rer.sender', 'like', '%' . $filters['sender'] . '%');
+            if ($type === 'booking') {
+                $query->where('br.sender', 'like', '%' . $filters['sender'] . '%');
+            } else {
+                $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) LIKE ?", ['%' . $filters['sender'] . '%']);
+            }
         }
 
-        // reciever filter (applies to both tables) - Add this
+        // Receiver filter
         if (!empty($filters['reciever'])) {
-            $query->where($type === 'booking' ? 'br.reciever' : 'rer.reciever', 'like', '%' . $filters['reciever'] . '%');
+            if ($type === 'booking') {
+                $query->where('br.reciever', 'like', '%' . $filters['reciever'] . '%');
+            } else {
+                $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) LIKE ?", ['%' . $filters['reciever'] . '%']);
+            }
         }
 
-        // Interact bank filter (applies to both tables) - Add this
+        // Interact bank filter
         if (!empty($filters['interact_bank']) && $filters['interact_bank'] !== 'all') {
-            $query->where($type === 'booking' ? 'br.interact_bank' : 'rer.interact_bank', $filters['interact_bank']);
+            if ($type === 'booking') {
+                $query->where('br.interact_bank', $filters['interact_bank']);
+            } else {
+                $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.interact_bank')) = ?", [$filters['interact_bank']]);
+            }
         }
 
-        // Currency filter (applies to both tables)
+        // Currency filter
         if (!empty($filters['currency'])) {
-            $query->where($type === 'booking' ? 'br.currency' : 'rer.currency', $filters['currency']);
+            if ($type === 'booking') {
+                $query->where('br.currency', $filters['currency']);
+            } else {
+                $query->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.currency')), 'THB') = ?", [$filters['currency']]);
+            }
         }
 
         // Date filter
@@ -265,24 +285,39 @@ class ReceiptService
      */
     private function applyDateFilter($query, $dateFilter, $type)
     {
-        $dateField = $type === 'booking' ? 'br.date' : 'rer.date';
         $dateArray = array_map('trim', explode(',', $dateFilter));
 
         if (count($dateArray) === 2) {
             // Date range
             $startDate = date('Y-m-d', strtotime($dateArray[0]));
             $endDate = date('Y-m-d', strtotime($dateArray[1]));
-            $query->whereBetween($dateField, [$startDate, $endDate]);
+
+            if ($type === 'booking') {
+                $query->whereBetween('br.date', [$startDate, $endDate]);
+            } else {
+                $query->whereRaw("DATE(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date'))) BETWEEN ? AND ?", [$startDate, $endDate]);
+            }
         } else {
             // Single date
             $filterDate = date('Y-m-d', strtotime($dateArray[0]));
-            $query->whereDate($dateField, $filterDate);
+
+            if ($type === 'booking') {
+                $query->whereDate('br.date', $filterDate);
+            } else {
+                $query->whereRaw("DATE(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date'))) = ?", [$filterDate]);
+            }
         }
 
         // Exclude invalid dates
-        $query->where($dateField, '!=', '0000-00-00')
-              ->where($dateField, '!=', '1970-01-01')
-              ->whereNotNull($dateField);
+        if ($type === 'booking') {
+            $query->where('br.date', '!=', '0000-00-00')
+                  ->where('br.date', '!=', '1970-01-01')
+                  ->whereNotNull('br.date');
+        } else {
+            $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) != '0000-00-00'")
+                  ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) != '1970-01-01'")
+                  ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) IS NOT NULL");
+        }
     }
 
     /**
@@ -305,17 +340,16 @@ class ReceiptService
                       ->where('br.date', '!=', '0000-00-00')
                       ->where('br.date', '!=', '1970-01-01');
             } else {
-                $query->whereNotNull('rer.amount')
-                      ->where('rer.amount', '>', 0)
-                      ->whereNotNull('rer.bank_name')
-                      ->where('rer.bank_name', '!=', '')
-                      ->whereNotNull('rer.sender')
-                      ->where('rer.sender', '!=', '')
-                      ->whereNotNull('rer.reciever')
-                      ->where('rer.reciever', '!=', '')
-                      ->whereNotNull('rer.date')
-                      ->where('rer.date', '!=', '0000-00-00')
-                      ->where('rer.date', '!=', '1970-01-01');
+                $query->whereRaw("CAST(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.amount')) AS DECIMAL(10,2)) > 0")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) IS NOT NULL")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) != ''")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) IS NOT NULL")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) != ''")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) IS NOT NULL")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) != ''")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) IS NOT NULL")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) != '0000-00-00'")
+                      ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) != '1970-01-01'");
             }
         } elseif ($type === 'missing') {
             // Records missing required fields with booking date restrictions
@@ -337,17 +371,17 @@ class ReceiptService
                 ->where('b.booking_date', '>=', '2024-11-01');
             } else {
                 $query->where(function ($q) {
-                    $q->whereNull('rer.amount')
-                      ->orWhere('rer.amount', '<=', 0)
-                      ->orWhereNull('rer.bank_name')
-                      ->orWhere('rer.bank_name', '')
-                      ->orWhereNull('rer.sender')
-                      ->orWhere('rer.sender', '')
-                      ->orWhereNull('rer.reciever')
-                      ->orWhere('rer.reciever', '')
-                      ->orWhereNull('rer.date')
-                      ->orWhere('rer.date', '0000-00-00')
-                      ->orWhere('rer.date', '1970-01-01');
+                    $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.amount')) IS NULL")
+                      ->orWhereRaw("CAST(JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.amount')) AS DECIMAL(10,2)) <= 0")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) IS NULL")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.bank_name')) = ''")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) IS NULL")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.sender')) = ''")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) IS NULL")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.reciever')) = ''")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) IS NULL")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) = '0000-00-00'")
+                      ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(cd.meta, '$.date')) = '1970-01-01'");
                 })
                 // Only show bookings from Nov 2024 onwards
                 ->where('b.booking_date', '>=', '2024-11-01');
@@ -363,9 +397,10 @@ class ReceiptService
         $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
 
-        $expenseQuery = DB::table('reservation_expense_receipts as rer')
-            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
-            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
+        $expenseQuery = DB::table('customer_documents as cd')
+            ->leftJoin('booking_item_groups as big', 'cd.booking_item_group_id', '=', 'big.id')
+            ->leftJoin('bookings as b', 'big.booking_id', '=', 'b.id')
+            ->where('cd.type', 'expense_receipt');
 
         $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $filters, 'booking');
         $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $filters, 'expense');
@@ -385,9 +420,10 @@ class ReceiptService
         $bookingQuery = DB::table('booking_receipts as br')
             ->leftJoin('bookings as b', 'br.booking_id', '=', 'b.id');
 
-        $expenseQuery = DB::table('reservation_expense_receipts as rer')
-            ->leftJoin('booking_items as bi', 'rer.booking_item_id', '=', 'bi.id')
-            ->leftJoin('bookings as b', 'bi.booking_id', '=', 'b.id');
+        $expenseQuery = DB::table('customer_documents as cd')
+            ->leftJoin('booking_item_groups as big', 'cd.booking_item_group_id', '=', 'big.id')
+            ->leftJoin('bookings as b', 'big.booking_id', '=', 'b.id')
+            ->where('cd.type', 'expense_receipt');
 
         $bookingQuery = $this->applyDatabaseFilters($bookingQuery, $baseFilters, 'booking');
         $expenseQuery = $this->applyDatabaseFilters($expenseQuery, $baseFilters, 'expense');
