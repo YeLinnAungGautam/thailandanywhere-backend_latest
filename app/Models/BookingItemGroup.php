@@ -31,4 +31,9 @@ class BookingItemGroup extends Model
     {
         return $this->hasMany(CustomerDocument::class, 'booking_item_group_id')->where('type', 'passport');
     }
+
+    public function cashImages()
+    {
+        return $this->morphMany(CashImage::class, 'relatable');
+    }
 }

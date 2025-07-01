@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Accountance;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Accountance\CashImageResource;
 use App\Models\CashImage;
+use App\Services\CashImageService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
@@ -16,29 +17,31 @@ class CashImageController extends Controller
     use ImageManager;
     public function index(Request $request)
     {
-        $limit = $request->query('limit', 10);
-        $query = CashImage::query();
+        $cashImageService = new CashImageService();
+        $result = $cashImageService->getAll($request);
 
-        $data = $query->paginate($limit);
-
-        return $this->success(CashImageResource::collection($data)
-            ->additional([
-                'meta' => [
-                    'total_page' => (int)ceil($data->total() / $data->perPage()),
-                ],
-            ])
-            ->response()
-            ->getData(), 'Cash Image List');
-
+        if ($result['success']) {
+            return response()->json([
+                'status' => 'Request was successful.',
+                'message' => $result['message'],
+                'result' => $result['data']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'Error has occurred.',
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+        }
     }
 
-    public function create()
+    public function store(Request $request)
     {
-        $validate = request()->validate([
+        $validated = request()->validate([
             'image' => 'required',
             'date' => 'required|date_format:Y-m-d H:i:s',
             'sender' => 'required|string|max:255',
-            'receiver' => 'required|string|max:255',
+            'reciever' => 'required|string|max:255', // Fixed spelling
             'amount' => 'required|numeric|min:0',
             'interact_bank' => 'nullable|string|max:255',
             'currency' => 'required|string|max:10',
@@ -46,24 +49,23 @@ class CashImageController extends Controller
             'relatable_id' => 'required'
         ]);
 
-        if(!empty($validated['images'])){
-            $fileData = $this->uploads($validate['image'], 'images/');
+        // Since image is required, no need to check if empty
+        $fileData = $this->uploads($validated['image'], 'images/');
 
-            $create = CashImage::create([
-                'image' => $fileData['fileName'],
-                'date' => $validate['date'],
-                'sender' => $validate['sender'],
-                'receiver' => $validate['receiver'],
-                'amount' => $validate['amount'],
-                'currency' => $validate['currency'],
-                'interact_bank' => $validate['interact_bank'] ?? null,
-                'relatable_type' => $validate['relatable_type'],
-                'relatable_id' => $validate['relatable_id'],
-                'image_path' => $fileData['filePath'], // Store image path
-            ]);
+        $create = CashImage::create([
+            'image' => $fileData['fileName'],
+            'date' => $validated['date'],
+            'sender' => $validated['sender'],
+            'receiver' => $validated['reciever'], // Fixed spelling
+            'amount' => $validated['amount'],
+            'currency' => $validated['currency'],
+            'interact_bank' => $validated['interact_bank'] ?? null,
+            'relatable_type' => $validated['relatable_type'],
+            'relatable_id' => $validated['relatable_id'],
+            'image_path' => $fileData['filePath'],
+        ]);
 
-            return $this->success(new CashImageResource($create), 'Successfully created');
-        }
+        return $this->success(new CashImageResource($create), 'Successfully created');
     }
 
     public function update(Request $request, string $id)
@@ -77,7 +79,7 @@ class CashImageController extends Controller
         $data = [
             'date' => $request->date ?? $find->date,
             'sender' => $request->sender ?? $find->sender,
-            'receiver' => $request->receiver ?? $find->receiver,
+            'receiver' => $request->reciever ?? $find->reciever,
             'amount' => $request->amount ?? $find->amount,
             'currency' => $request->currency ?? $find->currency,
             'interact_bank' => $request->interact_bank ?? $find->interact_bank,

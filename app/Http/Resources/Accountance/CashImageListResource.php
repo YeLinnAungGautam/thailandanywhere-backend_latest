@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-class CashImageResource extends JsonResource
+class CashImageListResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -27,7 +27,9 @@ class CashImageResource extends JsonResource
             'currency' => $this->currency,
             'interact_bank' => $this->interact_bank,
             'relatable_type' => $this->relatable_type,
-            'relatable_id' => $this->relatable_id
+            'relatable_id' => $this->relatable_id,
+            'relatable' => $this->relatable
         ];
+
     }
 }

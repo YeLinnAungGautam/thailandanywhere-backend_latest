@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\BookingRequest;
 use App\Jobs\PersistBookingItemGroupJob;
 use App\Action\UpsertBookingItemGroupAction;
+use App\Models\CashImage;
 
 class BookingManager
 {
@@ -197,18 +198,30 @@ class BookingManager
 
             $fileData = upload_file($image, 'images/');
 
-            BookingReceipt::create([
-                'booking_id' => $booking->id,
-                'image' => $fileData['fileName'],
-                'amount' => $amount,
-                'bank_name' => $bank_name,
+            // BookingReceipt::create([
+            //     'booking_id' => $booking->id,
+            //     'image' => $fileData['fileName'],
+            //     'amount' => $amount,
+            //     'bank_name' => $bank_name,
+            //     'date' => $date,
+            //     'is_corporate' => $is_corporate,
+            //     'note' => $note,
+            //     'sender' => $sender,
+            //     'reciever' => $reciever,
+            //     'interact_bank' => $interact_bank ?? 'personal',
+            //     'currency' => $currency ?? 'THB',
+            // ]);
+
+            CashImage::create([
+                'relatable_id' => $booking->id,
+                'relatable_type' => Booking::class,
                 'date' => $date,
-                'is_corporate' => $is_corporate,
-                'note' => $note,
                 'sender' => $sender,
-                'reciever' => $reciever,
-                'interact_bank' => $interact_bank ?? 'personal',
+                'receiver' => $reciever,
+                'amount' => $amount,
                 'currency' => $currency ?? 'THB',
+                'interact_bank' => $interact_bank ?? 'personal',
+                'image' => $fileData['fileName'],
             ]);
         }
     }
