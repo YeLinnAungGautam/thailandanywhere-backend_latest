@@ -36,6 +36,10 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function cashImages()
+    {
+        return $this->morphMany(CashImage::class, 'relatable');
+    }
 
     public function createdBy()
     {

@@ -50,7 +50,8 @@ class migrateExpenseReceipts implements ShouldQueue
                     'comment' => $receipt?->comment,
                     'sender' => $receipt?->sender,
                     'reciever' => $receipt?->reciever,
-                    'interact_bank' => $receipt?->interact_bank
+                    'interact_bank' => $receipt?->interact_bank,
+                    'currency' => $receipt?->currency,
                 ];
 
                 DB::table('customer_documents')->updateOrInsert([

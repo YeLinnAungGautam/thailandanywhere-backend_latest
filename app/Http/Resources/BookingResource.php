@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Accountance\CashImageResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -49,7 +50,8 @@ class BookingResource extends JsonResource
             'balance_due_date' => $this->balance_due_date->format('Y-m-d'),
             'created_by' => $this->createdBy,
             'bill_to' => $this->customer ? $this->customer->name : "-",
-            'receipts' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
+            'receipts_orignal' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
+            'receipts' => isset($this->cashImages) ? CashImageResource::collection($this->cashImages) : '',
             'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
 
             // Inclusive

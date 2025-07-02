@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\BookingItem;
 
+use App\Http\Resources\Accountance\CashImageResource;
 use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\BookingResource;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class BookingItemGroupDetailResource extends JsonResource
             'has_confirm_letter' => $this->hasConfirmLetter(),
             'booking_items_payment_detail' => $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsPaymentDetail() : false,
             'booking_items_assigned' => $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsAssigned() : false,
+            'expense' => $this->cashImages ? CashImageResource::collection($this->cashImages) : [],
         ];
     }
 

@@ -13,6 +13,7 @@ use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\BookingReceipt;
+use App\Models\CashImage;
 use App\Models\InclusiveProduct;
 use App\Models\Order;
 use App\Models\ReservationBookingConfirmLetter;
@@ -256,18 +257,30 @@ class BookingController extends Controller
 
                     $fileData = $this->uploads($image, 'images/');
 
-                    BookingReceipt::create([
-                        'booking_id' => $find->id,
-                        'image' => $fileData['fileName'],
-                        'amount' => $amount,
-                        'bank_name' => $bank_name,
+                    // BookingReceipt::create([
+                    //     'booking_id' => $find->id,
+                    //     'image' => $fileData['fileName'],
+                    //     'amount' => $amount,
+                    //     'bank_name' => $bank_name,
+                    //     'date' => $date,
+                    //     'is_corporate' => $is_corporate,
+                    //     'note' => $note,
+                    //     'sender' => $sender,
+                    //     'reciever' => $reciever,
+                    //     'interact_bank' => $interact_bank ?? 'personal',
+                    //     'currency' => $currency ?? 'THB',
+                    // ]);
+
+                    CashImage::create([
+                        'relatable_id' => $find->id,
+                        'relatable_type' => Booking::class,
                         'date' => $date,
-                        'is_corporate' => $is_corporate,
-                        'note' => $note,
                         'sender' => $sender,
-                        'reciever' => $reciever,
-                        'interact_bank' => $interact_bank ?? 'personal',
+                        'receiver' => $reciever,
+                        'amount' => $amount,
                         'currency' => $currency ?? 'THB',
+                        'interact_bank' => $interact_bank ?? 'personal',
+                        'image' => $fileData['fileName'],
                     ]);
                 }
             }
@@ -395,11 +408,10 @@ class BookingController extends Controller
                 }
             }
 
-
-
-            if ($find->wasChanged('deposit')) {
-                dispatch(new SendSaleDepositUpdateEmailJob($find));
-            }
+            // don't forget to command off & run
+            // if ($find->wasChanged('deposit')) {
+            //     dispatch(new SendSaleDepositUpdateEmailJob($find));
+            // }
 
             // balance due auto set
             UpdateBalanceDueDateJob::dispatch($find->id);
@@ -441,6 +453,14 @@ class BookingController extends Controller
             if ($item->receipt_image) {
                 Storage::delete('images/' . $item->receipt_image);
             }
+
+
+        }
+
+        foreach ($find->cashImages as $cashImage) {
+            Storage::delete('images/' . $cashImage->image);
+
+            $cashImage->delete();
         }
 
         $find->items()->delete();

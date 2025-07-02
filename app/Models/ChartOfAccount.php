@@ -28,4 +28,15 @@ class ChartOfAccount extends Model
     {
         return $this->belongsTo(AccountHead::class);
     }
+
+    public function cashBooks()
+    {
+        return $this->belongsToMany(
+            CashBook::class,
+            'cash_book_chart_of_accounts',
+            'chart_of_account_id',
+            'cash_book_id'
+        )->withPivot(['allocated_amount', 'note'])
+         ->withTimestamps();
+    }
 }

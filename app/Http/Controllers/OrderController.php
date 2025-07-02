@@ -98,6 +98,7 @@ class OrderController extends Controller
             // Set user_id or admin_id based on type
             if ($userType === 'user') {
                 $orderData['user_id'] = Auth::id();
+                $orderData['admin_id'] = $request->admin_id;
                 $orderData['order_status'] = 'pending';
             } else {
                 $orderData['admin_id'] = Auth::id();

@@ -7,7 +7,7 @@ use App\Jobs\ReservationGroup\migrateBookingRequestDocuments;
 // use App\Jobs\ReservationGroup\migrateCarInfos;
 use App\Jobs\ReservationGroup\migrateCustomerPassport;
 use App\Jobs\ReservationGroup\migrateExpenseMails;
-use App\Jobs\ReservationGroup\migrateExpenseReceipts;
+// use App\Jobs\ReservationGroup\migrateExpenseReceipts;
 use App\Jobs\ReservationGroup\migratePaidSlips;
 // use App\Jobs\ReservationGroup\migrateSupplierInfos;
 // use App\Jobs\ReservationGroup\migrateTaxSlips;
@@ -40,7 +40,7 @@ class MigrateCustomerDocumentCommand extends Command
 
         migrateBookingConfirmLetters::dispatch();
 
-        migrateExpenseReceipts::dispatch();
+        // migrateExpenseReceipts::dispatch();
 
         migrateExpenseMails::dispatch();
 

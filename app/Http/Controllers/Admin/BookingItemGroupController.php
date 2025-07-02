@@ -25,6 +25,7 @@ class BookingItemGroupController extends Controller
                 ->with([
                     'booking',
                     'bookingItems',
+                    'cashImages',
                 ])
                 ->where('product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
                 ->when($request->crm_id, function ($query) use ($request) {
@@ -160,7 +161,8 @@ class BookingItemGroupController extends Controller
                 'booking',
                 'bookingItems',
                 'bookingItems.product',
-                'customerDocuments'
+                'customerDocuments',
+                'cashImages',
             ]);
 
             return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');

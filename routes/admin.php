@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Accountance\CashBookController;
+use App\Http\Controllers\Accountance\CashImageController;
+use App\Http\Controllers\Accountance\CashStructureController;
 use App\Http\Controllers\Admin\AccountClassController;
 use App\Http\Controllers\Admin\AccountHeadController;
 use App\Http\Controllers\Admin\AdminController;
@@ -411,6 +414,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('tax-receipts/{tax_receipt}/detach-reservations', [TaxReceiptController::class, 'detachReservations']);
     Route::post('tax-receipts/{tax_receipt}/async-reservations', [TaxReceiptController::class, 'asyncReservations']);
 
+    # Cash book
+    Route::apiResource('cash-books', CashBookController::class);
+
+    # Cash Structure
+    Route::apiResource('cash-structures', CashStructureController::class);
+
+    # Cash Image
+    Route::apiResource('cash-images', CashImageController::class);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
