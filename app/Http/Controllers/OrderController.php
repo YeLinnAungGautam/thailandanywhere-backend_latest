@@ -100,9 +100,11 @@ class OrderController extends Controller
                 $orderData['user_id'] = Auth::id();
                 $orderData['admin_id'] = $request->admin_id;
                 $orderData['order_status'] = 'pending';
+                $orderData['is_customer_create'] = '1';
             } else {
                 $orderData['admin_id'] = Auth::id();
                 $orderData['order_status'] = 'confirmed';
+                $orderData['is_customer_create'] = '0';
             }
 
             // အော်ဒါဖန်တီးခြင်း

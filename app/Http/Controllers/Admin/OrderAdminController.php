@@ -288,4 +288,47 @@ class OrderAdminController extends Controller
         $order->delete();
         return $this->success(null, 'Order deleted successfully');
     }
+
+    public function reportOrderCompact(){
+        $today = now()->toDateString();
+
+        // Get both today and month stats in one go
+        $stats = [
+            'today' => Order::whereDate('created_at', $today)
+                           ->selectRaw('
+                               COUNT(*) as total,
+                               SUM(is_customer_create = 1) as customer_yes,
+                               SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
+                           ')
+                           ->first(),
+
+            'month' => Order::whereYear('created_at', now()->year)
+                           ->whereMonth('created_at', now()->month)
+                           ->selectRaw('
+                               COUNT(*) as total,
+                               SUM(is_customer_create = 1) as customer_yes,
+                               SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
+                           ')
+                           ->first()
+        ];
+
+        return $this->success([
+            'today' => [
+                'total_orders' => $stats['today']->total,
+                'customer_create_yes' => $stats['today']->customer_yes,
+                'sale_converted' => $stats['today']->converted,
+                'conversion_rate' => $stats['today']->customer_yes > 0
+                    ? round(($stats['today']->converted / $stats['today']->customer_yes) * 100, 2)
+                    : 0
+            ],
+            'this_month' => [
+                'total_orders' => $stats['month']->total,
+                'customer_create_yes' => $stats['month']->customer_yes,
+                'sale_converted' => $stats['month']->converted,
+                'conversion_rate' => $stats['month']->customer_yes > 0
+                    ? round(($stats['month']->converted / $stats['month']->customer_yes) * 100, 2)
+                    : 0
+            ]
+            ], 'Order Report');
+    }
 }
