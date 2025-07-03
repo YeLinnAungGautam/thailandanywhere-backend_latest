@@ -32,10 +32,11 @@ class DeleteUnverifiedUsers extends Command
         $cutoffTime = Carbon::now()->subMinutes(30);
 
         // Find unverified users created more than 30 minutes ago
-        $users = User::where('is_active', false)
-                    ->whereNull('email_verified_at')
-                    ->where('created_at', '<', $cutoffTime)
-                    ->get();
+        $users = User::query()
+            ->where('is_active', false)
+            ->whereNull('email_verified_at')
+            ->where('created_at', '<', $cutoffTime)
+            ->get();
 
         $count = $users->count();
 
