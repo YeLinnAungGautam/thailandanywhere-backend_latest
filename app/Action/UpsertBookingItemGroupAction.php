@@ -8,7 +8,7 @@ class UpsertBookingItemGroupAction
 {
     public static function execute(Booking $booking)
     {
-        $grouped = $booking->items->groupBy(function ($item) {
+        $grouped = $booking->items->whereNull('group_id')->groupBy(function ($item) {
             return $item->product_type . ':' . $item->product_id;
         });
 
