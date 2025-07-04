@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\OrderResource;
 use App\Jobs\ArchiveSaleJob;
+use App\Jobs\PersistBookingItemGroupJob;
 use App\Jobs\UpdateBookingDatesJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
@@ -169,6 +170,8 @@ class OrderAdminController extends Controller
 
                 UpdateBookingDatesJob::dispatch($booking->id);
 
+                PersistBookingItemGroupJob::dispatch($booking);
+
                 return $this->success(
                     new BookingResource($booking),
                     'Order successfully approved and converted to booking'
@@ -224,6 +227,8 @@ class OrderAdminController extends Controller
         // }
 
         $this->convertOrderItemsToBookingItems($order, $booking);
+
+
 
         return $booking;
     }
