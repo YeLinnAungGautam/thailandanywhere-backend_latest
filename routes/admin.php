@@ -374,6 +374,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('account-classes', AccountClassController::class);
     Route::apiResource('chart-of-accounts', ChartOfAccountController::class);
 
+    # Chart of Accounts additional methods
+    Route::get('/balance-due-over', [ChartOfAccountController::class, 'balanceDueOver']);
+
     # Partner
     Route::apiResource('partners', PartnerController::class);
 

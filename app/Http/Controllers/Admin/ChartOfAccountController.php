@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItemResource;
+use App\Http\Resources\ChartOfAccount\BookingItemResource as ChartOfAccountBookingItemResource;
 use App\Http\Resources\ChartOfAccountResource;
 use App\Models\AccountClass;
 use App\Models\AccountHead;
 use App\Models\BookingItem;
 use App\Models\ChartOfAccount;
+use App\Services\ChartOfAccountCalculationService;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -16,6 +19,14 @@ use Illuminate\Support\Facades\Validator;
 class ChartOfAccountController extends Controller
 {
     use HttpResponses;
+
+    protected $calculationService;
+
+    public function __construct(ChartOfAccountCalculationService $calculationService)
+    {
+        $this->calculationService = $calculationService;
+    }
+
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
@@ -36,75 +47,19 @@ class ChartOfAccountController extends Controller
         $data = $query->paginate($limit);
         $collection = ChartOfAccountResource::collection($data);
 
-        // Process and add total amounts for specific connections
+        // Process and add total amounts using service
         $collection->each(function ($item) use ($month) {
-            // Handle price connection_detail
-            if ($item->connection_detail == 'price') {
-                $totalAmount = 0;
-                $verifiedAmount = 0;
-                $unverifiedAmount = 0;
-                $pendingAmount = 0;
-
-                // For VanTour connection
-                if ($item->connection === 'vantour') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid');
-                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'verified');
-                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'unverified');
-                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'amount', 'fully_paid', 'pending');
-                }
-                // For Hotel connection
-                elseif ($item->connection === 'hotel') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid');
-                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'verified');
-                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'unverified');
-                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'amount', 'fully_paid', 'pending');
-                }
-                // For Ticket connection
-                elseif ($item->connection === 'ticket') {
-                    $totalAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid');
-                    $verifiedAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'verified');
-                    $unverifiedAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'unverified');
-                    $pendingAmount = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'amount', 'fully_paid', 'pending');
-                }
-
-                $item->total_amount = $totalAmount;
-                $item->verified_amount = $verifiedAmount;
-                $item->unverified_amount = $unverifiedAmount;
-                $item->pending_amount = $pendingAmount;
+            // Handle specific account codes with overdue and booking calculations
+            if (in_array($item->account_code, ['1-3000-01', '1-3000-02', '1-3000-03'])) {
+                $item = $this->calculationService->calculateAccountCodeTotals($item, $month);
             }
-            // Handle expense connection_detail
+            // Handle existing price connection_detail
+            elseif ($item->connection_detail == 'price') {
+                $item = $this->calculationService->calculatePriceConnectionTotals($item, $month);
+            }
+            // Handle existing expense connection_detail
             elseif ($item->connection_detail === 'expense') {
-                $totalCostPrice = 0;
-                $verifiedCostPrice = 0;
-                $unverifiedCostPrice = 0;
-                $pendingCostPrice = 0;
-
-                // For VanTour connection
-                if ($item->connection === 'vantour') {
-                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid');
-                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'verified');
-                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'unverified');
-                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\PrivateVanTour', $month, 'total_cost_price', 'fully_paid', 'pending');
-                }
-                // For Hotel connection
-                elseif ($item->connection === 'hotel') {
-                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid');
-                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'verified');
-                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'unverified');
-                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\Hotel', $month, 'total_cost_price', 'fully_paid', 'pending');
-                }
-                // For Ticket connection
-                elseif ($item->connection === 'ticket') {
-                    $totalCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid');
-                    $verifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'verified');
-                    $unverifiedCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'unverified');
-                    $pendingCostPrice = $this->calculateTotalForProductType('App\\Models\\EntranceTicket', $month, 'total_cost_price', 'fully_paid', 'pending');
-                }
-
-                $item->total_cost_amount = $totalCostPrice;
-                $item->verified_cost_price = $verifiedCostPrice;
-                $item->unverified_cost_price = $unverifiedCostPrice;
-                $item->pending_cost_price = $pendingCostPrice;
+                $item = $this->calculationService->calculateExpenseConnectionTotals($item, $month);
             }
         });
 
@@ -120,6 +75,7 @@ class ChartOfAccountController extends Controller
 
     /**
      * Calculate total for a specific product type in the given month based on booking payment status and verify status
+     * Keep this method for backward compatibility and existing functionality
      *
      * @param  string      $productType   The fully qualified class name of the product type
      * @param  string      $month         The month in YYYY-MM format
@@ -128,29 +84,6 @@ class ChartOfAccountController extends Controller
      * @param  string|null $verifyStatus  Booking verify status to filter by (null, 'verified', 'unverified', 'pending')
      * @return float       The total amount
      */
-    private function calculateTotalForProductType($productType, $month, $field, $paymentStatus, $verifyStatus = null)
-    {
-        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
-
-        $query = BookingItem::where('product_type', $productType)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereNotNull($field)
-            ->whereHas('booking', function ($query) use ($paymentStatus, $verifyStatus) {
-                // Only include booking items whose related booking is not inclusive
-                $query->where('is_inclusive', '!=', 1);
-
-                // Filter by booking payment status
-                $query->where('payment_status', $paymentStatus);
-
-                // Filter by verify status if provided
-                if ($verifyStatus !== null) {
-                    $query->where('verify_status', $verifyStatus);
-                }
-            });
-
-        return $query->sum($field) * 1 ?? 0;
-    }
 
     public function store(Request $request)
     {
@@ -230,5 +163,29 @@ class ChartOfAccountController extends Controller
         $account->delete();
 
         return $this->success(null, 'Account deleted successfully');
+    }
+
+    public function balanceDueOver(Request $request)
+    {
+        $month = $request->query('month', date('Y-m'));
+        $limit = $request->query('limit', 10);
+        $productType = $request->query('product_type');
+
+        if (!$productType) {
+            return $this->error('Product type is required.', 400);
+        }
+
+        // Fetch the results (not the query)
+        $data = $this->calculationService->getItemOverBalanceDue($productType, $month)->paginate($limit);
+
+        return $this->success(
+            ChartOfAccountBookingItemResource::collection($data)
+            ->additional([
+                'meta' => [
+                    'total_page' => (int) ceil($data->total() / $data->perPage()),
+                ],
+            ])->response()->getData(),
+            'Receiptable checker List'
+        );
     }
 }
