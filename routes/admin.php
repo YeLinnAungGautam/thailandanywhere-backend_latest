@@ -408,6 +408,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('orders/{id}/change-status', [OrderAdminController::class, 'changeStatus']);
     Route::delete('orders/{id}', [OrderAdminController::class, 'deleteOrder']);
 
+    Route::get('report/orders', [OrderAdminController::class, 'reportOrderCompact']);
+
     # Tax Receipt
     Route::apiResource('tax-receipts', TaxReceiptController::class);
     Route::post('tax-receipts/{tax_receipt}/attach-reservations', [TaxReceiptController::class, 'attachReservations']);

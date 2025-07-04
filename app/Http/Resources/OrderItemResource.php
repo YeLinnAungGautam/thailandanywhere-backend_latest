@@ -51,7 +51,7 @@ class OrderItemResource extends JsonResource
             'cost_price' => $this->cost_price,
             'total_cost_price' => $this->total_cost_price,
             'discount' => $this->discount,
-            'special_discount' => $this->special_discount,
+            'special_request' => $this->special_request,
             'route_price' => $this->route_price,
             'pickup_location' => $this->pickup_location,
             'pickup_time' => $this->pickup_time,
