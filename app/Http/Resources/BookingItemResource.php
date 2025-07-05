@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Accountance\CashImageResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -136,7 +137,7 @@ class BookingItemResource extends JsonResource
             'amend_info' => BookingItemAmendmentResource::collection($this->amendments),
             'reservation_supplier_info' => new ReservationCarInfoResource($this->reservationSupplierInfo),
             'booking_confirm_letters' => ReservationBookingConfirmLetterResource::collection($this->reservationBookingConfirmLetter),
-            'receipt_images' => ReservationReceiptImageResource::collection($this->reservationReceiptImage),
+            'receipt_images_real' => ReservationReceiptImageResource::collection($this->reservationReceiptImage),
             'customer_passports' => ReservationCustomerPassportResource::collection($this->reservationCustomerPassport),
             'paid_slip' => ReservationReceiptImageResource::collection($this->reservationPaidSlip),
             'tax_slip' => ReservationTaxSlipResource::collection($this->taxSlips),
@@ -158,6 +159,7 @@ class BookingItemResource extends JsonResource
             'cases' => isset($this->costCases) ? CaseDetailResource::collection($this->costCases) : '',
 
             'group_id' => $this->group_id,
+            'receipt_images' => $this->group?->cashImages && count($this->group->cashImages) ? CashImageResource::collection($this->group->cashImages) : [],
         ];
     }
 }

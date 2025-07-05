@@ -32,6 +32,11 @@ class ChartOfAccountResource extends JsonResource
             'unverified_cost_price' => $this->unverified_cost_price,
             'pending_cost_price' => $this->pending_cost_price,
             'connection_detail' => $this->connection_detail,
+
+            // Account code specific calculations (1-3000-01, 1-3000-02, 1-3000-03)
+            // Overdue balance due total (balance_due_date overdue and payment_status not_paid)
+            'over_balance_due_total' => $this->over_balance_due_total ?? null,
+
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
