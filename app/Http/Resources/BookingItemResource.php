@@ -161,6 +161,8 @@ class BookingItemResource extends JsonResource
             'cases' => isset($this->costCases) ? CaseDetailResource::collection($this->costCases) : '',
 
             'group_id' => $this->group_id,
+            'output_vat' => $this->output_vat,
+            'commission' => $this->commission,
             'receipt_images' => $this->group?->cashImages && count($this->group->cashImages) ? CashImageResource::collection($this->group->cashImages) : [],
         ];
     }
