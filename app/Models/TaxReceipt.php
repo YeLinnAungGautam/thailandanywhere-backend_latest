@@ -47,9 +47,9 @@ class TaxReceipt extends Model
      * Get reservations associated with this tax receipt.
      * Many-to-many relationship with reservations.
      */
-    public function reservations()
+    public function groups()
     {
-        return $this->belongsToMany(BookingItem::class, 'tax_receipt_reservations')
-                    ->withTimestamps();
+        return $this->belongsToMany(BookingItemGroup::class, 'tax_receipt_groups', 'tax_receipt_id', 'booking_item_group_id')
+                    ->withTimestamps()->withPivot('id');
     }
 }

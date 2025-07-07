@@ -63,6 +63,8 @@ class BookingItemResource extends JsonResource
                 'payment_method' => $this->booking->payment_method,
                 'payment_status' => $this->booking->payment_status,
                 'bank_name' => $this->booking->bank_name,
+                'output_vat' => $this->booking->output_vat,
+                'commission' => $this->booking->commission,
             ],
             'customer_info' => $this->booking->customer,
             'customer_attachment' => $this->customer_attachment ? Storage::url('attachments/' . $this->customer_attachment) : null,
