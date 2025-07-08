@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxReceiptRequest;
 use App\Http\Resources\TaxReceiptResource;
+use App\Models\BookingItemGroup;
 use App\Models\TaxReceipt;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -20,7 +21,7 @@ class TaxReceiptController extends Controller
     // Index - List all tax receipts
     public function index(Request $request)
     {
-        $query = TaxReceipt::with(['product', 'reservations']);
+        $query = TaxReceipt::with(['product', 'groups']);
 
         if ($request->product_type) {
             $query->where('product_type', $request->product_type);
@@ -67,7 +68,7 @@ class TaxReceiptController extends Controller
 
             DB::commit();
 
-            $taxReceipt->load(['product', 'reservations']);
+            $taxReceipt->load(['product', 'groups']);
 
             return $this->success(new TaxReceiptResource($taxReceipt), 'Tax Receipt created successfully.');
         } catch (\Exception $e) {
@@ -84,7 +85,7 @@ class TaxReceiptController extends Controller
     // Show - Get single tax receipt
     public function show(TaxReceipt $taxReceipt)
     {
-        $taxReceipt->load(['product', 'reservations']);
+        $taxReceipt->load(['product', 'groups']);
         return $this->success(new TaxReceiptResource($taxReceipt), 'Tax Receipt retrieved successfully');
     }
 
@@ -111,7 +112,7 @@ class TaxReceiptController extends Controller
 
             DB::commit();
 
-            $taxReceipt->load(['product', 'reservations']);
+            $taxReceipt->load(['product', 'groups']);
 
             return $this->success(new TaxReceiptResource($taxReceipt), 'Tax Receipt updated successfully.');
         } catch (\Exception $e) {
@@ -148,74 +149,46 @@ class TaxReceiptController extends Controller
     }
 
     // Attach reservations (booking items) to tax receipt
-    public function attachReservations(Request $request, TaxReceipt $taxReceipt)
-    {
-        $request->validate([
-            'reservation_ids' => 'required|array',
-            'reservation_ids.*' => 'exists:booking_items,id'
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $taxReceipt->reservations()->attach($request->reservation_ids);
-
-            DB::commit();
-
-            $taxReceipt->load('reservations');
-
-            return $this->success(new TaxReceiptResource($taxReceipt), 'Reservations attached successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->error('Failed to attach reservations: ' . $e->getMessage(), 500);
-        }
-    }
-
-    // Detach reservations (booking items) from tax receipt
-    public function detachReservations(Request $request, TaxReceipt $taxReceipt)
-    {
-        $request->validate([
-            'reservation_ids' => 'required|array',
-            'reservation_ids.*' => 'exists:booking_items,id'
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $taxReceipt->reservations()->detach($request->reservation_ids);
-
-            DB::commit();
-
-            $taxReceipt->load('reservations');
-
-            return $this->success(new TaxReceiptResource($taxReceipt), 'Reservations detached successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->error('Failed to detach reservations: ' . $e->getMessage(), 500);
-        }
-    }
-
-    // Sync reservations (replace all attached booking items)
     public function syncReservations(Request $request, TaxReceipt $taxReceipt)
     {
         $request->validate([
-            'reservation_ids' => 'required|array',
-            'reservation_ids.*' => 'exists:booking_items,id'
+            'group_ids' => 'array', // Allow empty array to detach all
+            'group_ids.*' => 'exists:booking_item_groups,id' // FIXED: was booking_items
         ]);
 
         try {
             DB::beginTransaction();
 
-            $taxReceipt->reservations()->sync($request->reservation_ids);
+            $oldGroups = $taxReceipt->groups()->pluck('booking_item_group_id')->toArray();
+            $newGroups = $request->group_ids ?? [];
+
+            $taxReceipt->groups()->sync($newGroups);
 
             DB::commit();
 
-            $taxReceipt->load('reservations');
+            $taxReceipt->load('groups');
 
-            return $this->success(new TaxReceiptResource($taxReceipt), 'Reservations synced successfully');
+            $attached = array_diff($newGroups, $oldGroups);
+            $detached = array_diff($oldGroups, $newGroups);
+
+            $message = 'Reservations synced successfully';
+            if (count($attached) > 0 || count($detached) > 0) {
+                $message .= sprintf(' (%d attached, %d detached)', count($attached), count($detached));
+            }
+
+            return $this->success(new TaxReceiptResource($taxReceipt), $message);
+
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to sync reservations: ' . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Get available booking item groups for attaching to tax receipt
+     */
+
+    /**
+     * Get currently attached groups for a tax receipt
+     */
 }

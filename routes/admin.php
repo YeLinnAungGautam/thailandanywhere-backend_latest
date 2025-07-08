@@ -415,9 +415,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Tax Receipt
     Route::apiResource('tax-receipts', TaxReceiptController::class);
-    Route::post('tax-receipts/{tax_receipt}/attach-reservations', [TaxReceiptController::class, 'attachReservations']);
-    Route::post('tax-receipts/{tax_receipt}/detach-reservations', [TaxReceiptController::class, 'detachReservations']);
-    Route::post('tax-receipts/{tax_receipt}/async-reservations', [TaxReceiptController::class, 'asyncReservations']);
+    Route::post('tax-receipts/{tax_receipt}/async-reservations', [TaxReceiptController::class, 'syncReservations']);
 
     # Cash book
     Route::apiResource('cash-books', CashBookController::class);

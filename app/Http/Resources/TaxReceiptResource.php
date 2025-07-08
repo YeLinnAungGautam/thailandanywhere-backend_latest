@@ -36,7 +36,7 @@ class TaxReceiptResource extends JsonResource
             'total_after_tax' => $this->total_after_tax,
             // 'total' => $this->total,
             'invoice_number' => $this->invoice_number,
-            'reservations' => $this->whenLoaded('reservations'),
+            'groups' => $this->whenLoaded('groups'),
             'product' => $productResource,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),

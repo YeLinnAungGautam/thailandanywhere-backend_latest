@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Jobs\ArchiveSaleJob;
+use App\Jobs\BookingVatJob;
 use App\Jobs\PersistBookingItemGroupJob;
 use App\Jobs\SendSaleDepositUpdateEmailJob;
 use App\Jobs\UpdateBalanceDueDateJob;
@@ -177,6 +178,9 @@ class BookingController extends Controller
 
             // Auto-set balance_due_date
             UpdateBalanceDueDateJob::dispatch($booking->id);
+
+            // Auto-set vat
+            BookingVatJob::dispatch($booking->id);
 
             return $this->success(new BookingResource($booking), 'Booking created successfully');
         } catch (Exception $e) {
@@ -418,6 +422,9 @@ class BookingController extends Controller
 
             // Persist booking item groups
             PersistBookingItemGroupJob::dispatch($find);
+
+            // Auto-set vat
+            BookingVatJob::dispatch($find->id);
 
             DB::commit();
 
