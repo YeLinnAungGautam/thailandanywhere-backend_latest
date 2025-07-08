@@ -42,7 +42,7 @@ class BookingVatJob implements ShouldQueue
 
             DB::commit();
 
-            Log::info("Successfully calculated VAT for booking ID: {$this->bookingId}");
+            // Log::info("Successfully calculated VAT for booking ID: {$this->bookingId}");
 
         } catch (\Exception $e) {
             //throw $th;
@@ -78,7 +78,7 @@ class BookingVatJob implements ShouldQueue
             'commission' => round($commission, 2),
         ]);
 
-        Log::info("Updated booking ID {$booking->id}: VAT={$vatAmount}, Commission={$commission}");
+        // Log::info("Updated booking ID {$booking->id}: VAT={$vatAmount}, Commission={$commission}");
     }
 
     private function calculateItemVatAndCommission($item): void
@@ -104,6 +104,7 @@ class BookingVatJob implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error("Error calculating VAT for item ID {$item->id}: " . $e->getMessage());
+
             throw $e;
         }
     }
@@ -112,12 +113,14 @@ class BookingVatJob implements ShouldQueue
     {
         if (is_null($booking->grand_total) || $booking->grand_total === '') {
             Log::warning("Booking ID {$booking->id}: Missing grand_total");
+
             return false;
         }
 
         $grandTotal = $this->sanitizeAmount($booking->grand_total);
         if ($grandTotal <= 0) {
             Log::warning("Booking ID {$booking->id}: Invalid grand_total ({$grandTotal})");
+
             return false;
         }
 
@@ -131,6 +134,7 @@ class BookingVatJob implements ShouldQueue
 
         if ($costPrice < 0 || $amount < 0) {
             Log::warning("Item ID {$item->id}: Negative values");
+
             return false;
         }
 
@@ -145,6 +149,7 @@ class BookingVatJob implements ShouldQueue
 
         // Remove commas and convert to float
         $cleaned = str_replace([',', ' '], '', (string) $value);
+
         return (float) $cleaned;
     }
 }
