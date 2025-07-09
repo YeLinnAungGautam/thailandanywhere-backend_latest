@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Accountance\AccountanceGenerateController;
 use App\Http\Controllers\Accountance\CashBookController;
 use App\Http\Controllers\Accountance\CashImageController;
 use App\Http\Controllers\Accountance\CashStructureController;
@@ -85,6 +86,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/bookings/{id}/receipt', [BookingController::class, 'printReceipt']);
+// for cedit
+Route::get('/bookings/{id}/credit', [BookingController::class, 'printCredit']);
 Route::get('/reservations/{id}/receipt', [ReservationController::class, 'printReservation']);
 Route::get('/hotel-reservation/{id}/receipt', [ReservationController::class, 'printReservationHotel']);
 Route::get('/vantour-reservation/{id}/receipt', [ReservationController::class, 'printReservationVantour']);
@@ -109,6 +112,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/sales-count', [ReportController::class, 'salesCount']);
     Route::get('/bookings-count', [ReportController::class, 'bookingsCount']);
     Route::get('/reservations-count', [ReportController::class, 'reservationsCount']);
+
+    Route::post('/generate-Accounting-Pdf', [AccountanceGenerateController::class, 'generateAccountingPdf']);
 
     Route::get('report-by-channel', [DashboardController::class, 'reportByChannel']);
     Route::get('report-by-payment-method', [DashboardController::class, 'reportByPaymentMethod']);

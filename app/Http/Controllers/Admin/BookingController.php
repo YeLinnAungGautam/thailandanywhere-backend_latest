@@ -513,6 +513,23 @@ class BookingController extends Controller
         return $pdf->stream();
     }
 
+    public function printCredit(Request $request, string $id)
+    {
+        $booking = Booking::where('id', $id)->with(['customer','items'])->first();
+
+        $booking->sub_total_with_vat = $booking->grand_total - $booking->commission;
+        $booking->vat = ($booking->sub_total_with_vat - $booking->commission) * 0.07;
+        $booking->total_excluding_vat = $booking->sub_total_with_vat - $booking->vat;
+
+        $pdf_view = 'pdf.booking_credit';
+
+        $pdf = Pdf::setOption([
+            'fontDir' => public_path('/fonts')
+        ])->loadView($pdf_view, ['booking' => $booking]);
+
+        return $pdf->stream();
+    }
+
     public function deleteReceipt($id)
     {
         $find = BookingReceipt::find($id);
