@@ -20,7 +20,7 @@ class AccountanceGenerateController extends Controller
 
         // Get fully paid bookings within date range with nested relationships
         $bookings = Booking::where('payment_status', 'fully_paid')
-            ->whereBetween('created_at', [$request->start_date, $request->end_date])
+            ->whereBetween('booking_date', [$request->start_date, $request->end_date])
             ->with([
                 'customer',
                 'cashImages',
@@ -29,7 +29,7 @@ class AccountanceGenerateController extends Controller
                     $query->where('type', 'booking_confirm_letter');
                 }
             ])
-            ->orderBy('created_at')
+            ->orderBy('booking_date', 'asc')
             ->get();
 
         // Prepare data for PDF
@@ -41,7 +41,7 @@ class AccountanceGenerateController extends Controller
                 'documents' => []
             ];
 
-            // 1. Add customer payment slips (booking->cashImage)
+            // 1. Add customer payment slips (booking->cashImage) // customer payment slip
             if ($booking->relationLoaded('cashImages')) {
                 foreach ($booking->cashImages as $image) {
                     if (isset($image->image) && Storage::exists('images/' . $image->image)) {
