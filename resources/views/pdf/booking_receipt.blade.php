@@ -180,7 +180,8 @@
                         </tr>
 
                         @foreach ($items as $index => $row)
-                            <tr @if (!is_null($row->cancellation) && $row->cancellation === 'cancel_request') style="background: yellow; color: #000"
+                            <tr
+                                @if (!is_null($row->cancellation) && $row->cancellation === 'cancel_request') style="background: yellow; color: #000"
                                 @elseif (!is_null($row->cancellation) && $row->cancellation === 'cancel_confirm')
                                     style="background: red; color: white"
                                 @else

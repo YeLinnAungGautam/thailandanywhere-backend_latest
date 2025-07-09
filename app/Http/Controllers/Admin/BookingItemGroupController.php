@@ -10,6 +10,7 @@ use App\Traits\HttpResponses;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class BookingItemGroupController extends Controller
 {
@@ -25,7 +26,7 @@ class BookingItemGroupController extends Controller
                 ->with([
                     'booking',
                     'bookingItems',
-                    'cashImages',
+                    'cashImages'
                 ])
                 ->where('product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
                 ->when($request->crm_id, function ($query) use ($request) {
@@ -130,6 +131,21 @@ class BookingItemGroupController extends Controller
                 $main_query->whereHas('bookingItems', function ($query) use ($dates) {
                     $query->whereBetween('service_date', $dates);
                 });
+            }
+
+            if ($request->sorting) {
+                $sorting = $request->sorting === 'asc' ? 'asc' : 'desc'; // validate sorting direction
+
+                // Join with a subquery to get the earliest service date for each group
+                $main_query->joinSub(
+                    DB::table('booking_items')
+                        ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                        ->groupBy('group_id'),
+                    'earliest_service_dates',
+                    function($join) {
+                        $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
+                    }
+                )->orderBy('earliest_service_dates.earliest_service_date', $sorting);
             }
 
             if (!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor'])) {
