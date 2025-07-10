@@ -24,7 +24,7 @@ class BookingItemGroupListResource extends JsonResource
             'booking_crm_id' => $this->booking->crm_id ?? null,
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
             'customer_name' => $this->booking->customer->name ?? 'N/A',
-
+            'have_tax_receipt' => $this->taxReceipts()->count() > 0 ? true : false,
             'total_amount' => $this->bookingItems->sum('amount'),
             'expense_amount' => BookingItemDataService::getTotalExpenseAmount($this->bookingItems()),
 
@@ -58,6 +58,11 @@ class BookingItemGroupListResource extends JsonResource
             ];
         })->all();
     }
+
+    // private function haveTaxReceipt()
+    // {
+    //     return $this->taxReceipts();
+    // }
 
     protected function calculateGroupExpenseStatus()
     {

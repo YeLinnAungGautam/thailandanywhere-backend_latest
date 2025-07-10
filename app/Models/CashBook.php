@@ -36,6 +36,11 @@ class CashBook extends Model
         return $this->morphMany(CashImage::class, 'relatable');
     }
 
+    public function cashBookImages()
+    {
+        return $this->hasMany(CashBookImage::class);
+    }
+
     // Relationship with Chart of Accounts (Many-to-Many) - Fixed table name
     public function chartOfAccounts()
     {

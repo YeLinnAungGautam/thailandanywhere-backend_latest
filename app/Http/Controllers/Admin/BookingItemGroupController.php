@@ -26,7 +26,8 @@ class BookingItemGroupController extends Controller
                 ->with([
                     'booking',
                     'bookingItems',
-                    'cashImages'
+                    'cashImages',
+                    'taxReceipts'
                 ])
                 ->where('product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
                 ->when($request->crm_id, function ($query) use ($request) {
@@ -83,6 +84,14 @@ class BookingItemGroupController extends Controller
                             $q->whereNull('supplier_id')
                               ->whereNull('driver_id');
                         });
+                    }
+                })
+                ->when($request->findTaxReceipt, function ($query) use ($request) {
+                    if ($request->findTaxReceipt == "not_have_tax") {
+                        $query->whereDoesntHave('taxReceipts');
+                    }
+                    if ($request->findTaxReceipt == "have_tax") {
+                        $query->whereHas('taxReceipts');
                     }
                 })
                 ->when($request->expense_item_status, function ($query) use ($request) {

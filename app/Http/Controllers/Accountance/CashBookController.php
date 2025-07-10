@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Accountance;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Accountance\CashBookResource;
 use App\Models\CashBook;
+use App\Models\CashBookImage;
 use App\Models\CashImage;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -26,7 +27,7 @@ class CashBookController extends Controller
         $start_date = $request->query('start_date');
         $end_date = $request->query('end_date');
 
-        $query = CashBook::with(['cashStructure', 'chartOfAccounts', 'cashImages']);
+        $query = CashBook::with(['cashStructure', 'chartOfAccounts', 'cashImages', 'cashBookImages']);
 
         // Filter by type
         if ($type && in_array($type, ['income', 'expense'])) {
@@ -67,27 +68,27 @@ class CashBookController extends Controller
     {
         $validated = $request->validate([
             'reference_number' => 'nullable|string|max:100|unique:cash_books,reference_number',
-            'date' => 'nullable|date_format:Y-m-d H:i:s', // Changed to datetime and nullable
-            'date_only' => 'nullable|date', // Alternative date input
-            'time_only' => 'nullable|date_format:H:i:s', // Alternative time input
+            'date' => 'nullable|date_format:Y-m-d H:i:s',
+            'date_only' => 'nullable|date',
+            'time_only' => 'nullable|date_format:H:i:s',
             'income_or_expense' => 'required|in:income,expense',
             'cash_structure_id' => 'required|exists:cash_structures,id',
             'interact_bank' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'accounts' => 'required|array|min:1',
-            'accounts.*.id' => 'required|exists:chart_of_accounts,id', // Fixed table name
+            'accounts.*.id' => 'required|exists:chart_of_accounts,id',
             'accounts.*.allocated_amount' => 'required|numeric|min:0',
             'accounts.*.note' => 'nullable|string',
             'images' => 'nullable|array',
-            'images.*.image' => 'required', // Base64 image or file path
-            'images.*.date' => 'nullable|date_format:Y-m-d H:i:s', // Changed to datetime
+            'images.*.image' => 'required',
+            'images.*.date' => 'nullable|date_format:Y-m-d H:i:s',
             'images.*.sender' => 'required|string|max:255',
             'images.*.receiver' => 'required|string|max:255',
             'images.*.amount' => 'required|numeric|min:0',
             'images.*.currency' => 'required|string|max:10',
             'images.*.interact_bank' => 'nullable|string|max:255',
-            'images.*.relatable_type' => 'nullable', // For polymorphic
-            'images.*.relatable_id' => 'nullable|integer' // For polymorphic
+            'cash_book_images' => 'nullable|array',
+            'cash_book_images.*.image' => 'required',
         ]);
 
         try {
@@ -115,31 +116,40 @@ class CashBookController extends Controller
                     ]);
                 }
 
-                // Create cash images if provided
+                // Create cash images if provided (polymorphic relationship)
                 if (!empty($validated['images'])) {
                     foreach ($validated['images'] as $imageData) {
-                        // Handle image upload
                         $fileData = $this->uploads($imageData['image'], 'images/');
-
-                        $relatableId = $imageData['relatable_id'] ?? $cashBook->id;
 
                         CashImage::create([
                             'image' => $fileData['fileName'],
-                            'date' => $imageData['date'],
+                            'date' => $imageData['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
                             'sender' => $imageData['sender'],
                             'receiver' => $imageData['receiver'],
                             'amount' => $imageData['amount'],
                             'currency' => $imageData['currency'],
                             'interact_bank' => $imageData['interact_bank'] ?? null,
-                            'relatable_type' => 'App\Models\CashBook',
-                            'relatable_id' => $relatableId,
-                            'image_path' => $fileData['filePath'], // Store image path
+                            'relatable_type' => CashBook::class,
+                            'relatable_id' => $cashBook->id,
+                            'image_path' => $fileData['filePath'],
+                        ]);
+                    }
+                }
+
+                // Create cash book images if provided (one-to-many relationship)
+                if (!empty($validated['cash_book_images'])) {
+                    foreach ($validated['cash_book_images'] as $imageData) {
+                        $fileData = $this->uploads($imageData['image'], 'images/');
+
+                        CashBookImage::create([
+                            'image' => $fileData['fileName'],
+                            'cash_book_id' => $cashBook->id,
                         ]);
                     }
                 }
 
                 // Load relationships for response
-                $cashBook->load(['cashStructure', 'chartOfAccounts', 'cashImages']);
+                $cashBook->load(['cashStructure', 'chartOfAccounts', 'cashImages', 'cashBookImages']);
 
                 return $this->success(new CashBookResource($cashBook), 'Cash book entry created successfully');
             });
@@ -166,21 +176,23 @@ class CashBookController extends Controller
                 'accounts.*.allocated_amount' => 'required|numeric|min:0',
                 'accounts.*.note' => 'nullable|string',
                 'images' => 'nullable|array',
-                'images.*.id' => 'nullable|integer|exists:cash_images,id', // For updating existing images
-                'images.*.image' => 'nullable|file|image|max:2048', // File upload for new/replacement images
+                'images.*.id' => 'nullable|integer|exists:cash_images,id',
+                'images.*.image' => 'nullable',
                 'images.*.date' => 'nullable|date_format:Y-m-d H:i:s',
                 'images.*.sender' => 'required|string|max:255',
                 'images.*.receiver' => 'required|string|max:255',
                 'images.*.amount' => 'required|numeric|min:0',
                 'images.*.currency' => 'required|string|max:10',
                 'images.*.interact_bank' => 'nullable|string|max:255',
+                'cash_book_images' => 'nullable|array',
+                'cash_book_images.*.id' => 'nullable|integer|exists:cash_book_images,id',
+                'cash_book_images.*.image' => 'nullable',
             ]);
 
             return DB::transaction(function () use ($validated, $cashBook) {
-
                 // Update cash book basic info
                 $cashBook->update([
-                    'date' => $validated['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
+                    'date' => $validated['date'] ?? $cashBook->date,
                     'income_or_expense' => $validated['income_or_expense'],
                     'cash_structure_id' => $validated['cash_structure_id'],
                     'interact_bank' => $validated['interact_bank'] ?? null,
@@ -197,19 +209,19 @@ class CashBookController extends Controller
                 }
                 $cashBook->chartOfAccounts()->sync($accountsData);
 
-                // Handle images if provided
+                // Handle polymorphic cash images
                 if (!empty($validated['images'])) {
                     $existingImageIds = [];
 
                     foreach ($validated['images'] as $imageData) {
-                        // Case 1: Existing image with ID (Update existing)
                         if (isset($imageData['id']) && !empty($imageData['id'])) {
+                            // Update existing image
                             $existingImageIds[] = $imageData['id'];
-
                             $existingImage = CashImage::find($imageData['id']);
+
                             if ($existingImage) {
                                 $updateData = [
-                                    'date' => $imageData['date'],
+                                    'date' => $imageData['date'] ?? $existingImage->date,
                                     'sender' => $imageData['sender'],
                                     'receiver' => $imageData['receiver'],
                                     'amount' => $imageData['amount'],
@@ -217,61 +229,134 @@ class CashBookController extends Controller
                                     'interact_bank' => $imageData['interact_bank'] ?? null,
                                 ];
 
-                                // CRITICAL FIX: Only update image file if new one is provided
-                                if (isset($imageData['image']) && $imageData['image'] instanceof \Illuminate\Http\UploadedFile) {
+                                if (isset($imageData['image']) && $imageData['image']) {
+                                    // Delete old image file
+                                    if ($existingImage->image) {
+                                        Storage::delete('images/' . $existingImage->image);
+                                    }
+
                                     $fileData = $this->uploads($imageData['image'], 'images/');
                                     $updateData['image'] = $fileData['fileName'];
                                     $updateData['image_path'] = $fileData['filePath'];
                                 }
-                                // If no new image file, keep the existing image unchanged
 
                                 $existingImage->update($updateData);
                             }
-                        }
-                        // Case 2: New image without ID (Create new)
-                        else {
-                            // Only create if image file is provided
-                            if (isset($imageData['image']) && $imageData['image'] instanceof \Illuminate\Http\UploadedFile) {
+                        } else {
+                            // Create new image
+                            if (isset($imageData['image']) && $imageData['image']) {
                                 $fileData = $this->uploads($imageData['image'], 'images/');
 
                                 $newImage = CashImage::create([
                                     'image' => $fileData['fileName'],
-                                    'date' => $imageData['date'],
+                                    'date' => $imageData['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
                                     'sender' => $imageData['sender'],
                                     'receiver' => $imageData['receiver'],
                                     'amount' => $imageData['amount'],
                                     'currency' => $imageData['currency'],
                                     'interact_bank' => $imageData['interact_bank'] ?? null,
-                                    'relatable_type' => 'App\Models\CashBook',
+                                    'relatable_type' => CashBook::class,
                                     'relatable_id' => $cashBook->id,
                                     'image_path' => $fileData['filePath'],
                                 ]);
 
-                                $existingImageIds[] = $newImage->id; // Add new image ID to keep list
+                                $existingImageIds[] = $newImage->id;
                             }
                         }
                     }
 
-                    // Delete images that are no longer in the request
-                    CashImage::where('relatable_type', 'App\Models\CashBook')
+                    // Delete cash images that are no longer in the request
+                    $imagesToDelete = CashImage::where('relatable_type', CashBook::class)
                         ->where('relatable_id', $cashBook->id)
                         ->whereNotIn('id', $existingImageIds)
-                        ->delete();
+                        ->get();
+
+                    foreach ($imagesToDelete as $image) {
+                        if ($image->image) {
+                            Storage::delete('images/' . $image->image);
+                        }
+                        $image->delete();
+                    }
                 } else {
-                    // If no images in request, delete all existing images
-                    CashImage::where('relatable_type', 'App\Models\CashBook')
+                    // Delete all existing cash images
+                    $cashImages = CashImage::where('relatable_type', CashBook::class)
                         ->where('relatable_id', $cashBook->id)
-                        ->delete();
+                        ->get();
+
+                    foreach ($cashImages as $image) {
+                        if ($image->image) {
+                            Storage::delete('images/' . $image->image);
+                        }
+                        $image->delete();
+                    }
+                }
+
+                // Handle one-to-many cash book images
+                if (!empty($validated['cash_book_images'])) {
+                    $existingCashBookImageIds = [];
+
+                    foreach ($validated['cash_book_images'] as $imageData) {
+                        if (isset($imageData['id']) && !empty($imageData['id'])) {
+                            // Update existing cash book image
+                            $existingCashBookImageIds[] = $imageData['id'];
+                            $existingCashBookImage = CashBookImage::find($imageData['id']);
+
+                            if ($existingCashBookImage && isset($imageData['image']) && $imageData['image']) {
+                                // Delete old image file
+                                if ($existingCashBookImage->image) {
+                                    Storage::delete('images/' . $existingCashBookImage->image);
+                                }
+
+                                $fileData = $this->uploads($imageData['image'], 'images/');
+                                $existingCashBookImage->update([
+                                    'image' => $fileData['fileName'],
+                                ]);
+                            }
+                        } else {
+                            // Create new cash book image
+                            if (isset($imageData['image']) && $imageData['image']) {
+                                $fileData = $this->uploads($imageData['image'], 'images/');
+
+                                $newCashBookImage = CashBookImage::create([
+                                    'image' => $fileData['fileName'],
+                                    'cash_book_id' => $cashBook->id,
+                                ]);
+
+                                $existingCashBookImageIds[] = $newCashBookImage->id;
+                            }
+                        }
+                    }
+
+                    // Delete cash book images that are no longer in the request
+                    $cashBookImagesToDelete = CashBookImage::where('cash_book_id', $cashBook->id)
+                        ->whereNotIn('id', $existingCashBookImageIds)
+                        ->get();
+
+                    foreach ($cashBookImagesToDelete as $image) {
+                        if ($image->image) {
+                            Storage::delete('images/' . $image->image);
+                        }
+                        $image->delete();
+                    }
+                } else {
+                    // Delete all existing cash book images
+                    $cashBookImages = CashBookImage::where('cash_book_id', $cashBook->id)->get();
+
+                    foreach ($cashBookImages as $image) {
+                        if ($image->image) {
+                            Storage::delete('images/' . $image->image);
+                        }
+                        $image->delete();
+                    }
                 }
 
                 // Load relationships for response
                 $cashBook->refresh();
-                $cashBook->load(['cashStructure', 'chartOfAccounts', 'cashImages']);
+                $cashBook->load(['cashStructure', 'chartOfAccounts', 'cashImages', 'cashBookImages']);
 
                 return $this->success(new CashBookResource($cashBook), 'Cash book entry updated successfully');
             });
         } catch (\Exception $e) {
-            // \Log::error('Cash book update error: ' . $e->getMessage());
             return $this->error(null, 'Failed to update cash book entry: ' . $e->getMessage());
         }
     }
@@ -282,16 +367,23 @@ class CashBookController extends Controller
             $cashBook = CashBook::findOrFail($id);
 
             return DB::transaction(function () use ($cashBook) {
-                // Delete associated images and their files
+                // Delete polymorphic cash images and their files
                 foreach ($cashBook->cashImages as $image) {
                     if ($image->image) {
                         Storage::delete('images/' . $image->image);
                     }
-
                     $image->delete();
                 }
 
-                // Delete the cash book (this will cascade delete images and pivot records)
+                // Delete one-to-many cash book images and their files
+                foreach ($cashBook->cashBookImages as $image) {
+                    if ($image->image) {
+                        Storage::delete('images/' . $image->image);
+                    }
+                    $image->delete();
+                }
+
+                // Delete the cash book (this will cascade delete pivot records)
                 $cashBook->delete();
 
                 return $this->success(null, 'Cash book entry deleted successfully');

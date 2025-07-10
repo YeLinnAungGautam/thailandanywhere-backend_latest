@@ -31,6 +31,12 @@ class TaxReceiptController extends Controller
             $query->where('product_id', $request->product_id);
         }
 
+        if($request->group_id){
+            $query->whereHas('groups', function($query) use ($request){
+                $query->where('booking_item_groups.id', $request->group_id);
+            });
+        }
+
         if ($request->date_from && $request->date_to) {
             $query->whereBetween('receipt_date', [$request->date_from, $request->date_to]);
         }
@@ -65,6 +71,18 @@ class TaxReceiptController extends Controller
             }
 
             $taxReceipt->save();
+
+            if ($request->has('group_ids')) {
+                $groupIds = $request->group_ids ?? [];
+
+                if(!empty($groupIds)) {
+                    $validGroupIds = BookingItemGroup::whereIn('id', $groupIds)->pluck('id')->toArray();
+                    if(count($validGroupIds) !== count($groupIds)) {
+                        throw new \Exception('Invalid group ids provided');
+                    }
+                }
+                $taxReceipt->groups()->sync($request->group_ids);
+            }
 
             DB::commit();
 
@@ -109,6 +127,20 @@ class TaxReceiptController extends Controller
             }
 
             $taxReceipt->update($data);
+
+            if ($request->has('group_ids')) {
+                $groupIds = $request->group_ids ?? [];
+
+                // Validate group_ids
+                if (!empty($groupIds)) {
+                    $validGroups = BookingItemGroup::whereIn('id', $groupIds)->pluck('id')->toArray();
+                    if (count($validGroups) !== count($groupIds)) {
+                        throw new \Exception('Some booking item groups do not exist');
+                    }
+                }
+
+                $taxReceipt->groups()->sync($groupIds);
+            }
 
             DB::commit();
 
