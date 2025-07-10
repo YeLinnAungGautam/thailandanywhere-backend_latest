@@ -5,13 +5,13 @@
 namespace App\Jobs;
 
 use App\Models\Booking;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class UpdateBalanceDueDateJob implements ShouldQueue
 {
@@ -27,12 +27,13 @@ class UpdateBalanceDueDateJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            $booking = Booking::whereHas('items', fn($q) => $q->whereNotNull('service_date'))
-                ->with(['items' => fn($q) => $q->whereNotNull('service_date')->orderBy('service_date')])
+            $booking = Booking::whereHas('items', fn ($q) => $q->whereNotNull('service_date'))
+                ->with(['items' => fn ($q) => $q->whereNotNull('service_date')->orderBy('service_date')])
                 ->find($this->bookingId);
 
             if (!$booking) {
-                Log::warning("Booking not found", ['booking_id' => $this->bookingId]);
+                // Log::warning("Booking not found", ['booking_id' => $this->bookingId]);
+
                 return;
             }
 
@@ -41,7 +42,8 @@ class UpdateBalanceDueDateJob implements ShouldQueue
             $earliestDate = $earliestDate ? Carbon::parse($earliestDate) : null;
 
             if (!$earliestDate) {
-                Log::info("No valid service dates found", ['booking_id' => $this->bookingId]);
+                // Log::info("No valid service dates found", ['booking_id' => $this->bookingId]);
+
                 return;
             }
 
@@ -52,11 +54,11 @@ class UpdateBalanceDueDateJob implements ShouldQueue
             if ($currentDue !== $newDue) {
                 $booking->update(['balance_due_date' => $earliestDate->format('Y-m-d')]);
 
-                Log::info("Updated balance_due_date", [
-                    'booking_id' => $this->bookingId,
-                    'old_date' => $currentDue,
-                    'new_date' => $newDue
-                ]);
+                // Log::info("Updated balance_due_date", [
+                //     'booking_id' => $this->bookingId,
+                //     'old_date' => $currentDue,
+                //     'new_date' => $newDue
+                // ]);
             }
 
         } catch (\Exception $e) {
@@ -64,6 +66,7 @@ class UpdateBalanceDueDateJob implements ShouldQueue
                 'booking_id' => $this->bookingId,
                 'error' => $e->getMessage()
             ]);
+
             throw $e;
         }
     }
