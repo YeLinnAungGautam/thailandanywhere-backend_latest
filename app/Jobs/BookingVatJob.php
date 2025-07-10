@@ -100,7 +100,7 @@ class BookingVatJob implements ShouldQueue
                 'commission' => round($commission, 2),
             ]);
 
-            Log::debug("Updated item ID {$item->id}: VAT={$vatAmount}, Commission={$commission}");
+            // Log::debug("Updated item ID {$item->id}: VAT={$vatAmount}, Commission={$commission}");
 
         } catch (\Exception $e) {
             Log::error("Error calculating VAT for item ID {$item->id}: " . $e->getMessage());
@@ -112,14 +112,14 @@ class BookingVatJob implements ShouldQueue
     private function validateBookingData(Booking $booking): bool
     {
         if (is_null($booking->grand_total) || $booking->grand_total === '') {
-            Log::warning("Booking ID {$booking->id}: Missing grand_total");
+            // Log::warning("Booking ID {$booking->id}: Missing grand_total");
 
             return false;
         }
 
         $grandTotal = $this->sanitizeAmount($booking->grand_total);
         if ($grandTotal <= 0) {
-            Log::warning("Booking ID {$booking->id}: Invalid grand_total ({$grandTotal})");
+            // Log::warning("Booking ID {$booking->id}: Invalid grand_total ({$grandTotal})");
 
             return false;
         }
@@ -133,7 +133,7 @@ class BookingVatJob implements ShouldQueue
         $amount = $this->sanitizeAmount($item->amount ?? 0);
 
         if ($costPrice < 0 || $amount < 0) {
-            Log::warning("Item ID {$item->id}: Negative values");
+            // Log::warning("Item ID {$item->id}: Negative values");
 
             return false;
         }
