@@ -36,4 +36,10 @@ class BookingItemGroup extends Model
     {
         return $this->morphMany(CashImage::class, 'relatable');
     }
+
+    public function taxReceipts()
+    {
+        return $this->belongsToMany(TaxReceipt::class, 'tax_receipt_groups', 'booking_item_group_id', 'tax_receipt_id')
+                    ->withTimestamps()->withPivot('id');
+    }
 }
