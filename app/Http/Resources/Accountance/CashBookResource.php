@@ -29,7 +29,7 @@ class CashBookResource extends JsonResource
             'description' => $this->description,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-            'cash_book_images' => $this->cashBookImages,
+            'cash_book_images' => CashBookImageResource::collection($this->cashBookImages),
         ];
     }
 }

@@ -425,6 +425,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Cash book
     Route::apiResource('cash-books', CashBookController::class);
 
+    Route::delete('cash-books/{id}/delete-image', [CashBookController::class, 'destoryCashBookImage']);
+
     # Cash Structure
     Route::apiResource('cash-structures', CashStructureController::class);
 
