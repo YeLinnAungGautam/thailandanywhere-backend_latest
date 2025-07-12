@@ -75,6 +75,7 @@ class CashBookController extends Controller
             'cash_structure_id' => 'required|exists:cash_structures,id',
             'interact_bank' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'amount' => 'required|numeric|min:0',
             'accounts' => 'required|array|min:1',
             'accounts.*.id' => 'required|exists:chart_of_accounts,id',
             'accounts.*.allocated_amount' => 'required|numeric|min:0',
@@ -106,6 +107,7 @@ class CashBookController extends Controller
                     'cash_structure_id' => $validated['cash_structure_id'],
                     'interact_bank' => $validated['interact_bank'] ?? null,
                     'description' => $validated['description'] ?? null,
+                    'amount' => $validated['amount'],
                 ]);
 
                 // Attach accounts with allocations
@@ -171,6 +173,7 @@ class CashBookController extends Controller
                 'cash_structure_id' => 'required|exists:cash_structures,id',
                 'interact_bank' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
+                'amount' => 'required|numeric|min:0',
                 'accounts' => 'required|array|min:1',
                 'accounts.*.id' => 'required|exists:chart_of_accounts,id',
                 'accounts.*.allocated_amount' => 'required|numeric|min:0',
@@ -197,6 +200,7 @@ class CashBookController extends Controller
                     'cash_structure_id' => $validated['cash_structure_id'],
                     'interact_bank' => $validated['interact_bank'] ?? null,
                     'description' => $validated['description'] ?? null,
+                    'amount' => $validated['amount'],
                 ]);
 
                 // Sync accounts
