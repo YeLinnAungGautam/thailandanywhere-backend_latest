@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Accountance;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageResource;
 use App\Models\CashImage;
 use App\Services\CashImageService;
@@ -66,6 +67,15 @@ class CashImageController extends Controller
         ]);
 
         return $this->success(new CashImageResource($create), 'Successfully created');
+    }
+
+    public function show(string $id)
+    {
+        $find = CashImage::find($id);
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+        return $this->success(new CashImageDetailResource($find), 'Successfully retrieved');
     }
 
     public function update(Request $request, string $id)
