@@ -19,120 +19,69 @@ class CashImageListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $relatable = null;
-        $groupedItems = [];
-
-        // Check if relatable relationship exists before processing
-        if ($this->relatable) {
-            switch ($this->relatable_type) {
-                case 'App\Models\Booking':
-                    $relatable = new BookingResource($this->relatable);
-                    // Get grouped items for booking
-                    $groupedItems = $this->getGroupedBookingItems();
-                    break;
-                case 'App\Models\BookingItemGroup':
-                    $relatable = new BookingItemGroupResource($this->relatable);
-                    break;
-                case 'App\Models\CashBook':
-                    $relatable = new CashBookResource($this->relatable);
-                    break;
-                default:
-                    // Handle unknown relatable types
-                    $relatable = null;
-            }
-        }
-
+        // Option 1: Minimal data for list view (FASTEST)
         return [
             'id' => $this->id,
-            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
-            'date' => $this->date ? $this->date->format('d-m-Y H:i:s') : null,
-            'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
-            'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
+            'image' => $this->whenLoaded('image', function() {
+                return $this->image ? Storage::url('images/' . $this->image) : null;
+            }),
+            'date' => $this->date ? $this->formatDate($this->date) : null,
+            'created_at' => $this->created_at ? $this->formatDate($this->created_at) : null,
+            'updated_at' => $this->updated_at ? $this->formatDate($this->updated_at) : null,
             'sender' => $this->sender,
             'receiver' => $this->receiver,
             'amount' => $this->amount,
             'currency' => $this->currency,
             'interact_bank' => $this->interact_bank,
-            'relatable_type' => $this->relatable_type,
-            'relatable_id' => $this->relatable_id,
-            'relatable' => $relatable,
-            'grouped_items' => $groupedItems,
+
+            // Only include relatable data if explicitly requested
+            'relatable_type' => $this->when($request->input('include_relatable'), $this->relatable_type),
+            'relatable_id' => $this->when($request->input('include_relatable'), $this->relatable_id),
+
+            // Remove these expensive operations from list view
+            // 'relatable' => $relatable,
+            // 'grouped_items' => $groupedItems,
+            'product_type' => $this->getProductType(),
         ];
     }
 
-    /**
-     * Get booking items grouped by group_id
-     *
-     * @return array
-     */
-    protected function getGroupedBookingItems()
+    public function getProductType()
     {
-        try {
-            if (!$this->relatable || $this->relatable_type !== 'App\Models\Booking') {
-                return [];
+        // Only get product_type if relatable_type is BookingItemGroup
+        if ($this->relatable_type === 'App\Models\BookingItemGroup') {
+            // Check if relatable relationship is loaded
+            if ($this->relationLoaded('relatable') && $this->relatable) {
+                return $this->relatable->product_type ?? null;
             }
 
-            // Get all items from the booking with their groups and customer documents
-            $items = $this->relatable->items()->with(['group', 'group.customerDocuments', 'group.cashImages', 'product', 'booking'])->get();
+            // If not loaded, we can load just this field efficiently
+            if ($this->relatable_id) {
+                try {
+                    $group = \App\Models\BookingItemGroup::select('product_type')
+                        ->where('id', $this->relatable_id)
+                        ->first();
 
-            // Group items by group_id
-            $groupedItems = $items->groupBy('group_id');
-
-            $result = [];
-
-            foreach ($groupedItems as $groupId => $itemsInGroup) {
-                // Get the group information (assuming first item has the group relationship loaded)
-                $group = $itemsInGroup->first()->group ?? null;
-
-                $result[] = [
-                    'group_id' => $groupId,
-                    'group_info' => $group ? new BookingItemGroupResource($group) : null,
-                    'related_slip' => $group && $group->cashImages ? $group->cashImages : [],
-                    'related_tax' => $group && $group->customerDocuments ?
-                        CustomerDocumentResource::collection(
-                            $group->customerDocuments->filter(function ($document) {
-                                return $document->type == 'booking_confirm_letter';
-                            })
-                        ) : [],
-                    'items_count' => $itemsInGroup->count(),
-                    'items' => $itemsInGroup->map(function ($item) {
-                        $variation_name = null;
-
-                        if ($item->product_type == 'App\Models\Hotel') {
-                            $variation_name = $item->room->name ?? null;
-                        } elseif($item->product_type == 'App\Models\EntranceTicket') {
-                            $variation_name = $item->variation->name ?? null;
-                        } elseif($item->product_type == 'App\Models\PrivateVanTour') {
-                            $variation_name = $item->car->name ?? null;
-                        }
-
-                        return [
-                            'id' => $item->id,
-                            'booking_id' => $item->booking->id ?? null,
-                            'crm_id' => $item->crm_id,
-                            'product_name' => $item->product->name ?? '-',
-                            'product_type' => $item->product_type,
-                            'variation_name' => $variation_name,
-                            'service_date' => $item->service_date ? $item->service_date->format('Y-m-d') : null,
-                            'sale_date' => $item->booking->booking_date ?? null,
-                            'balance_due_date' => $item->booking->balance_due_date ? $item->booking->balance_due_date->format('Y-m-d') : null,
-                            'amount' => $item->amount,
-                            'payment_status' => $item->booking->payment_status ?? null,
-                            'expense_status' => $item->payment_status,
-                            'payment_verify_status' => $item->booking->verify_status ?? null,
-                            'income' => $item->amount - $item->total_cost_price,
-                            'expense' => $item->total_cost_price,
-                        ];
-                    })->toArray(),
-                ];
+                    return $group ? $group->product_type : null;
+                } catch (\Exception $e) {
+                    Log::error("Error fetching product_type for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
+                    return null;
+                }
             }
-
-            return $result;
-
-        } catch (\Exception $e) {
-            Log::error("Error getting grouped booking items: " . $e->getMessage());
-            return [];
         }
+
+        return null;
+    }
+
+    /**
+     * Format date consistently
+     */
+    protected function formatDate($date)
+    {
+        if (is_string($date)) {
+            $date = \Carbon\Carbon::parse($date);
+        }
+        return $date->format('d-m-Y H:i:s');
+    }
 }
 
-}
+

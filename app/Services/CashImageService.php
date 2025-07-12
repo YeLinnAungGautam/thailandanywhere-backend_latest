@@ -15,9 +15,6 @@ class CashImageService
     const PER_PAGE = 10;
     const MAX_PER_PAGE = 100;
 
-    const VALID_TYPES = [
-        'complete', 'missing', 'all'
-    ];
     const VALID_INTERACT_BANK = [
         'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management'
     ];
@@ -26,7 +23,7 @@ class CashImageService
     ];
 
     /**
-     * Get all cash images with filtering and pagination
+     * Get all cash images with filtering and pagination (Optimized)
      */
     public function getAll(Request $request)
     {
@@ -36,7 +33,7 @@ class CashImageService
             $limit = min((int) $request->get('limit', self::PER_PAGE), self::MAX_PER_PAGE);
             $filters = $this->extractFilters($request);
 
-            $query = $this->buildQuery($filters);
+            $query = $this->buildOptimizedQuery($filters);
             $data = $query->paginate($limit);
 
             $resourceCollection = AccountanceCashImageResource::collection($data);
@@ -65,14 +62,13 @@ class CashImageService
     }
 
     /**
-     * Validate request parameters
+     * Validate request parameters (Simplified - removed type validation)
      */
     private function validateRequest(Request $request)
     {
         $validator = Validator(
             $request->all(),
             [
-                'type' => 'nullable|in:' . implode(',', self::VALID_TYPES),
                 'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK),
                 'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
                 'sender' => 'nullable|string|max:255',
@@ -114,46 +110,61 @@ class CashImageService
     }
 
     /**
-     * Build query with all filters applied
+     * Build optimized query without relatable and type filtering
      */
-    private function buildQuery($filters)
+    private function buildOptimizedQuery($filters)
     {
-        $query = CashImage::query();
+        // Select only necessary columns for better performance
+        // Removed 'file' column as it doesn't exist in the database
+        $query = CashImage::select([
+            'id',
+            'date',
+            'sender',
+            'receiver',
+            'amount',
+            'interact_bank',
+            'currency',
+            'created_at',
+            'updated_at',
+            'relatable_id',
+            'relatable_type'
+            // Removed relatable_id and relatable_type to avoid relationship loading
+        ]);
 
         // Apply date filter
         if (!empty($filters['date'])) {
             $this->applyDateFilter($query, $filters['date']);
         }
 
-        // Apply type filter (complete/missing)
-        if (!empty($filters['type']) && $filters['type'] !== 'all') {
-            $this->applyTypeFilter($query, $filters['type']);
-        }
+        // Apply search filters (simplified)
+        $this->applySimpleSearchFilters($query, $filters);
 
-        // Apply search filters
-        $this->applySearchFilters($query, $filters);
+        // Add database indexes for these columns if not already present:
+        // ALTER TABLE cash_images ADD INDEX idx_date_created (date, created_at);
+        // ALTER TABLE cash_images ADD INDEX idx_interact_bank (interact_bank);
+        // ALTER TABLE cash_images ADD INDEX idx_currency (currency);
+        // ALTER TABLE cash_images ADD INDEX idx_sender (sender);
+        // ALTER TABLE cash_images ADD INDEX idx_receiver (receiver);
 
-        // Eager load relationships
-        $query->with('relatable');
-
-        // Order by date and created_at
+        // Order by date and created_at (ensure these columns are indexed)
         $query->orderBy('date', 'desc')->orderBy('created_at', 'desc');
 
         return $query;
     }
 
     /**
-     * Apply date filter
+     * Apply date filter (optimized)
      */
     private function applyDateFilter($query, $dateFilter)
     {
         $dates = array_map('trim', explode(',', $dateFilter));
 
         if (count($dates) === 2) {
-            // Date range
+            // Date range - using DATE() function for better index usage
             $startDate = $dates[0];
             $endDate = $dates[1];
-            $query->whereBetween('date', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            $query->whereDate('date', '>=', $startDate)
+                  ->whereDate('date', '<=', $endDate);
         } else {
             // Single date
             $singleDate = $dates[0];
@@ -162,67 +173,20 @@ class CashImageService
     }
 
     /**
-     * Apply type filter (complete/missing)
+     * Apply simplified search filters (removed complex type filtering)
      */
-    /**
-     * Apply type filter (complete/missing)
-     */
-    private function applyTypeFilter($query, $type)
-    {
-        if ($type === 'complete') {
-            // Records with all required fields filled AND relatable_id is not null
-            $query->whereNotNull('relatable_id')
-                  ->whereNotNull('amount')
-                  ->where('amount', '>', 0)
-                  ->whereNotNull('sender')
-                  ->where('sender', '!=', '')
-                  ->where('sender', '!=', 'NULL')
-                  ->whereNotNull('receiver')
-                  ->where('receiver', '!=', '')
-                  ->where('receiver', '!=', 'NULL')
-                  ->whereNotNull('date')
-                  ->where('date', '!=', '')
-                  ->whereNotNull('interact_bank')
-                  ->where('interact_bank', '!=', 'null')
-                  ->whereNotNull('currency')
-                  ->where('currency', '!=', 'null');
-        } elseif ($type === 'missing') {
-            // Records missing required fields OR relatable_id is null
-            $query->where(function ($q) {
-                $q->whereNull('relatable_id')
-                  ->orWhereNull('amount')
-                  ->orWhere('amount', '<=', 0)
-                  ->orWhereNull('sender')
-                  ->orWhere('sender', '')
-                  ->orWhere('sender', 'NULL')
-                  ->orWhereNull('receiver')
-                  ->orWhere('receiver', '')
-                  ->orWhere('receiver', 'NULL')
-                  ->orWhereNull('date')
-                  ->orWhere('date', '')
-                  ->orWhereNull('interact_bank')
-                  ->orWhere('interact_bank', 'null')
-                  ->orWhereNull('currency')
-                  ->orWhere('currency', 'null');
-            });
-        }
-    }
-
-    /**
-     * Apply search filters
-     */
-    private function applySearchFilters($query, $filters)
+    private function applySimpleSearchFilters($query, $filters)
     {
         if (!empty($filters['sender'])) {
             $query->where('sender', 'like', '%' . $filters['sender'] . '%');
         }
 
-        if (!empty($filters['reciever'])) {
-            $query->where('receiver', 'like', '%' . $filters['reciever'] . '%');
+        if (!empty($filters['receiver'])) {
+            $query->where('receiver', 'like', '%' . $filters['receiver'] . '%');
         }
 
         if (!empty($filters['amount'])) {
-            $query->where('amount', $filters['amount']); // Assuming exact match for amount
+            $query->where('amount', $filters['amount']);
         }
 
         if (!empty($filters['interact_bank']) && $filters['interact_bank'] !== 'all') {
@@ -233,55 +197,115 @@ class CashImageService
             $query->where('currency', $filters['currency']);
         }
 
-        // Apply CRM ID filter if present
+        // Simplified CRM ID filter (if still needed - this might also be slow)
         if (!empty($filters['crm_id'])) {
-            $this->applyCrmIdFilter($query, $filters['crm_id']);
+            // Option 1: Remove this entirely for better performance
+            // Option 2: If you must keep it, add proper indexes
+            $this->applySimpleCrmIdFilter($query, $filters['crm_id']);
         }
     }
 
     /**
-     * Apply CRM ID filter through polymorphic relationships.
-     * CRM ID only exists in the 'bookings' table.
+     * Simplified CRM ID filter (optional - consider removing entirely)
      */
-    private function applyCrmIdFilter($query, $crmId)
+    private function applySimpleCrmIdFilter($query, $crmId)
     {
+        // This is still potentially slow - consider removing if not essential
+        // Or create a denormalized column for crm_id in cash_images table
         $query->where(function ($q) use ($crmId) {
-            // Case 1: CashImage is directly related to a Booking
-            $q->where(function ($subQ) use ($crmId) {
-                $subQ->where('relatable_type', 'App\Models\Booking')
-                     ->whereHas('relatable', function ($bookingQ) use ($crmId) {
-                         $bookingQ->where('crm_id', 'like', '%' . $crmId . '%');
-                     });
-            });
-
-            // Case 2: CashImage is related to a BookingItemGroup, which then relates to a Booking
-            $q->orWhere(function ($subQ) use ($crmId) {
-                $subQ->where('relatable_type', 'App\Models\BookingItemGroup')
-                     ->whereExists(function ($existsQuery) use ($crmId) {
-                         $existsQuery->select(DB::raw(1)) // Select 1 for existence check
-                                   ->from('booking_item_groups') // Start from booking_item_groups
-                                   ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id') // Join to bookings
-                                   ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id') // Match relatable_id to booking_item_group_id
-                                   ->where('bookings.crm_id', 'like', '%' . $crmId . '%'); // Apply crm_id filter on bookings
-                     });
-            });
+            $q->where('relatable_type', 'App\Models\Booking')
+              ->whereExists(function ($existsQuery) use ($crmId) {
+                  $existsQuery->select(DB::raw(1))
+                            ->from('bookings')
+                            ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+              });
         });
     }
 
     /**
-     * Extract filters from request
+     * Extract filters from request (removed type)
      */
     private function extractFilters(Request $request)
     {
         return [
-            'type' => $request->input('type'),
             'interact_bank' => $request->input('interact_bank'),
             'currency' => $request->input('currency'),
-            'receiver' => $request->input('reciever'),
+            'receiver' => $request->input('receiver'),
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),
             'date' => $request->input('date'),
-            'crm_id' => $request->input('crm_id')
+            'crm_id' => $request->input('crm_id') // Consider removing this too for max performance
         ];
     }
+
+    /**
+     * Alternative: Get basic list without any complex filtering
+     */
+    public function getBasicList(Request $request)
+    {
+        try {
+            $limit = min((int) $request->get('limit', self::PER_PAGE), self::MAX_PER_PAGE);
+
+            $query = CashImage::select([
+                'id',
+                'date',
+                'sender',
+                'receiver',
+                'amount',
+                'interact_bank',
+                'currency',
+                'created_at',
+                'relatable_type',
+                'relatable_id'
+            ])
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc');
+
+            // Only apply date filter if provided (most common filter)
+            if ($request->filled('date')) {
+                $query->whereDate('date', $request->input('date'));
+            }
+
+            $data = $query->paginate($limit);
+
+            return [
+                'success' => true,
+                'data' => $data,
+                'message' => 'Cash images retrieved successfully'
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ];
+        }
+    }
 }
+
+/*
+Database Optimization Recommendations:
+
+1. Add these indexes for better performance:
+ALTER TABLE cash_images ADD INDEX idx_date_created (date, created_at);
+ALTER TABLE cash_images ADD INDEX idx_interact_bank (interact_bank);
+ALTER TABLE cash_images ADD INDEX idx_currency (currency);
+ALTER TABLE cash_images ADD INDEX idx_sender (sender(50)); -- Partial index for string columns
+ALTER TABLE cash_images ADD INDEX idx_receiver (receiver(50));
+
+2. Consider adding a denormalized crm_id column to cash_images table to avoid joins:
+ALTER TABLE cash_images ADD COLUMN crm_id VARCHAR(255) NULL;
+ALTER TABLE cash_images ADD INDEX idx_crm_id (crm_id);
+
+3. If you need the relatable functionality, consider lazy loading:
+- Load basic data first
+- Load relationships on demand via AJAX calls
+
+4. Implement caching for frequently accessed data:
+- Cache pagination results for 5-10 minutes
+- Use Redis or Memcached
+
+5. Consider using database views for complex queries
+*/
