@@ -27,6 +27,7 @@ class CashBookResource extends JsonResource
             'chart_of_accounts' => $this->chartOfAccounts,
             'interact_bank' => $this->interact_bank,
             'description' => $this->description,
+            'amount' => $this->amount,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'cash_book_images' => CashBookImageResource::collection($this->cashBookImages),

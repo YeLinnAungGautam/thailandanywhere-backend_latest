@@ -15,7 +15,8 @@ class CashBook extends Model
         'income_or_expense',
         'cash_structure_id',
         'interact_bank',
-        'description'
+        'description',
+        'amount',
     ];
 
     protected $casts = [
