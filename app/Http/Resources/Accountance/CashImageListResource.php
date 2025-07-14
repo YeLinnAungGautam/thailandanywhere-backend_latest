@@ -37,6 +37,7 @@ class CashImageListResource extends JsonResource
             // Only include relatable data if explicitly requested
             'relatable_type' => $this->when($request->input('include_relatable'), $this->relatable_type),
             'relatable_id' => $this->when($request->input('include_relatable'), $this->relatable_id),
+            'crm_id' => $this->when($request->input('include_relatable'), $this->relatable->crm_id ?? null),
 
             // Remove these expensive operations from list view
             // 'relatable' => $relatable,

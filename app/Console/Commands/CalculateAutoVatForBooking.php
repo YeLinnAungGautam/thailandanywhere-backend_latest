@@ -153,7 +153,8 @@ class CalculateAutoVatForBooking extends Command
             }
 
             // Calculate booking totals
-            $vatAmount = $grandTotal * 0.07; // 7% VAT
+            // $vatAmount = $grandTotal * 0.07; // 7% VAT
+            $vatAmount = $grandTotal - ($grandTotal / 1.07);
             $profit = $grandTotal - $totalItemCost;
             $commission = $profit > 0 ? $profit / 2 : 0;
 
@@ -189,7 +190,8 @@ class CalculateAutoVatForBooking extends Command
             $costPrice = $this->sanitizeAmount($item->total_cost_price ?? 0);
             $amount = $this->sanitizeAmount($item->amount ?? 0);
 
-            $vatAmount = $costPrice * 0.07; // 7% VAT on cost price
+            // $vatAmount = $costPrice * 0.07; // 7% VAT on cost price
+            $vatAmount = $costPrice - ($costPrice / 1.07);
             $profit = $amount - $costPrice;
             $commission = $profit > 0 ? $profit / 2 : 0;
 
@@ -336,7 +338,8 @@ class TestVatCalculationResults extends Command
             'ID', 'Grand Total', 'Calculated VAT', 'Expected VAT', 'Commission', 'Items Count', 'Status'
         ], $bookings->map(function ($booking) {
             $grandTotal = $this->sanitizeAmount($booking->grand_total);
-            $expectedVat = round($grandTotal * 0.07, 2);
+            // $expectedVat = round($grandTotal * 0.07, 2);
+            $expectedVat = $grandTotal - ($grandTotal / 1.07);
             $actualVat = (float) $booking->output_vat;
 
             $status = abs($expectedVat - $actualVat) < 0.01 ? '✅ Correct' : '❌ Wrong';

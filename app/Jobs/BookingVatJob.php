@@ -68,7 +68,8 @@ class BookingVatJob implements ShouldQueue
         }
 
         // Calculate booking totals
-        $vatAmount = $grandTotal * 0.07; // 7% VAT
+        // $vatAmount = $grandTotal * 0.07; // 7% VAT
+        $vatAmount = $grandTotal - ($grandTotal / 1.07);
         $profit = $grandTotal - $totalItemCost;
         $commission = $profit > 0 ? $profit / 2 : 0;
 
@@ -91,7 +92,8 @@ class BookingVatJob implements ShouldQueue
             $costPrice = $this->sanitizeAmount($item->total_cost_price ?? 0);
             $amount = $this->sanitizeAmount($item->amount ?? 0);
 
-            $vatAmount = $costPrice * 0.07; // 7% VAT on cost price
+            // $vatAmount = $costPrice * 0.07; // 7% VAT on cost price
+            $vatAmount = $costPrice - ($costPrice / 1.07);
             $profit = $amount - $costPrice;
             $commission = $profit > 0 ? $profit / 2 : 0;
 
