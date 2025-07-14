@@ -4,6 +4,7 @@ use App\Http\Controllers\Accountance\AccountanceGenerateController;
 use App\Http\Controllers\Accountance\CashBookController;
 use App\Http\Controllers\Accountance\CashImageController;
 use App\Http\Controllers\Accountance\CashStructureController;
+use App\Http\Controllers\Accountance\VatCalculationController;
 use App\Http\Controllers\Admin\AccountClassController;
 use App\Http\Controllers\Admin\AccountHeadController;
 use App\Http\Controllers\Admin\AdminController;
@@ -432,6 +433,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Cash Image
     Route::apiResource('cash-images', CashImageController::class);
+
+    # Summary Report Vat
+    Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
