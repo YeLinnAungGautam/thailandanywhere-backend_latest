@@ -39,6 +39,11 @@ class CashImageListResource extends JsonResource
             'relatable_id' => $this->when($request->input('include_relatable'), $this->relatable_id),
             'crm_id' => $this->when($request->input('include_relatable'), $this->relatable->crm_id ?? null),
 
+            // Only include grouped_items data if explicitly requested
+            'vat' => $this->when($request->input('include_relatable'), $this->relatable->output_vat ?? null),
+            'net_vat' => $this->when($request->input('include_relatable'), $this->relatable->commission - ($this->relatable->commission / 1.07) ?? null),
+            'commission' => $this->when($request->input('include_relatable'), $this->relatable->commission ?? null),
+
             // Remove these expensive operations from list view
             // 'relatable' => $relatable,
             // 'grouped_items' => $groupedItems,
