@@ -42,11 +42,104 @@ class CashImageListResource extends JsonResource
             'net_vat' => $this->when($request->input('include_relatable'), $this->calculateNetVat()),
             'commission' => $this->when($request->input('include_relatable'), $this->getCommission()),
 
+            // New fields for BookingItemGroup
+            'has_invoice' => $this->when(
+                $request->input('include_relatable') && $this->relatable_type === 'App\Models\BookingItemGroup',
+                $this->hasInvoice()
+            ),
+            'tax_receipts' => $this->when(
+                $request->input('include_relatable') && $this->relatable_type === 'App\Models\BookingItemGroup',
+                $this->getTaxReceipts()
+            ),
+
             // Remove these expensive operations from list view
             // 'relatable' => $relatable,
             // 'grouped_items' => $groupedItems,
-            'product_type' => $this->getProductType(),
+            // 'product_type' => $this->getProductType(),
         ];
+    }
+
+    /**
+     * Check if BookingItemGroup has invoice (customer_documents with type 'booking_confirm_letter')
+     */
+    public function hasInvoice()
+    {
+        if ($this->relatable_type !== 'App\Models\BookingItemGroup' || !$this->relatable_id) {
+            return false;
+        }
+
+        try {
+            // Check if relatable and customer_documents are loaded
+            if ($this->relationLoaded('relatable') &&
+                $this->relatable &&
+                $this->relatable->relationLoaded('customer_documents')) {
+
+                return $this->relatable->customer_documents
+                    ->where('type', 'booking_confirm_letter')
+                    ->isNotEmpty();
+            }
+
+            // If not loaded, query database directly
+            $hasInvoice = \App\Models\CustomerDocument::where('booking_item_group_id', $this->relatable_id)
+                ->where('type', 'booking_confirm_letter')
+                ->exists();
+
+            return $hasInvoice;
+        } catch (\Exception $e) {
+            Log::error("Error checking invoice for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get tax receipts for BookingItemGroup
+     */
+    public function getTaxReceipts()
+    {
+        if ($this->relatable_type !== 'App\Models\BookingItemGroup' || !$this->relatable_id) {
+            return [];
+        }
+
+        try {
+            // Check if relatable and taxReceipts are loaded
+            if ($this->relationLoaded('relatable') &&
+                $this->relatable &&
+                $this->relatable->relationLoaded('taxReceipts')) {
+
+                return $this->relatable->taxReceipts->map(function ($taxReceipt) {
+                    return [
+                        'id' => $taxReceipt->id,
+                        'pivot_id' => $taxReceipt->pivot->id ?? null,
+                        'created_at' => $taxReceipt->pivot->created_at ?? null,
+                        'updated_at' => $taxReceipt->pivot->updated_at ?? null,
+                        // Add other tax receipt fields you need
+                    ];
+                });
+            }
+
+            // If not loaded, query database directly
+            $taxReceipts = \App\Models\TaxReceipt::join('tax_receipt_groups', 'tax_receipts.id', '=', 'tax_receipt_groups.tax_receipt_id')
+                ->where('tax_receipt_groups.booking_item_group_id', $this->relatable_id)
+                ->select([
+                    'tax_receipts.*',
+                    'tax_receipt_groups.id as pivot_id',
+                    'tax_receipt_groups.created_at',
+                    'tax_receipt_groups.updated_at',
+                    // Add other fields you need from tax_receipts table
+                ])
+                ->get()
+                ->map(function ($taxReceipt) {
+                    return [
+                        'detail' => $taxReceipt,
+                        'image' => $taxReceipt->receipt_image ? Storage::url('images/' . $taxReceipt->receipt_image) : null
+                    ];
+                });
+
+            return $taxReceipts;
+        } catch (\Exception $e) {
+            Log::error("Error getting tax receipts for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -216,33 +309,6 @@ class CashImageListResource extends JsonResource
             Log::error("Error getting CRM ID for CashImage {$this->id}: " . $e->getMessage());
             return null;
         }
-    }
-
-    public function getProductType()
-    {
-        // Only get product_type if relatable_type is BookingItemGroup
-        if ($this->relatable_type === 'App\Models\BookingItemGroup') {
-            // Check if relatable relationship is loaded
-            if ($this->relationLoaded('relatable') && $this->relatable) {
-                return $this->relatable->product_type ?? null;
-            }
-
-            // If not loaded, we can load just this field efficiently
-            if ($this->relatable_id) {
-                try {
-                    $group = \App\Models\BookingItemGroup::select('product_type')
-                        ->where('id', $this->relatable_id)
-                        ->first();
-
-                    return $group ? $group->product_type : null;
-                } catch (\Exception $e) {
-                    Log::error("Error fetching product_type for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
-                    return null;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
