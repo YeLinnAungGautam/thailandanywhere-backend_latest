@@ -26,6 +26,9 @@ class CashImageDetailResource extends JsonResource
                         $groupedItems = $this->getGroupedBookingItems();
                         break;
                     case 'App\Models\BookingItemGroup':
+                        if (!$this->relatable->relationLoaded('bookingItems')) {
+                            $this->relatable->load('bookingItems');
+                        }
                         $relatable = new BookingItemGroupResource($this->relatable);
                         break;
                     case 'App\Models\CashBook':

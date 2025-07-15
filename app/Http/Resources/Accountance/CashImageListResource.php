@@ -22,9 +22,7 @@ class CashImageListResource extends JsonResource
         // Option 1: Minimal data for list view (FASTEST)
         return [
             'id' => $this->id,
-            'image' => $this->whenLoaded('image', function() {
-                return $this->image ? Storage::url('images/' . $this->image) : null;
-            }),
+            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
             'date' => $this->date ? $this->formatDate($this->date) : null,
             'created_at' => $this->created_at ? $this->formatDate($this->created_at) : null,
             'updated_at' => $this->updated_at ? $this->formatDate($this->updated_at) : null,
