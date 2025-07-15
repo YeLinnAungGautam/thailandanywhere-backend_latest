@@ -42,12 +42,8 @@ class EntranceTicketResource extends JsonResource
             'contacts' => HotelContractResource::collection($this->contracts),
             // 'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             // 'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-            'lowest_variation_price' => $this->whenLoaded('variations') && $this->variations->where('is_add_on', false)->count() > 0
-                ? $this->variations->where('is_add_on', false)->sortBy('price')->first()->price ?? 0
-                : 0,
-            'lowest_walk_in_price' => $this->whenLoaded('variations') && $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->count() > 0
-                ? $this->variations->where('is_add_on', false)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0
-                : 0,
+            'lowest_variation_price' => $this->getLowestVariationPrice(),
+            'lowest_walk_in_price' => $this->getLowestWalkInPrice(),
             'total_booking_count' => $this->bookingItems()->count(),
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
             'email' => is_null($this->email) ? null : json_decode($this->email),
@@ -66,5 +62,99 @@ class EntranceTicketResource extends JsonResource
 
             return $variation;
         });
+    }
+
+    protected function getLowestVariationPrice()
+    {
+        if (!$this->whenLoaded('variations')) {
+            return 0;
+        }
+
+        $eligibleVariations = $this->variations->filter(function ($variation) {
+            // Check if is_add_on is false
+            if ($variation->is_add_on == 1 || $variation->is_add_on === true) {
+                return false;
+            }
+
+            if (is_null($variation->price) || $variation->price <= 0) {
+                return false;
+            }
+
+            // If meta_data exists, check if is_show is 1
+            if ($variation->meta_data) {
+                $metaData = is_string($variation->meta_data)
+                    ? json_decode($variation->meta_data, true)
+                    : $variation->meta_data;
+
+                if (is_array($metaData)) {
+                    // Check the first element if meta_data is an array of objects
+                    $firstElement = isset($metaData[0]) ? $metaData[0] : $metaData;
+
+                    if (isset($firstElement['is_show'])) {
+                        // Handle both string and integer values
+                        return $firstElement['is_show'] == '1' || $firstElement['is_show'] === 1;
+                    }
+                }
+            }
+
+            // If meta_data doesn't exist or is_show is not set, include it (only check is_add_on)
+            return true;
+        });
+
+        if ($eligibleVariations->isEmpty()) {
+            return 0;
+        }
+
+        $lowestPriceVariation = $eligibleVariations->sortBy('price')->first();
+        return $lowestPriceVariation ? ($lowestPriceVariation->price ?? 0) : 0;
+    }
+
+    /**
+     * Get the lowest walk-in price for variations that are not add-ons and shown
+     */
+    protected function getLowestWalkInPrice()
+    {
+        if (!$this->whenLoaded('variations')) {
+            return 0;
+        }
+
+        $eligibleVariations = $this->variations->filter(function ($variation) {
+            // Check if is_add_on is false
+            if ($variation->is_add_on == 1 || $variation->is_add_on === true) {
+                return false;
+            }
+
+            // Check if owner_price is not null
+            if (is_null($variation->owner_price)) {
+                return false;
+            }
+
+            // If meta_data exists, check if is_show is 1
+            if ($variation->meta_data) {
+                $metaData = is_string($variation->meta_data)
+                    ? json_decode($variation->meta_data, true)
+                    : $variation->meta_data;
+
+                if (is_array($metaData)) {
+                    // Check the first element if meta_data is an array of objects
+                    $firstElement = isset($metaData[0]) ? $metaData[0] : $metaData;
+
+                    if (isset($firstElement['is_show'])) {
+                        // Handle both string and integer values
+                        return $firstElement['is_show'] == '1' || $firstElement['is_show'] === 1;
+                    }
+                }
+            }
+
+            // If meta_data doesn't exist or is_show is not set, include it (only check is_add_on and owner_price)
+            return true;
+        });
+
+        if ($eligibleVariations->isEmpty()) {
+            return 0;
+        }
+
+        $lowestWalkInVariation = $eligibleVariations->sortBy('owner_price')->first();
+        return $lowestWalkInVariation ? ($lowestWalkInVariation->owner_price ?? 0) : 0;
     }
 }

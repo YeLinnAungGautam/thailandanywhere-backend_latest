@@ -145,4 +145,18 @@ class Booking extends Model
         return $this->hasMany(CaseTable::class, 'related_id')
             ->where('case_type', 'sale');
     }
+
+    // New: Many-to-many relationship
+    public function cashImagesPivot()
+    {
+        return $this->belongsToMany(CashImage::class, 'cash_image_bookings')
+                    ->withPivot('deposit', 'notes')
+                    ->withTimestamps();
+    }
+
+    // Helper method to get all cash images
+    public function getAllCashImages()
+    {
+        return $this->cashImages->merge($this->cashImagesPivot)->unique('id');
+    }
 }

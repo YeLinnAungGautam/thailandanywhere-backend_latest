@@ -21,112 +21,135 @@ class BookingItemGroupController extends Controller
         $request->validate((['product_type' => 'required|in:attraction,hotel,private_van_tour']));
 
         try {
-            $main_query = BookingItemGroup::query()
-                ->has('bookingItems')
+            // Create base query function to avoid code duplication
+            $buildBaseQuery = function() use ($request) {
+                return BookingItemGroup::query()
+                    ->has('bookingItems')
+                    ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                    ->when($request->crm_id, function ($query) use ($request) {
+                        $query->whereHas('booking', function ($q) use ($request) {
+                            $q->where('crm_id', $request->crm_id);
+                        });
+                    })
+                    ->when($request->product_name, function ($query) use ($request) {
+                        $query->whereIn('id', function ($q) use ($request) {
+                            $q->select('group_id')
+                                ->from('booking_items')
+                                ->whereIn('product_id', function ($subQuery) use ($request) {
+                                    if ($request->product_type == 'attraction') {
+                                        $subQuery->select('id')
+                                            ->from('entrance_tickets')
+                                            ->where('name', 'like', '%' . $request->product_name . '%');
+                                    } elseif ($request->product_type == 'hotel') {
+                                        $subQuery->select('id')
+                                            ->from('hotels')
+                                            ->where('name', 'like', '%' . $request->product_name . '%');
+                                    } elseif ($request->product_type == 'private_van_tour') {
+                                        $subQuery->select('id')
+                                            ->from('private_van_tours')
+                                            ->where('name', 'like', '%' . $request->product_name . '%');
+                                    }
+                                });
+                        });
+                    })
+                    ->when($request->invoice_status, function ($query) use ($request) {
+                        if ($request->invoice_status == 'not_receive') {
+                            $query->whereDoesntHave('customerDocuments', function ($q) {
+                                $q->where('type', 'booking_confirm_letter');
+                            });
+                        } else {
+                            $query->whereHas('customerDocuments', function ($q) {
+                                $q->where('type', 'booking_confirm_letter');
+                            });
+                        }
+                    })
+                    ->when($request->vantour_payment_details, function ($query) use ($request) {
+                        if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
+                            $query->whereHas('bookingItems', function ($q) {
+                                $q->whereNull('is_driver_collect');
+                            });
+                        }
+                    })
+                    ->when($request->assigned, function ($query) use ($request) {
+                        if ($request->assigned == 'not_have' && $request->product_type == 'private_van_tour') {
+                            $query->whereHas('bookingItems.reservationCarInfo', function ($q) {
+                                $q->whereNull('supplier_id')
+                                  ->whereNull('driver_id');
+                            });
+                        }
+                    })
+                    ->when($request->findTaxReceipt, function ($query) use ($request) {
+                        if ($request->findTaxReceipt == "not_have_tax") {
+                            $query->whereDoesntHave('taxReceipts');
+                        }
+                        if ($request->findTaxReceipt == "have_tax") {
+                            $query->whereHas('taxReceipts');
+                        }
+                    })
+                    ->when($request->expense_item_status, function ($query) use ($request) {
+                        $query->whereIn('id', function ($q) use ($request) {
+                            $q->select('group_id')
+                                ->from('booking_items')
+                                ->where('payment_status', $request->expense_item_status);
+                        });
+                    })
+                    ->when($request->customer_name, function ($query) use ($request) {
+                        $query->whereHas('booking.customer', function ($q) use ($request) {
+                            $q->where('name', 'like', '%' . $request->customer_name . '%');
+                        });
+                    })
+                    ->when($request->user_id, function ($query) use ($request) {
+                        $query->whereHas('booking', function ($q) use ($request) {
+                            $q->where('created_by', $request->user_id)
+                                ->orWhere('past_user_id', $request->user_id);
+                        });
+                    })
+                    ->when($request->payment_status, function ($query) use ($request) {
+                        $query->whereHas('booking', function ($q) use ($request) {
+                            $q->where('payment_status', $request->payment_status);
+                        });
+                    })
+                    ->when($request->booking_daterange, function ($query) use ($request) {
+                        $dates = explode(',', $request->booking_daterange);
+                        $dates = array_map('trim', $dates);
+
+                        $query->whereHas('bookingItems', function ($q) use ($dates, $request) {
+                            if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
+                                $q->where('service_date', $dates[0]);
+                            } else {
+                                $q->whereBetween('service_date', $dates);
+                            }
+                        });
+                    })
+                    ->when(!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor']), function ($query) {
+                        $query->whereHas('booking', function ($q) {
+                            $q->where('created_by', Auth::id())
+                                ->orWhere('past_user_id', Auth::id());
+                        });
+                    });
+            };
+
+            // Calculate total sum of all booking items (not paginated)
+            $totalCostPriceSum = DB::table('booking_items')
+                ->whereIn('group_id', function($query) use ($buildBaseQuery) {
+                    $query->select('id')->fromSub($buildBaseQuery(), 'filtered_groups');
+                })
+                ->sum('total_cost_price');
+
+            // Alternative approach: Calculate sum using relationships
+            // $totalCostPriceSum = $buildBaseQuery()
+            //     ->withSum('bookingItems', 'total_cost_price')
+            //     ->get()
+            //     ->sum('booking_items_sum_total_cost_price');
+
+            // Build main query for pagination with relationships
+            $main_query = $buildBaseQuery()
                 ->with([
                     'booking',
                     'bookingItems', // Ensure bookingItems are loaded for the resource
                     'cashImages',
                     'taxReceipts'
-                ])
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->when($request->crm_id, function ($query) use ($request) {
-                    $query->whereHas('booking', function ($q) use ($request) {
-                        $q->where('crm_id', $request->crm_id);
-                    });
-                })
-                ->when($request->product_name, function ($query) use ($request) {
-                    $query->whereIn('id', function ($q) use ($request) {
-                        $q->select('group_id')
-                            ->from('booking_items')
-                            ->whereIn('product_id', function ($subQuery) use ($request) {
-                                if ($request->product_type == 'attraction') {
-                                    $subQuery->select('id')
-                                        ->from('entrance_tickets')
-                                        ->where('name', 'like', '%' . $request->product_name . '%');
-                                } elseif ($request->product_type == 'hotel') {
-                                    $subQuery->select('id')
-                                        ->from('hotels')
-                                        ->where('name', 'like', '%' . $request->product_name . '%');
-                                } elseif ($request->product_type == 'private_van_tour') {
-                                    $subQuery->select('id')
-                                        ->from('private_van_tours')
-                                        ->where('name', 'like', '%' . $request->product_name . '%');
-                                }
-                            });
-                    });
-                })
-                ->when($request->invoice_status, function ($query) use ($request) {
-                    if ($request->invoice_status == 'not_receive') {
-                        $query->whereDoesntHave('customerDocuments', function ($q) {
-                            $q->where('type', 'booking_confirm_letter');
-                        });
-                    } else {
-                        $query->whereHas('customerDocuments', function ($q) {
-                            $q->where('type', 'booking_confirm_letter');
-                        });
-                    }
-                })
-                ->when($request->vantour_payment_details, function ($query) use ($request) {
-                    if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
-                        $query->whereHas('bookingItems', function ($q) {
-                            $q->whereNull('is_driver_collect');
-                        });
-                    }
-                })
-                ->when($request->assigned, function ($query) use ($request) {
-                    if ($request->assigned == 'not_have' && $request->product_type == 'private_van_tour') {
-                        $query->whereHas('bookingItems.reservationCarInfo', function ($q) {
-                            $q->whereNull('supplier_id')
-                              ->whereNull('driver_id');
-                        });
-                    }
-                })
-                ->when($request->findTaxReceipt, function ($query) use ($request) {
-                    if ($request->findTaxReceipt == "not_have_tax") {
-                        $query->whereDoesntHave('taxReceipts');
-                    }
-                    if ($request->findTaxReceipt == "have_tax") {
-                        $query->whereHas('taxReceipts');
-                    }
-                })
-                ->when($request->expense_item_status, function ($query) use ($request) {
-                    $query->whereIn('id', function ($q) use ($request) {
-                        $q->select('group_id')
-                            ->from('booking_items')
-                            ->where('payment_status', $request->expense_item_status);
-                    });
-                })
-                ->when($request->customer_name, function ($query) use ($request) {
-                    $query->whereHas('booking.customer', function ($q) use ($request) {
-                        $q->where('name', 'like', '%' . $request->customer_name . '%');
-                    });
-                })
-                ->when($request->user_id, function ($query) use ($request) {
-                    $query->whereHas('booking', function ($q) use ($request) {
-                        $q->where('created_by', $request->user_id)
-                            ->orWhere('past_user_id', $request->user_id);
-                    });
-                })
-                ->when($request->payment_status, function ($query) use ($request) {
-                    $query->whereHas('booking', function ($q) use ($request) {
-                        $q->where('payment_status', $request->payment_status);
-                    });
-                });
-
-            // Date Range Filtering
-            if ($request->booking_daterange) {
-                $dates = explode(',', $request->booking_daterange);
-                $dates = array_map('trim', $dates);
-
-                $main_query->whereHas('bookingItems', function ($query) use ($dates, $request) {
-                    if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
-                        $query->where('service_date', $dates[0]);
-                    } else {
-                        $query->whereBetween('service_date', $dates);
-                    }
-                });
-            }
+                ]);
 
             // Sorting Logic
             if ($request->sorting) {
@@ -134,8 +157,6 @@ class BookingItemGroupController extends Controller
 
                 if ($request->sorting_type == 'product_name') {
                     // Use a subquery to get the product name for sorting for each group.
-                    // We use MIN() to pick one consistent name if a group has multiple booking items,
-                    // aligning with the `first()` concept in the resource.
                     $main_query->joinSub(
                         DB::table('booking_items as bi_sort')
                             ->select(
@@ -146,7 +167,7 @@ class BookingItemGroupController extends Controller
                                     WHEN bi_sort.product_type = "App\\\\Models\\\\GroupTour" THEN group_tours_sort.name
                                     WHEN bi_sort.product_type = "App\\\\Models\\\\EntranceTicket" THEN entrance_tickets_sort.name
                                     WHEN bi_sort.product_type = "App\\\\Models\\\\Airline" THEN airlines_sort.name
-                                    ELSE "ZZZ" -- Placeholder to ensure non-matching types sort consistently (e.g., at the end)
+                                    ELSE "ZZZ"
                                 END) as sort_product_name')
                             )
                             ->leftJoin('hotels as hotels_sort', function($join) {
@@ -169,8 +190,8 @@ class BookingItemGroupController extends Controller
                                 $join->on('bi_sort.product_id', '=', 'airlines_sort.id')
                                     ->where('bi_sort.product_type', 'App\Models\Airline');
                             })
-                            ->groupBy('bi_sort.group_id'), // Group by group_id in the subquery
-                        'product_names_for_sorting', // Alias for the subquery
+                            ->groupBy('bi_sort.group_id'),
+                        'product_names_for_sorting',
                         function($join) {
                             $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id');
                         }
@@ -189,16 +210,7 @@ class BookingItemGroupController extends Controller
                 }
             } else {
                 // Default sorting if no specific sorting is requested
-                $main_query->latest(); // This will order by 'created_at' DESC
-            }
-
-
-            // User role-based filtering
-            if (!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor'])) {
-                $main_query->whereHas('booking', function ($query) {
-                    $query->where('created_by', Auth::id())
-                        ->orWhere('past_user_id', Auth::id());
-                });
+                $main_query->latest();
             }
 
             $groups = $main_query->paginate($request->get('per_page', 5));
@@ -207,6 +219,7 @@ class BookingItemGroupController extends Controller
                 ->additional([
                     'meta' => [
                         'total_page' => (int)ceil($groups->total() / $groups->perPage()),
+                        'total_cost_price_sum' => $totalCostPriceSum, // Add the total sum here
                     ],
                 ])
                 ->response()

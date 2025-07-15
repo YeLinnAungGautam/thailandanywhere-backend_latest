@@ -124,6 +124,7 @@ class CashImageService
             'amount',
             'interact_bank',
             'currency',
+            'image',
             'created_at',
             'updated_at',
             'relatable_id',
@@ -256,6 +257,7 @@ class CashImageService
                 'interact_bank',
                 'currency',
                 'created_at',
+                'image',
                 'relatable_type',
                 'relatable_id'
             ])

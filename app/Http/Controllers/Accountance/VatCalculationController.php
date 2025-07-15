@@ -31,10 +31,9 @@ class VatCalculationController extends Controller
                 'status' => 'success',
                 'data' => [
                     'date_range' => $dateRange,
+                    'total_vat' => $summary['total_vat'],
                     'total_commission' => $summary['total_commission'],
-                    'really_output_vat' => $summary['really_output_vat'],
-                    'current_output_vat' => $summary['current_output_vat'], // This is for items WITH confirm letter
-                    'total_output_vat' => $summary['total_output_vat'], // This is for items WITHOUT confirm letter
+                    'total_net_vat' => $summary['total_net_vat'],
                 ],
                 'message' => $summary['message'],
             ]);

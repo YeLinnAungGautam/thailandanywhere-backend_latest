@@ -33,4 +33,27 @@ class CashImage extends Model
     {
         return $this->morphTo();
     }
+
+    public function bookings()
+    {
+        return $this->belongsToMany(Booking::class, 'cash_image_bookings')
+                    ->withPivot('deposit', 'notes')
+                    ->withTimestamps();
+    }
+
+    // Helper method to get all related bookings (both polymorphic and pivot)
+    public function getAllBookings()
+    {
+        $bookings = collect();
+
+        // Add polymorphic booking if exists
+        if ($this->relatable_type === 'App\Models\Booking' && $this->relatable) {
+            $bookings->push($this->relatable);
+        }
+
+        // Add pivot table bookings
+        $bookings = $bookings->merge($this->bookings);
+
+        return $bookings->unique('id');
+    }
 }
