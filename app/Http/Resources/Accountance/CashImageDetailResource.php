@@ -27,7 +27,7 @@ class CashImageDetailResource extends JsonResource
                         break;
                     case 'App\Models\BookingItemGroup':
                         if (!$this->relatable->relationLoaded('bookingItems')) {
-                            $this->relatable->load('bookingItems');
+                            $this->relatable->load('bookingItems', 'customerDocuments', 'taxReceipts'); // Changed from 'customer_documents' and 'tax_receipts'
                         }
                         $relatable = new BookingItemGroupResource($this->relatable);
                         break;

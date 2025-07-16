@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\BookingItemResource;
+use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,19 @@ class BookingItemGroupResource extends JsonResource
 
             'sent_booking_request' => $this->sent_booking_request,
             'booking_request_proof' => get_file($this->booking_request_proof, 'booking_item_groups'),
+            // 'booking_confirm_letter' => $this->customerDocuments->contains('type', 'booking_confirm_letter') ? CustomerDocumentResource::collection($this->customerDocuments->where('type', 'booking_confirm_letter')) : [],
+            // 'tax_credit' => $this->relationLoaded('taxReceipts') && $this->taxReceipts->count() > 0
+            // ? TaxReceiptResource::collection($this->taxReceipts)
+            // : [],
+
+            'booking_confirm_letter' => $this->relationLoaded('customerDocuments') && $this->customerDocuments->contains('type', 'booking_confirm_letter')
+                ? CustomerDocumentResource::collection($this->customerDocuments->where('type', 'booking_confirm_letter'))
+                : [],
+
+            // Fix: Use consistent pattern with relationLoaded check
+            'tax_credit' => $this->relationLoaded('taxReceipts') && $this->taxReceipts->count() > 0
+                ? TaxReceiptResource::collection($this->taxReceipts)
+                : [],
 
             'passport_info' => $this->passport_info,
             'expense_method' => $this->expense_method,
