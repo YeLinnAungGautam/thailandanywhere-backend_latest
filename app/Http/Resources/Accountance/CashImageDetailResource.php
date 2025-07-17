@@ -27,7 +27,7 @@ class CashImageDetailResource extends JsonResource
                         break;
                     case 'App\Models\BookingItemGroup':
                         if (!$this->relatable->relationLoaded('bookingItems')) {
-                            $this->relatable->load('bookingItems');
+                            $this->relatable->load('bookingItems', 'customerDocuments', 'taxReceipts'); // Changed from 'customer_documents' and 'tax_receipts'
                         }
                         $relatable = new BookingItemGroupResource($this->relatable);
                         break;
@@ -92,6 +92,7 @@ class CashImageDetailResource extends JsonResource
                                     return $document->type == 'booking_confirm_letter';
                                 })
                             ) : [],
+                        'related_credit' => $group && $group->taxReceipts ? $group->taxReceipts : [],
                         'items_count' => $itemsInGroup->count(),
                         'items' => $itemsInGroup->map(function ($item) {
                             $variation_name = null;

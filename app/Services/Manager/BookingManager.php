@@ -223,6 +223,8 @@ class BookingManager
                 'interact_bank' => $interact_bank ?? 'personal',
                 'image' => $fileData['fileName'],
             ]);
+
+
         }
     }
 }

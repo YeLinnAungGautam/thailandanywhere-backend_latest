@@ -244,8 +244,6 @@ class BookingController extends Controller
 
             $find->update($data);
 
-
-
             if ($request->receipt_image) {
                 foreach ($request->receipt_image as $receipt) {
                     $image = $receipt['file'];
@@ -260,20 +258,6 @@ class BookingController extends Controller
                     $currency = $receipt['currency'];
 
                     $fileData = $this->uploads($image, 'images/');
-
-                    // BookingReceipt::create([
-                    //     'booking_id' => $find->id,
-                    //     'image' => $fileData['fileName'],
-                    //     'amount' => $amount,
-                    //     'bank_name' => $bank_name,
-                    //     'date' => $date,
-                    //     'is_corporate' => $is_corporate,
-                    //     'note' => $note,
-                    //     'sender' => $sender,
-                    //     'reciever' => $reciever,
-                    //     'interact_bank' => $interact_bank ?? 'personal',
-                    //     'currency' => $currency ?? 'THB',
-                    // ]);
 
                     CashImage::create([
                         'relatable_id' => $find->id,

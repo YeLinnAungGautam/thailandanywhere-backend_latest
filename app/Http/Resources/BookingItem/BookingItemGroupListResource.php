@@ -6,6 +6,7 @@ use App\Services\BookingItemDataService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use PhpParser\Node\Expr\Cast\Object_;
 
 class BookingItemGroupListResource extends JsonResource
 {
@@ -48,14 +49,29 @@ class BookingItemGroupListResource extends JsonResource
     private function transformedItems()
     {
         return $this->bookingItems->map(function ($item) {
-            return [
+            $data = [
                 'id' => $item->id,
                 'product_name' => $item->product->name ?? 'N/A',
                 'variant_name' => $item->acsr_variation_name ?? 'N/A',
                 'reservation_status' => $item->reservation_status,
                 'expense_status' => $item->payment_status,
                 'booking_status' => $this->booking->payment_status ?? 'not_paid',
+                'service_date' => Carbon::parse($item->service_date)->format('M d') ?? 'N/A',
+                'quantity' => $item->quantity,
             ];
+
+            $individualPricing = $item->individual_pricing ?
+                (is_string($item->individual_pricing) ? json_decode($item->individual_pricing) : $item->individual_pricing) :
+                null;
+
+            if ($item->product_type === 'App\Models\Hotel') {
+                $data['days'] = $item->checkin_date ? Carbon::parse($item->checkout_date)->diffInDays(Carbon::parse($item->checkin_date)) : 'N/A';
+            }
+
+            if ($item->product_type === 'App\Models\EntranceTicket') {
+                $data['child_quantity'] = $individualPricing['child']['quantity'] ?? 0;
+            }
+            return $data;
         })->all();
     }
 

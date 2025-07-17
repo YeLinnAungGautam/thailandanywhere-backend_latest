@@ -56,6 +56,7 @@ class CashImageListResource extends JsonResource
             // 'relatable' => $relatable,
             // 'grouped_items' => $groupedItems,
             // 'product_type' => $this->getProductType(),
+            'product_type' => $this->when($request->input('include_relatable'), $this->getProductType()),
         ];
     }
 
@@ -266,6 +267,17 @@ class CashImageListResource extends JsonResource
             Log::error("Error getting commission for CashImage {$this->id}: " . $e->getMessage());
             return 0;
         }
+    }
+
+    /**
+     * Get total amount
+     */
+    public function getProductType()
+    {
+        if($this->relatable_type == 'App\Models\BookingItemGroup') {
+            return $this->relatable->bookingItems->first()->product_type ?? null;
+        }
+        return null;
     }
 
     /**
