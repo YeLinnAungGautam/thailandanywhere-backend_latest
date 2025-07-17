@@ -7,7 +7,7 @@ trait HttpResponses
     protected function success($data, $message = null, $code = 200)
     {
         return response()->json([
-            'status' => 1,
+            'status' => 'Request was successful.',
             'message' => $message ?? 'Success',
             'result' => $data
         ], $code);
