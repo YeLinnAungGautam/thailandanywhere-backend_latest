@@ -5,6 +5,7 @@ namespace App\Http\Resources\Accountance;
 use App\Http\Resources\BookingItemGroupResource;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
+use App\Http\Resources\TaxReceiptResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -92,7 +93,7 @@ class CashImageDetailResource extends JsonResource
                                     return $document->type == 'booking_confirm_letter';
                                 })
                             ) : [],
-                        'related_credit' => $group && $group->taxReceipts ? $group->taxReceipts : [],
+                        'related_credit' => $group && $group->taxReceipts ? TaxReceiptResource::collection($group->taxReceipts) : [],
                         'items_count' => $itemsInGroup->count(),
                         'items' => $itemsInGroup->map(function ($item) {
                             $variation_name = null;
