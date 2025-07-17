@@ -7,6 +7,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Mail\VerifyEmail;
 use App\Models\User;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -17,113 +18,124 @@ class RegisterController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        // Check if email already exists
-        $existingUser = User::where('email', $request->email)->first();
+        try {
+            // Check if email already exists
+            $existingUser = User::where('email', $request->email)->first();
 
-        if ($existingUser) {
-            // If the user exists but is not active (not verified)
-            if (!$existingUser->is_active) {
-                // Generate new verification code
-                $code = sprintf('%06d', mt_rand(0, 999999));
+            if ($existingUser) {
+                // If the user exists but is not active (not verified)
+                if (!$existingUser->is_active) {
+                    // Generate new verification code
+                    $code = sprintf('%06d', mt_rand(0, 999999));
 
-                // Update the existing user with new verification code
-                $existingUser->email_verification_token = $code;
-                $existingUser->save();
+                    // Update the existing user with new verification code
+                    $existingUser->email_verification_token = $code;
+                    $existingUser->save();
 
-                // Resend verification email
-                Mail::to($existingUser->email)->queue(new VerifyEmail($existingUser));
+                    // Resend verification email
+                    Mail::to($existingUser->email)->queue(new VerifyEmail($existingUser));
 
-                return error('This email is already registered but not verified. A new verification code has been sent to your email.');
+                    return error('This email is already registered but not verified. A new verification code has been sent to your email.');
+                }
+
+                // If user exists and is active
+                return error('This email is already registered. Please login instead.');
             }
 
-            // If user exists and is active
-            return error('This email is already registered. Please login instead.');
+            // If email doesn't exist, create new user
+            $code = sprintf('%06d', mt_rand(0, 999999));
+
+            $user = User::create([
+                'name' => $request->first_name . ' ' . $request->last_name,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'dob' => $request->dob,
+                'email_verification_token' => $code,
+                'email_verified_at' => null,
+                'is_active' => false,
+            ]);
+
+            // send verification email
+            Mail::to($user->email)->queue(new VerifyEmail($user));
+
+            return success($user, 'User registered successfully. Please check your email to verify your account.');
+        } catch (Exception $e) {
+            return error('An error occurred during registration: ' . $e->getMessage());
         }
-
-        // If email doesn't exist, create new user
-        $code = sprintf('%06d', mt_rand(0, 999999));
-
-        $user = User::create([
-            'name' => $request->first_name . ' ' . $request->last_name,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'dob' => $request->dob,
-            'email_verification_token' => $code,
-            'email_verified_at' => null,
-            'is_active' => false,
-        ]);
-
-        // send verification email
-        Mail::to($user->email)->queue(new VerifyEmail($user));
-
-        return success($user, 'User registered successfully. Please check your email to verify your account.');
     }
 
     // For POST request
     public function resendVerificationEmail(Request $request)
     {
-        info('resendVerificationEmail');
-        $request->validate([
-            'email' => 'required|email'
-        ]);
+        try {
+            $request->validate([
+                'email' => 'required|email'
+            ]);
 
-        $email = $request->email;
+            $email = $request->email;
 
-        $user = User::where('email', $email)->first();
+            $user = User::where('email', $email)->first();
 
-        if (!$user) {
-            return error('User not found!');
+            if (!$user) {
+                return error('User not found!');
+            }
+
+            if ($user->email_verified_at) {
+                return error('Email already verified!');
+            }
+
+            // Generate new 6-digit verification code
+            $code = sprintf('%06d', mt_rand(0, 999999));
+
+            $user->email_verification_token = $code;
+            $user->email_verified_at = null;
+            $user->is_active = false; // Deactivate the user before sending the verification email
+            $user->save();
+
+            // send verification email
+            Mail::to($user->email)->queue(new VerifyEmail($user));
+
+            return success(null, 'Verification email sent successfully.');
+        } catch (Exception $e) {
+            return error('An error occurred while resending the verification email: ' . $e->getMessage());
         }
-
-        if ($user->email_verified_at) {
-            return error('Email already verified!');
-        }
-
-        // Generate new 6-digit verification code
-        $code = sprintf('%06d', mt_rand(0, 999999));
-
-        $user->email_verification_token = $code;
-        $user->email_verified_at = null;
-        $user->is_active = false; // Deactivate the user before sending the verification email
-        $user->save();
-
-        // send verification email
-        Mail::to($user->email)->queue(new VerifyEmail($user));
-
-        return success(null, 'Verification email sent successfully.');
     }
 
     public function verifyEmail(Request $request)
     {
-        $request->validate([
-            'verification_code' => 'required|numeric|digits:6',
-            'email' => 'required|email' // Add email validation
-        ]);
+        try {
+            $request->validate([
+                'verification_code' => 'required|numeric|digits:6',
+                'email' => 'required|email' // Add email validation
+            ]);
 
-        $code = $request->verification_code;
-        $email = $request->email;
+            $code = $request->verification_code;
+            $email = $request->email;
 
-        // Find user with both the correct email and verification code
-        $user = User::where('email', $email)
-                    ->where('email_verification_token', $code)
-                    ->first();
+            // Find user with both the correct email and verification code
+            $user = User::where('email', $email)
+                ->where('email_verification_token', $code)
+                ->first();
 
-        if (!$user) {
-            return error('Invalid verification code or email!');
+            if (!$user) {
+                return error('Invalid verification code or email!');
+            }
+
+            $user->email_verification_token = null;
+            $user->email_verified_at = Carbon::now();
+            $user->is_active = true; // Activate the user after email verification
+            $user->save();
+
+            $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
+
+            return success([
+                'user' => $user,
+                'token' => $token
+            ], 'Your email has been verified successfully. You can now login.');
+        } catch (Exception $e) {
+            return error('An error occurred while verifying your email: ' . $e->getMessage());
         }
-
-        $user->email_verification_token = null;
-        $user->email_verified_at = Carbon::now();
-        $user->is_active = true; // Activate the user after email verification
-        $user->save();
-
-        $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
-
-        return success([
-            'user' => $user,
-            'token' => $token
-        ], 'Your email has been verified successfully. You can now login.');
     }
 }
