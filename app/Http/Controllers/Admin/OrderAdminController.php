@@ -300,22 +300,41 @@ class OrderAdminController extends Controller
         // Get both today and month stats in one go
         $stats = [
             'today' => Order::whereDate('created_at', $today)
-                           ->selectRaw('
-                               COUNT(*) as total,
-                               SUM(is_customer_create = 1) as customer_yes,
-                               SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
-                           ')
-                           ->first(),
+                            ->selectRaw('
+                                COUNT(*) as total,
+                                SUM(is_customer_create = 1) as customer_yes,
+                                SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
+                            ')
+                            ->first(),
 
             'month' => Order::whereYear('created_at', now()->year)
-                           ->whereMonth('created_at', now()->month)
-                           ->selectRaw('
-                               COUNT(*) as total,
-                               SUM(is_customer_create = 1) as customer_yes,
-                               SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
-                           ')
-                           ->first()
+                            ->whereMonth('created_at', now()->month)
+                            ->selectRaw('
+                                COUNT(*) as total,
+                                SUM(is_customer_create = 1) as customer_yes,
+                                SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
+                            ')
+                            ->first()
         ];
+
+        // Get detailed orders with booking info for today
+        $todayOrders = Order::whereDate('created_at', $today)
+                            ->select('id', 'booking_id', 'is_customer_create', 'order_status')
+                            ->with([
+                                'booking:id,crm_id,created_by',
+                                'booking.createdBy:id,name' // Assuming User model relationship
+                            ])
+                            ->get();
+
+        // Get detailed orders with booking info for this month
+        $monthOrders = Order::whereYear('created_at', now()->year)
+                            ->whereMonth('created_at', now()->month)
+                            ->select('id', 'booking_id', 'is_customer_create', 'order_status')
+                            ->with([
+                                'booking:id,crm_id,created_by',
+                                'booking.createdBy:id,name' // Assuming User model relationship
+                            ])
+                            ->get();
 
         return $this->success([
             'today' => [
@@ -324,7 +343,18 @@ class OrderAdminController extends Controller
                 'sale_converted' => $stats['today']->converted,
                 'conversion_rate' => $stats['today']->customer_yes > 0
                     ? round(($stats['today']->converted / $stats['today']->customer_yes) * 100, 2)
-                    : 0
+                    : 0,
+                'orders_detail' => $todayOrders->map(function($order) {
+                    return [
+                        'order_id' => $order->id,
+                        'booking_id' => $order->booking_id,
+                        'crm_id' => $order->booking->crm_id ?? 'N/A',
+                        'created_by' => $order->booking->created_by ?? 'N/A',
+                        'created_by_name' => $order->booking->createdBy->name ?? 'N/A',
+                        'is_customer_create' => $order->is_customer_create,
+                        'order_status' => $order->order_status
+                    ];
+                })
             ],
             'this_month' => [
                 'total_orders' => $stats['month']->total,
@@ -332,8 +362,19 @@ class OrderAdminController extends Controller
                 'sale_converted' => $stats['month']->converted,
                 'conversion_rate' => $stats['month']->customer_yes > 0
                     ? round(($stats['month']->converted / $stats['month']->customer_yes) * 100, 2)
-                    : 0
+                    : 0,
+                'orders_detail' => $monthOrders->map(function($order) {
+                    return [
+                        'order_id' => $order->id,
+                        'booking_id' => $order->booking_id,
+                        'crm_id' => $order->booking->crm_id ?? 'N/A',
+                        'created_by' => $order->booking->created_by ?? 'N/A',
+                        'created_by_name' => $order->booking->createdBy->name ?? 'N/A',
+                        'is_customer_create' => $order->is_customer_create,
+                        'order_status' => $order->order_status
+                    ];
+                })
             ]
-            ], 'Order Report');
+        ], 'Order Report');
     }
 }

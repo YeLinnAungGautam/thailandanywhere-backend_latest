@@ -92,6 +92,7 @@ class CashImageDetailResource extends JsonResource
                                     return $document->type == 'booking_confirm_letter';
                                 })
                             ) : [],
+                        'related_credit' => $group && $group->taxReceipts ? $group->taxReceipts : [],
                         'items_count' => $itemsInGroup->count(),
                         'items' => $itemsInGroup->map(function ($item) {
                             $variation_name = null;

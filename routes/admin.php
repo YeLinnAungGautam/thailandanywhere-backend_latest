@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Accountance\AccountanceGenerateController;
 use App\Http\Controllers\Accountance\CashBookController;
+use App\Http\Controllers\Accountance\CashImageBookingController;
 use App\Http\Controllers\Accountance\CashImageController;
 use App\Http\Controllers\Accountance\CashStructureController;
 use App\Http\Controllers\Accountance\VatCalculationController;
@@ -436,6 +437,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
+
+    # Cash Image Booking
+    Route::apiResource('cash-image-bookings', CashImageBookingController::class);
+    Route::post('cash-image-bookings/bulk', [CashImageBookingController::class, 'bulkStore']);
+    Route::delete('cash-image-bookings/bulk', [CashImageBookingController::class, 'bulkDestroy']);
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });
