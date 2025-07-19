@@ -3,6 +3,7 @@
 function success($data, $message = "success")
 {
     return response()->json([
+        'status' => 1,
         'result' => 1,
         'message' => $message,
         'data' => $data,
@@ -12,6 +13,7 @@ function success($data, $message = "success")
 function fail($message = "fail", $data = [], $target = "")
 {
     return response()->json([
+        'status' => 0,
         'result' => 0,
         'message' => $message,
         'target' => $target,
@@ -22,6 +24,7 @@ function fail($message = "fail", $data = [], $target = "")
 function successMessage($message = "success")
 {
     return response()->json([
+        'status' => 1,
         'result' => 1,
         'message' => $message,
     ]);
@@ -30,6 +33,7 @@ function successMessage($message = "success")
 function failedMessage($message = "fail")
 {
     return response()->json([
+        'status' => 0,
         'result' => 0,
         'message' => $message,
         'data' => null
@@ -40,6 +44,7 @@ function failedMessage($message = "fail")
 function notFoundMessage($message = "Your item cannot be found.")
 {
     return response()->json([
+        'status' => 0,
         'result' => 0,
         'message' => $message,
         'data' => null
