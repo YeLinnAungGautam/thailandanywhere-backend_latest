@@ -434,6 +434,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Cash Image
     Route::apiResource('cash-images', CashImageController::class);
+    # Cash Image Summary Report
+    Route::get('summary-report', [CashImageController::class, 'summary']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);

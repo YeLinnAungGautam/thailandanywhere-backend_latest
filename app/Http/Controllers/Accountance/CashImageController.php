@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageResource;
 use App\Models\CashImage;
+use App\Services\CashImageInvoiceService;
 use App\Services\CashImageService;
+use App\Services\CompanyCashBookingService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
@@ -30,6 +32,25 @@ class CashImageController extends Controller
         } else {
             return response()->json([
                 'status' => 'Error has occurred.',
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+        }
+    }
+
+    public function summary(Request $request){
+        $cashImageService = new CashImageService();
+        $result = $cashImageService->getAllSummary($request);
+
+        if ($result['status'] == 1) {
+            return response()->json([
+                'status' => 1,
+                'message' => $result['message'],
+                'result' => $result['result']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 0,
                 'message' => $result['message'],
                 'result' => null
             ], $result['error_type'] === 'validation' ? 422 : 500);

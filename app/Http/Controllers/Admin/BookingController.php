@@ -500,10 +500,10 @@ class BookingController extends Controller
     public function printCredit(Request $request, string $id)
     {
         $booking = Booking::where('id', $id)->with(['customer','items'])->first();
-
+        $balance = $booking->grand_total - $booking->commission;
         $booking->sub_total_with_vat = $booking->grand_total - $booking->commission;
-        $booking->vat = ($booking->sub_total_with_vat - $booking->commission) * 0.07;
-        $booking->total_excluding_vat = $booking->sub_total_with_vat - $booking->vat;
+        $booking->vat = $balance - ( $balance / 1.07 ) ;
+        $booking->total_excluding_vat = $balance - $booking->vat;
 
         $pdf_view = 'pdf.booking_credit';
 

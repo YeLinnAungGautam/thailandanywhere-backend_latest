@@ -64,9 +64,9 @@
             border: 1px solid #000;
         }
 
-        .checked {
-            background-image: url('https://cdn-icons-png.flaticon.com/512/6399/6399634.png');
-        }
+        /* .checked {
+            background-image: url("{{ public_path() . '/assets/checked.png' }}");
+        } */
     </style>
 </head>
 
@@ -159,7 +159,7 @@
                     {{ number_format($booking->grand_total) }} thb</td>
             </tr>
             <tr>
-                <td style="width: 82%;text-align: right; padding-bottom: 10px">Agent Commission</td>
+                <td style="width: 82%;text-align: right; padding-bottom: 10px">Profit Share</td>
                 <td style="text-align: right; padding-bottom: 10px">- {{ number_format($booking->commission ?? 0) }}
                     thb</td>
             </tr>
@@ -172,13 +172,13 @@
             <tr>
                 <td style="width: 82%;text-align: right; padding-bottom: 10px">VAT 7%</td>
                 <td style="text-align: right; padding-bottom: 10px">
-                    {{ number_format($booking->vat ?? 0) }}
+                    {{ number_format($booking->vat ?? 0, 2) }} thb
                     thb</td>
             </tr>
             <tr>
                 <td style="width: 82%;text-align: right; padding-bottom: 10px">Total Excluding VAT</td>
                 <td style="text-align: right; padding-bottom: 10px">
-                    {{ number_format($booking->total_excluding_vat ?? 0) }}
+                    {{ number_format($booking->total_excluding_vat ?? 0, 2) }}
                     thb</td>
             </tr>
             <tr>
@@ -191,8 +191,8 @@
 
         <div class="checkbox-group" style="margin-top: 100px">
             <div>
-                <span class="checkbox {{ $booking->payment_method == 'Bank' ? 'checked' : '' }}"
-                    style="margin-left: 0px"></span> Bank
+                <img src="{{ public_path() . '/assets/checked.png' }}" class="checkbox" height="10%" />
+                <span style="margin-left: 0px;"></span> Bank
                 <span class="checkbox {{ $booking->payment_method == 'Cash' ? 'checked' : '' }}"
                     style="margin-left: 10px"></span> Cash
                 <span class="checkbox {{ $booking->payment_method == 'Credit' ? 'checked' : '' }}"
@@ -211,12 +211,12 @@
                 <tr>
                     <td style="width: 100px">Account No</td>
                     <td style="width: 100px; text-align:center">:</td>
-                    <td>0123 4567 8901</td>
+                    <td>198-1-06668-1</td>
                 </tr>
                 <tr>
                     <td style="width: 100px">Account Name:</td>
                     <td style="width: 100px; text-align:center">:</td>
-                    <td>Thiha @ Kumar Bhusal</td>
+                    <td>TH ANYWHERE CO.,LTD.</td>
                 </tr>
             </table>
         </div>
