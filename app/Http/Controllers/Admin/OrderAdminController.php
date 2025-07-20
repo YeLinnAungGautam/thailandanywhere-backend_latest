@@ -319,9 +319,9 @@ class OrderAdminController extends Controller
 
         // Get detailed orders with booking info for today
         $todayOrders = Order::whereDate('created_at', $today)
-                            ->select('id', 'booking_id', 'is_customer_create', 'order_status')
+                            ->select('id', 'booking_id', 'is_customer_create', 'order_status','admin_id')
                             ->with([
-                                'booking:id,crm_id,created_by',
+                                'booking:id,crm_id,created_by','admin',
                                 'booking.createdBy:id,name' // Assuming User model relationship
                             ])
                             ->get();
@@ -329,9 +329,9 @@ class OrderAdminController extends Controller
         // Get detailed orders with booking info for this month
         $monthOrders = Order::whereYear('created_at', now()->year)
                             ->whereMonth('created_at', now()->month)
-                            ->select('id', 'booking_id', 'is_customer_create', 'order_status')
+                            ->select('id', 'booking_id', 'is_customer_create', 'order_status','admin_id')
                             ->with([
-                                'booking:id,crm_id,created_by',
+                                'booking:id,crm_id,created_by','admin',
                                 'booking.createdBy:id,name' // Assuming User model relationship
                             ])
                             ->get();
@@ -347,6 +347,8 @@ class OrderAdminController extends Controller
                 'orders_detail' => $todayOrders->map(function($order) {
                     return [
                         'order_id' => $order->id,
+                        'admin_id' => $order->admin_id,
+                        'admin_name' => $order->admin->name ?? 'N/A',
                         'booking_id' => $order->booking_id,
                         'crm_id' => $order->booking->crm_id ?? 'N/A',
                         'created_by' => $order->booking->created_by ?? 'N/A',
@@ -366,6 +368,8 @@ class OrderAdminController extends Controller
                 'orders_detail' => $monthOrders->map(function($order) {
                     return [
                         'order_id' => $order->id,
+                        'admin_id' => $order->admin_id,
+                        'admin_name' => $order->admin->name ?? 'N/A',
                         'booking_id' => $order->booking_id,
                         'crm_id' => $order->booking->crm_id ?? 'N/A',
                         'created_by' => $order->booking->created_by ?? 'N/A',
