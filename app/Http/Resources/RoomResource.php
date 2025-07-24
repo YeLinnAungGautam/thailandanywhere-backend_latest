@@ -36,6 +36,13 @@ class RoomResource extends JsonResource
             'updated_at' => $this->updated_at,
             'amenities' => $this->amenities ? json_decode($this->amenities) : $this->amenities,
             'meta' => $this->meta ? json_decode($this->meta) : $this->meta,
+            'roitems' => RoitemResource::collection($this->whenLoaded('roitems')),
+            'roitems_grouped' => $this->when(
+                $this->relationLoaded('roitems'),
+                function () {
+                    return $this->roitemsGrouped();
+                }
+            ),
         ];
     }
 

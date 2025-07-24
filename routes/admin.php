@@ -62,6 +62,7 @@ use App\Http\Controllers\Admin\TaxReceiptController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AirlineExportImportController;
 use App\Http\Controllers\AirlineTicketExportImportController;
+use App\Http\Controllers\BalanceDueOverController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CaseController;
 use App\Http\Controllers\DriverController;
@@ -80,6 +81,8 @@ use App\Http\Controllers\ReservationExportController;
 use App\Http\Controllers\ReservationTransactionController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\RestaurantExportImportController;
+use App\Http\Controllers\RofacilityController;
+use App\Http\Controllers\RoitemController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
@@ -271,6 +274,12 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('rooms/export/csv', [RoomExportImportController::class, 'export']);
     Route::post('rooms/import/csv', [RoomExportImportController::class, 'import']);
 
+    Route::apiResource('rooms/items', RoitemController::class);
+    Route::apiResource('rooms/groups', RofacilityController::class);
+    Route::get('rooms/{room}/facilities', [RoomController::class, 'getRoomFacilities']);
+    Route::post('rooms/{room}/roitems', [RoomController::class, 'addRoitems']);
+    Route::delete('rooms/{room}/roitems', [RoomController::class, 'removeRoitems']);
+
     # Restaurant
     Route::apiResource('restaurants', RestaurantController::class);
 
@@ -383,6 +392,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Chart of Accounts additional methods
     Route::get('/balance-due-over', [ChartOfAccountController::class, 'balanceDueOver']);
+
+    # Account Receivable
+    Route::get('/account-receivable', [BalanceDueOverController::class, 'index']);
 
     # Partner
     Route::apiResource('partners', PartnerController::class);
