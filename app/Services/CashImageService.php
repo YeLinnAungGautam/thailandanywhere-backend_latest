@@ -26,9 +26,13 @@ class CashImageService
     // Add valid polymorphic types
     const VALID_RELATABLE_TYPES = [
         'App\Models\Booking',
-        'App\Models\Transaction',
-        'App\Models\Invoice',
+        'App\Models\BookingItemGroup',
+        'App\Models\CashBook',
         // Add other model types as needed
+    ];
+
+    const VALID_TAX_RECEIPT_FILTERS = [
+        'have', 'missing', 'all'
     ];
 
     /**
@@ -81,6 +85,7 @@ class CashImageService
                 'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK),
                 'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
                 'relatable_type' => 'nullable|in:' . implode(',', self::VALID_RELATABLE_TYPES),
+                'tax_receipts' => 'nullable|in:' . implode(',', self::VALID_TAX_RECEIPT_FILTERS),
                 'sender' => 'nullable|string|max:255',
                 'receiver' => 'nullable|string|max:255',
                 'amount' => 'nullable|numeric|min:0',
@@ -213,10 +218,43 @@ class CashImageService
             $query->where('relatable_type', $filters['relatable_type']);
         }
 
+        // Apply tax receipts filter (only for BookingItemGroup)
+        if (!empty($filters['tax_receipts']) && $filters['tax_receipts'] !== 'all') {
+            $this->applyTaxReceiptsFilter($query, $filters['tax_receipts']);
+        }
+
         // CRM ID filter (optimized for specific relatable_type)
         if (!empty($filters['crm_id'])) {
             $this->applyCrmIdFilter($query, $filters['crm_id'], $filters['relatable_type'] ?? null);
         }
+    }
+
+    /**
+     * Apply tax receipts filter (only for BookingItemGroup)
+     */
+    private function applyTaxReceiptsFilter($query, $taxReceiptsFilter)
+    {
+        // This filter only applies to BookingItemGroup
+        $query->where('relatable_type', 'App\Models\BookingItemGroup');
+
+        if ($taxReceiptsFilter === 'have') {
+            // Show only BookingItemGroups that have tax receipts
+            $query->whereExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                          ->from('tax_receipt_groups')
+                          ->join('tax_receipts', 'tax_receipt_groups.tax_receipt_id', '=', 'tax_receipts.id')
+                          ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+            });
+        } elseif ($taxReceiptsFilter === 'missing') {
+            // Show only BookingItemGroups that don't have tax receipts
+            $query->whereNotExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                          ->from('tax_receipt_groups')
+                          ->join('tax_receipts', 'tax_receipt_groups.tax_receipt_id', '=', 'tax_receipts.id')
+                          ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+            });
+        }
+        // If 'all', no additional filtering needed
     }
 
     /**
@@ -313,6 +351,14 @@ class CashImageService
                 $relatableType = $request->input('relatable_type');
                 if (in_array($relatableType, self::VALID_RELATABLE_TYPES)) {
                     $query->where('relatable_type', $relatableType);
+                }
+            }
+
+            // Apply tax receipts filter
+            if ($request->filled('tax_receipts')) {
+                $taxReceiptsFilter = $request->input('tax_receipts');
+                if (in_array($taxReceiptsFilter, self::VALID_TAX_RECEIPT_FILTERS) && $taxReceiptsFilter !== 'all') {
+                    $this->applyTaxReceiptsFilter($query, $taxReceiptsFilter);
                 }
             }
 
@@ -593,6 +639,72 @@ class CashImageService
             $summary['vat'] = $booking->output_vat ?? 0;
             $summary['commission'] = $booking->commission ?? 0;
         }
+
+        // if($cashImage->relatable_type === 'App\Models\BookingItemGroup' && $cashImage->relatable) {
+        //     $group = $cashImage->relatable;
+
+        //     $summary['invoice_id'] = $group->id ?? null;
+        //     $summary['crm_id'] = $group->booking->crm_id ?? null;
+
+        //     // Load booking and then customer through booking relationship
+        //     if (!$group->relationLoaded('booking')) {
+        //         $group->load('booking.customer');
+        //     } elseif (!$group->booking->relationLoaded('customer')) {
+        //         $group->booking->load('customer');
+        //     }
+        //     $summary['customer_name'] = optional($group->booking->customer)->name;
+
+        //     // Load booking items using the correct relationship name
+        //     if (!$group->relationLoaded('bookingItems')) {
+        //         $group->load('bookingItems.product');
+        //     }
+
+        //     // Calculate service totals from group items
+        //     $hotelTotal = 0;
+        //     $hotelCost = 0;
+        //     $ticketTotal = 0;
+        //     $ticketCost = 0;
+        //     $hotelVat = 0;
+        //     $hotelCommission = 0;
+        //     $ticketVat = 0;
+        //     $ticketCommission = 0;
+
+        //     if ($group->bookingItems && $group->bookingItems->count() > 0) {
+        //         foreach ($group->bookingItems as $item) {
+        //             $productType = $item->product_type ?? null;
+        //             $amount = $item->amount ?? 0;
+        //             $cost = $item->total_cost_price ?? 0;
+        //             $vat = $item->output_vat ?? 0;
+        //             $commission = $item->commission ?? 0;
+
+        //             if ($productType === 'App\\Models\\Hotel') {
+        //                 $hotelTotal += $amount;
+        //                 $hotelCost += $cost;
+        //                 $hotelVat += $vat;
+        //                 $hotelCommission += $commission;
+        //             } elseif ($productType === 'App\\Models\\EntranceTicket') {
+        //                 $ticketTotal += $amount;
+        //                 $ticketCost += $cost;
+        //                 $ticketVat += $vat;
+        //                 $ticketCommission += $commission;
+        //             }
+        //         }
+        //     }
+
+        //     $summary['hotel_service_total'] = $hotelTotal;
+        //     $summary['hotel_service_cost'] = $hotelCost;
+        //     $summary['hotel_service_vat'] = $hotelVat;
+        //     $summary['hotel_service_commission'] = $hotelCommission;
+        //     $summary['ticket_service_total'] = $ticketTotal;
+        //     $summary['ticket_service_cost'] = $ticketCost;
+        //     $summary['ticket_service_vat'] = $ticketVat;
+        //     $summary['ticket_service_commission'] = $ticketCommission;
+        //     $summary['total_price'] = $group->total_price ?? ($hotelTotal + $ticketTotal);
+        //     $summary['total_sales'] = $group->grand_total ?? 0;
+        //     $summary['total_before_vat'] = $group->total_before_vat ?? 0;
+        //     $summary['vat'] = $group->output_vat ?? 0;
+        //     $summary['commission'] = $group->commission ?? 0;
+        // }
 
         return $summary;
     }
