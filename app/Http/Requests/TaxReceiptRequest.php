@@ -34,7 +34,7 @@ class TaxReceiptRequest extends FormRequest
             'total_tax_amount' => 'required|numeric|min:0',
             'total_after_tax' => 'required|numeric|min:0',
             // 'total' => 'required|numeric|min:0',
-            'invoice_number' => 'required|string|max:255', // Optional invoice number
+            'invoice_number' => 'required|string|max:255|unique:tax_receipts,invoice_number,' . $this->id . ',id', // Optional invoice number,id', // Optional invoice number
             'reservation_ids' => 'nullable|array', // Optional array of reservation IDs
             'reservation_ids.*' => 'exists:booking_items,id', // Each ID must exist in booking_items table
         ];

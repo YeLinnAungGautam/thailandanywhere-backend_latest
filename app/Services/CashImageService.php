@@ -17,7 +17,7 @@ class CashImageService
     const MAX_PER_PAGE = 100;
 
     const VALID_INTERACT_BANK = [
-        'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management'
+        'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management','pay_to_driver'
     ];
     const VALID_CURRENCY = [
         'MMK', 'THB', 'USD'
@@ -33,6 +33,10 @@ class CashImageService
 
     const VALID_TAX_RECEIPT_FILTERS = [
         'have', 'missing', 'all'
+    ];
+
+    const VALID_SORTS = [
+        'date', 'sender', 'receiver', 'amount', 'interact_bank', 'currency', 'created_at'
     ];
 
     /**
@@ -86,6 +90,8 @@ class CashImageService
                 'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
                 'relatable_type' => 'nullable|in:' . implode(',', self::VALID_RELATABLE_TYPES),
                 'tax_receipts' => 'nullable|in:' . implode(',', self::VALID_TAX_RECEIPT_FILTERS),
+                'sort_by' => 'nullable|in:' . implode(',', self::VALID_SORTS),
+                'sort_order' => 'nullable|in:asc,desc',
                 'sender' => 'nullable|string|max:255',
                 'receiver' => 'nullable|string|max:255',
                 'amount' => 'nullable|numeric|min:0',
@@ -153,19 +159,40 @@ class CashImageService
         // Apply search filters (including relatable_type)
         $this->applySearchFilters($query, $filters);
 
-        // Add database indexes for these columns if not already present:
-        // ALTER TABLE cash_images ADD INDEX idx_date_created (date, created_at);
-        // ALTER TABLE cash_images ADD INDEX idx_interact_bank (interact_bank);
-        // ALTER TABLE cash_images ADD INDEX idx_currency (currency);
-        // ALTER TABLE cash_images ADD INDEX idx_sender (sender);
-        // ALTER TABLE cash_images ADD INDEX idx_receiver (receiver);
-        // ALTER TABLE cash_images ADD INDEX idx_relatable_type (relatable_type);
-        // ALTER TABLE cash_images ADD INDEX idx_relatable_composite (relatable_type, relatable_id);
-
-        // Order by date and created_at (ensure these columns are indexed)
-        $query->orderBy('date', 'desc')->orderBy('created_at', 'desc');
+        // Apply sorting - MOVED FROM applySearchFilters to avoid conflicts
+        $this->applySorting($query, $filters);
 
         return $query;
+    }
+
+    /**
+     * Apply sorting logic separately to avoid conflicts
+     */
+    private function applySorting($query, $filters)
+    {
+        if (!empty($filters['sort_by']) && !empty($filters['sort_order'])) {
+            $sortBy = $filters['sort_by'];
+            $sortOrder = strtolower($filters['sort_order']); // normalize to lowercase
+
+            // Validate allowed sort fields
+            $allowedSortFields = ['sender', 'receiver', 'amount', 'date'];
+            if (!in_array($sortBy, $allowedSortFields)) {
+                return; // or throw an exception if you prefer
+            }
+
+            // For string fields (sender, receiver), ensure case-insensitive sorting
+            if (in_array($sortBy, ['sender', 'receiver'])) {
+                if ($sortOrder === 'asc') {
+                    $query->orderByRaw("LOWER($sortBy) ASC");
+                } elseif ($sortOrder === 'desc') {
+                    $query->orderByRaw("LOWER($sortBy) DESC");
+                }
+            }
+            // For numeric (amount) or date fields, use regular orderBy
+            else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        }
     }
 
     /**
@@ -189,7 +216,7 @@ class CashImageService
     }
 
     /**
-     * Apply search filters (including relatable_type filtering)
+     * Apply search filters (REMOVED sort_by logic from here)
      */
     private function applySearchFilters($query, $filters)
     {
@@ -234,31 +261,37 @@ class CashImageService
      */
     private function applyTaxReceiptsFilter($query, $taxReceiptsFilter)
     {
-        // This filter only applies to BookingItemGroup
+        // Ensure we only apply to BookingItemGroup records
         $query->where('relatable_type', 'App\Models\BookingItemGroup');
 
-        if ($taxReceiptsFilter === 'have') {
-            // Show only BookingItemGroups that have tax receipts
-            $query->whereExists(function ($existsQuery) {
-                $existsQuery->select(DB::raw(1))
-                          ->from('tax_receipt_groups')
-                          ->join('tax_receipts', 'tax_receipt_groups.tax_receipt_id', '=', 'tax_receipts.id')
-                          ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
-            });
-        } elseif ($taxReceiptsFilter === 'missing') {
-            // Show only BookingItemGroups that don't have tax receipts
-            $query->whereNotExists(function ($existsQuery) {
-                $existsQuery->select(DB::raw(1))
-                          ->from('tax_receipt_groups')
-                          ->join('tax_receipts', 'tax_receipt_groups.tax_receipt_id', '=', 'tax_receipts.id')
-                          ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
-            });
+        switch ($taxReceiptsFilter) {
+            case 'have':
+                // Show only BookingItemGroups with tax receipts
+                $query->whereHas('taxReceipts', function ($q) {
+                    $q->whereNotNull('tax_receipts.id');
+                });
+                break;
+
+            case 'missing':
+                // Show only BookingItemGroups without tax receipts
+                $query->whereDoesntHave('taxReceipts');
+                break;
+
+            case 'all':
+                // No additional filtering needed
+                break;
+
+            default:
+                // Optionally handle invalid filter values
+                break;
         }
-        // If 'all', no additional filtering needed
     }
 
     /**
      * Apply CRM ID filter (optimized for specific relatable_type)
+     */
+    /**
+     * Apply CRM ID filter (FIXED to support BookingItemGroup)
      */
     private function applyCrmIdFilter($query, $crmId, $relatableType = null)
     {
@@ -269,6 +302,15 @@ class CashImageService
                       $existsQuery->select(DB::raw(1))
                                 ->from('bookings')
                                 ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                  });
+        } elseif ($relatableType === 'App\Models\BookingItemGroup') {
+            // ADD THIS: Handle BookingItemGroup CRM filtering
+            $query->where('relatable_type', 'App\Models\BookingItemGroup')
+                  ->whereExists(function ($existsQuery) use ($crmId) {
+                      $existsQuery->select(DB::raw(1))
+                                ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
                                 ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
                   });
         } else {
@@ -285,23 +327,24 @@ class CashImageService
                                  });
                 });
 
+                // ADD THIS: BookingItemGroup
+                $q->orWhere(function ($bookingItemGroupQuery) use ($crmId) {
+                    $bookingItemGroupQuery->where('relatable_type', 'App\Models\BookingItemGroup')
+                                         ->whereExists(function ($existsQuery) use ($crmId) {
+                                             $existsQuery->select(DB::raw(1))
+                                                       ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                                       ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                                                       ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                                         });
+                });
+
                 // Add other model types that have crm_id if needed
-                // Example for Transaction model:
-                // $q->orWhere(function ($transactionQuery) use ($crmId) {
-                //     $transactionQuery->where('relatable_type', 'App\Models\Transaction')
-                //                      ->whereExists(function ($existsQuery) use ($crmId) {
-                //                          $existsQuery->select(DB::raw(1))
-                //                                    ->from('transactions')
-                //                                    ->whereColumn('transactions.id', 'cash_images.relatable_id')
-                //                                    ->where('transactions.crm_id', 'like', '%' . $crmId . '%');
-                //                      });
-                // });
             });
         }
     }
 
     /**
-     * Extract filters from request (added relatable_type)
+     * Extract filters from request (UPDATED to include sort parameters)
      */
     private function extractFilters(Request $request)
     {
@@ -313,12 +356,14 @@ class CashImageService
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),
             'date' => $request->input('date'),
-            'crm_id' => $request->input('crm_id')
+            'crm_id' => $request->input('crm_id'),
+            'sort_by' => $request->input('sort_by'),
+            'sort_order' => $request->input('sort_order')
         ];
     }
 
     /**
-     * Alternative: Get basic list with relatable_type filtering
+     * Alternative: Get basic list with relatable_type filtering (ALSO FIXED)
      */
     public function getBasicList(Request $request)
     {
@@ -337,9 +382,7 @@ class CashImageService
                 'image',
                 'relatable_type',
                 'relatable_id'
-            ])
-            ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc');
+            ]);
 
             // Only apply date filter if provided (most common filter)
             if ($request->filled('date')) {
@@ -362,6 +405,18 @@ class CashImageService
                 }
             }
 
+            // FIXED: Apply sorting logic properly
+            if ($request->filled('sort_by') && in_array($request->input('sort_by'), self::VALID_SORTS)) {
+                $sortOrder = $request->input('sort_order', 'desc');
+                if (!in_array($sortOrder, ['asc', 'desc'])) {
+                    $sortOrder = 'desc'; // Default to desc if invalid
+                }
+                $query->orderBy($request->input('sort_by'), $sortOrder);
+            } else {
+                // Default sorting when no custom sort is specified
+                $query->orderBy('date', 'desc')->orderBy('created_at', 'desc');
+            }
+
             $data = $query->paginate($limit);
 
             return [
@@ -378,6 +433,8 @@ class CashImageService
             ];
         }
     }
+
+    // ... rest of the methods remain the same ...
 
     /**
      * Get available relatable types for filtering
@@ -500,7 +557,7 @@ class CashImageService
     }
 
     /**
-     * Build optimized query for summary with eager loading
+     * Build optimized query for summary with eager loading (UPDATED with proper sorting)
      */
     private function buildSummaryQuery($filters)
     {
@@ -525,6 +582,9 @@ class CashImageService
         // Apply search filters
         $this->applySearchFilters($query, $filters);
 
+        // Apply sorting
+        $this->applySorting($query, $filters);
+
         // Conditionally eager load based on relatable_type
         $query->with(['relatable' => function ($morphQuery) {
             // This will only load the polymorphic relationship
@@ -538,10 +598,6 @@ class CashImageService
                 'relatable.customer'
             ]);
         }
-
-        // Order by date and created_at
-        $query->orderBy('cash_images.date', 'desc')
-              ->orderBy('cash_images.created_at', 'desc');
 
         return $query;
     }
@@ -640,72 +696,6 @@ class CashImageService
             $summary['commission'] = $booking->commission ?? 0;
         }
 
-        // if($cashImage->relatable_type === 'App\Models\BookingItemGroup' && $cashImage->relatable) {
-        //     $group = $cashImage->relatable;
-
-        //     $summary['invoice_id'] = $group->id ?? null;
-        //     $summary['crm_id'] = $group->booking->crm_id ?? null;
-
-        //     // Load booking and then customer through booking relationship
-        //     if (!$group->relationLoaded('booking')) {
-        //         $group->load('booking.customer');
-        //     } elseif (!$group->booking->relationLoaded('customer')) {
-        //         $group->booking->load('customer');
-        //     }
-        //     $summary['customer_name'] = optional($group->booking->customer)->name;
-
-        //     // Load booking items using the correct relationship name
-        //     if (!$group->relationLoaded('bookingItems')) {
-        //         $group->load('bookingItems.product');
-        //     }
-
-        //     // Calculate service totals from group items
-        //     $hotelTotal = 0;
-        //     $hotelCost = 0;
-        //     $ticketTotal = 0;
-        //     $ticketCost = 0;
-        //     $hotelVat = 0;
-        //     $hotelCommission = 0;
-        //     $ticketVat = 0;
-        //     $ticketCommission = 0;
-
-        //     if ($group->bookingItems && $group->bookingItems->count() > 0) {
-        //         foreach ($group->bookingItems as $item) {
-        //             $productType = $item->product_type ?? null;
-        //             $amount = $item->amount ?? 0;
-        //             $cost = $item->total_cost_price ?? 0;
-        //             $vat = $item->output_vat ?? 0;
-        //             $commission = $item->commission ?? 0;
-
-        //             if ($productType === 'App\\Models\\Hotel') {
-        //                 $hotelTotal += $amount;
-        //                 $hotelCost += $cost;
-        //                 $hotelVat += $vat;
-        //                 $hotelCommission += $commission;
-        //             } elseif ($productType === 'App\\Models\\EntranceTicket') {
-        //                 $ticketTotal += $amount;
-        //                 $ticketCost += $cost;
-        //                 $ticketVat += $vat;
-        //                 $ticketCommission += $commission;
-        //             }
-        //         }
-        //     }
-
-        //     $summary['hotel_service_total'] = $hotelTotal;
-        //     $summary['hotel_service_cost'] = $hotelCost;
-        //     $summary['hotel_service_vat'] = $hotelVat;
-        //     $summary['hotel_service_commission'] = $hotelCommission;
-        //     $summary['ticket_service_total'] = $ticketTotal;
-        //     $summary['ticket_service_cost'] = $ticketCost;
-        //     $summary['ticket_service_vat'] = $ticketVat;
-        //     $summary['ticket_service_commission'] = $ticketCommission;
-        //     $summary['total_price'] = $group->total_price ?? ($hotelTotal + $ticketTotal);
-        //     $summary['total_sales'] = $group->grand_total ?? 0;
-        //     $summary['total_before_vat'] = $group->total_before_vat ?? 0;
-        //     $summary['vat'] = $group->output_vat ?? 0;
-        //     $summary['commission'] = $group->commission ?? 0;
-        // }
-
         return $summary;
     }
 
@@ -773,36 +763,3 @@ class CashImageService
         }
     }
 }
-
-/*
-Updated Database Optimization Recommendations:
-
-1. Add these indexes for better performance (including relatable_type):
-ALTER TABLE cash_images ADD INDEX idx_date_created (date, created_at);
-ALTER TABLE cash_images ADD INDEX idx_interact_bank (interact_bank);
-ALTER TABLE cash_images ADD INDEX idx_currency (currency);
-ALTER TABLE cash_images ADD INDEX idx_sender (sender(50)); -- Partial index for string columns
-ALTER TABLE cash_images ADD INDEX idx_receiver (receiver(50));
-ALTER TABLE cash_images ADD INDEX idx_relatable_type (relatable_type);
-ALTER TABLE cash_images ADD INDEX idx_relatable_composite (relatable_type, relatable_id);
-
-2. Consider adding a denormalized crm_id column to cash_images table to avoid joins:
-ALTER TABLE cash_images ADD COLUMN crm_id VARCHAR(255) NULL;
-ALTER TABLE cash_images ADD INDEX idx_crm_id (crm_id);
-
-3. For polymorphic relationships optimization:
-- Use composite index on (relatable_type, relatable_id) for better join performance
-- Consider eager loading relationships when needed
-
-4. API Usage Examples:
-GET /cash-images?relatable_type=App\Models\Booking
-GET /cash-images?relatable_type=App\Models\Booking&crm_id=CRM123
-GET /cash-images?relatable_type=App\Models\Transaction&date=2024-01-15
-
-5. Implement caching for frequently accessed data:
-- Cache pagination results for 5-10 minutes
-- Cache relatable type counts
-- Use Redis or Memcached
-
-6. Consider using database views for complex queries with multiple polymorphic types
-*/

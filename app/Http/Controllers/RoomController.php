@@ -27,7 +27,7 @@ class RoomController extends Controller
         $search = $request->query('search');
         $order_by_price = $request->query('order_by_price');
 
-        $query = Room::query()->with('periods', 'images', 'hotel');
+        $query = Room::query()->with('periods', 'images', 'hotel','roitems', 'roitems.rofacility');
 
         if ($order_by_price) {
             if ($order_by_price == 'low_to_high') {
@@ -310,5 +310,58 @@ class RoomController extends Controller
             ])
             ->response()
             ->getData(), 'Hotel List');
+    }
+
+    public function getRoomFacilities(Room $room)
+    {
+        $groupedFacilities = $room->roitemsGrouped();
+
+        return $this->success($groupedFacilities, 'Room facilities grouped by category');
+    }
+
+    /**
+     * Add roitems to room
+     */
+    public function addRoitems(Request $request, Room $room)
+    {
+        $request->validate([
+            'roitem_ids' => 'required|array',
+            'roitem_ids.*' => 'exists:roitems,id'
+        ]);
+
+        try {
+            $this->attachRoitems($room, $request->roitem_ids);
+
+            return $this->success(
+                new RoomResource($room->load(['roitems, roitems.rofacility'])),
+                'Roitems added successfully'
+            );
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Remove roitems from room
+     */
+    public function removeRoitems(Request $request, Room $room)
+    {
+        $request->validate([
+            'roitem_ids' => 'required|array',
+            'roitem_ids.*' => 'exists:roitems,id'
+        ]);
+
+        try {
+            $room->roitems()->detach($request->roitem_ids);
+
+            return $this->success(
+                new RoomResource($room->load(['roitems, roitems.rofacility'])),
+                'Roitems removed successfully'
+            );
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 }

@@ -32,4 +32,18 @@ class Room extends Model
     {
         return $this->hasMany(RoomPeriod::class, 'room_id', 'id');
     }
+
+    public function roitems()
+    {
+        return $this->belongsToMany(Roitem::class, 'room_roitems');
+    }
+
+    // ✅ မှန်ကန်တဲ့ grouped method
+    public function roitemsGrouped()
+    {
+        return $this->roitems()
+                    ->with('rofacility')
+                    ->get()
+                    ->groupBy('rofacility.name'); // သို့မဟုတ် 'rofacility.title'
+    }
 }
