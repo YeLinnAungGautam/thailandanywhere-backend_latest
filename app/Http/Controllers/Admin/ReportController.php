@@ -488,6 +488,7 @@ class ReportController extends Controller
         $data = [
             'daily_summary' => $report_service->getCashImageSummary($request->created_by),
             'monthly_summary' => $report_service->getMonthlyCashImageSummary($request->created_by),
+            'today_summary' => $report_service->getTodayCashImageSummary($request->created_by),
         ];
 
         return $this->success($data, 'Cash Image Report - Date: ' . Carbon::parse($date)->format('d F Y'));
