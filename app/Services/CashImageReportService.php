@@ -82,6 +82,52 @@ class CashImageReportService
         return $this->generateCashImageSummaryResponse($cash_summary, $created_by);
     }
 
+    public function getTodayCashImageSummary($created_by = null): array
+    {
+        $today = Carbon::now()->format('Y-m-d');
+
+        // Get cash images for Booking::class
+        $booking_cash_summary = CashImage::query()
+            ->whereDate('cash_images.date', $today)
+            ->where('cash_images.relatable_type', 'App\\Models\\Booking')
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_amount')
+            )
+            ->groupBy('cash_images.currency')
+            ->get()
+            ->pluck('total_amount', 'currency');
+
+        // Get cash images for BookingItemGroup::class and CashBook::class
+        $other_cash_summary = CashImage::query()
+            ->whereDate('cash_images.date', $today)
+            ->whereIn('cash_images.relatable_type', [
+                'App\\Models\\BookingItemGroup',
+                'App\\Models\\CashBook'
+            ])
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_amount')
+            )
+            ->groupBy('cash_images.currency')
+            ->get()
+            ->pluck('total_amount', 'currency');
+
+        // Return structured response with default 0 values
+        return [
+            'booking_summary' => [
+                'thb' => $booking_cash_summary['THB'] ?? 0,
+                'mmk' => $booking_cash_summary['MMK'] ?? 0,
+            ],
+            'other_summary' => [
+                'thb' => $other_cash_summary['THB'] ?? 0,
+                'mmk' => $other_cash_summary['MMK'] ?? 0,
+            ]
+        ];
+    }
+
     private function getDaysOfMonth(): array
     {
         $dates = Carbon::parse($this->date)->startOfMonth()

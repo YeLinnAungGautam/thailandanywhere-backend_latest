@@ -39,6 +39,7 @@ class BookingController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $crmId = $request->query('crm_id');
+        $verify = $request->query('verify_status');
         $filter = $request->query('filter');
         $paymentStatus = $request->query('status');
         $connectionStatus = $request->query('connection_status'); // New filter for connected/not_connected
@@ -68,6 +69,10 @@ class BookingController extends Controller
         // Search filter
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
+        }
+
+        if ($verify) {
+            $query->where('verify_status', $verify);
         }
 
         if ($crmId) {
