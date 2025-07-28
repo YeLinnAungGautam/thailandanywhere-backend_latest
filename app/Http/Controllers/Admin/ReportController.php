@@ -7,6 +7,7 @@ use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\SaleReportService;
+use App\Services\CashImageReportService;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use DateTime;
@@ -478,5 +479,17 @@ class ReportController extends Controller
         $data = $report_service->getProductSaleCount($request->product_type);
 
         return $this->success($data, 'Date: ' . Carbon::parse($request->date)->format('d F Y'));
+    }
+
+    public function generalCashImageReport(string $date, Request $request)
+    {
+        $report_service = new CashImageReportService($date);
+
+        $data = [
+            'daily_summary' => $report_service->getCashImageSummary($request->created_by),
+            'monthly_summary' => $report_service->getMonthlyCashImageSummary($request->created_by),
+        ];
+
+        return $this->success($data, 'Cash Image Report - Date: ' . Carbon::parse($date)->format('d F Y'));
     }
 }

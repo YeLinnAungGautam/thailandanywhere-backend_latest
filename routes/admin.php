@@ -141,6 +141,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('get-reports/{id}', [ReportController::class, 'getSelectData']);
     Route::get('get-each-user-report', [ReportController::class, 'getEachUserSaleCount']);
     Route::get('general-reports/{date}', [ReportController::class, 'generalSaleReport']);
+    Route::get('general-cash-image-reports/{date}', [ReportController::class, 'generalCashImageReport']);
 
     Route::apiResource('admins', AdminController::class);
     Route::get('/me', [AuthController::class, 'me']);
@@ -274,8 +275,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('rooms/export/csv', [RoomExportImportController::class, 'export']);
     Route::post('rooms/import/csv', [RoomExportImportController::class, 'import']);
 
-    Route::apiResource('rooms/items', RoitemController::class);
-    Route::apiResource('rooms/groups', RofacilityController::class);
+    Route::apiResource('rooms_items', RoitemController::class);
+    Route::apiResource('rooms_groups', RofacilityController::class);
     Route::get('rooms/{room}/facilities', [RoomController::class, 'getRoomFacilities']);
     Route::post('rooms/{room}/roitems', [RoomController::class, 'addRoitems']);
     Route::delete('rooms/{room}/roitems', [RoomController::class, 'removeRoitems']);
