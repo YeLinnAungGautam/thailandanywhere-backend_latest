@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
+use App\Models\Airline;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -37,8 +38,8 @@ class BookingResource extends JsonResource
             'booking_date' => $this->booking_date,
             'money_exchange_rate' => $this->money_exchange_rate,
 
-            'sub_total' => $this->sub_total + $this->exclude_amount ?? 0,
-            'grand_total' => $this->grand_total + $this->exclude_amount ?? 0,
+            'sub_total' => $this->sub_total,
+            'grand_total' => $this->grand_total,
             'exclude_amount' => $this->exclude_amount,
 
             'deposit' => $this->deposit,

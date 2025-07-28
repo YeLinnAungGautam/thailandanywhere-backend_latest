@@ -60,8 +60,8 @@ class BookingGroupResource extends JsonResource
             'booking_date' => $this->booking_date,
             'money_exchange_rate' => $this->money_exchange_rate,
 
-            'sub_total' => $this->sub_total + $this->exclude_amount ?? 0,
-            'grand_total' => $this->grand_total + $this->exclude_amount ?? 0,
+            'sub_total' => $this->sub_total ?? 0,
+            'grand_total' => $this->grand_total ?? 0,
             'exclude_amount' => $this->exclude_amount,
 
             'deposit' => $this->deposit,
