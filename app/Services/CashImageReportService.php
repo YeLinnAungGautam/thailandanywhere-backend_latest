@@ -4,6 +4,7 @@ namespace App\Services;
 use App\Http\Resources\BookingResource;
 use App\Models\Admin;
 use App\Models\Booking;
+use App\Models\BookingItemGroup;
 use App\Models\CashImage;
 use App\Models\EntranceTicket;
 use App\Models\Hotel;
@@ -182,6 +183,7 @@ class CashImageReportService
      */
     public function getMonthlyCashImageSummary($created_by = null): array
     {
+        // Original income query (Booking class)
         $monthly_summary = CashImage::query()
             ->join('bookings', function ($join) {
                 $join->on('cash_images.relatable_id', '=', 'bookings.id')
@@ -200,7 +202,116 @@ class CashImageReportService
             ->groupBy('bookings.created_by', 'cash_images.currency')
             ->get();
 
-        return $this->generateMonthlySummaryResponse($monthly_summary, $created_by);
+        // Get expense totals for THB and MMK only
+        $expense_totals = CashImage::query()
+            ->join('bookings', function ($join) {
+                $join->on('cash_images.relatable_id', '=', 'bookings.id')
+                     ->whereIn('cash_images.relatable_type', [
+                         'App\\Models\\BookingItemGroup',
+                         'App\\Models\\CashBook'
+                     ]);
+            })
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('bookings.created_by', explode(',', $created_by));
+            })
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_expense_amount')
+            )
+            ->groupBy('cash_images.currency')
+            ->get()
+            ->pluck('total_expense_amount', 'currency');
+
+        return $this->generateMonthlySummaryResponseWithExpenseTotals($monthly_summary, $expense_totals, $created_by);
+    }
+
+    /**
+     * Generate monthly summary response with expense totals added
+     */
+    private function generateMonthlySummaryResponseWithExpenseTotals($monthly_summary, $expense_totals, $created_by = null): array
+    {
+        $agents = Admin::query()
+            ->agentAndSaleManager()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('id', explode(',', $created_by));
+            })
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $agent_summaries = [];
+        $grand_totals_by_currency = [];
+        $grand_total_images = 0;
+
+        foreach ($agents as $agent_id => $agent_name) {
+            $agent_data_by_currency = $monthly_summary->where('created_by', $agent_id);
+
+            $currencies = [];
+            $total_images_for_agent = 0;
+
+            // Group by currency for this agent
+            foreach ($agent_data_by_currency as $data) {
+                $currency = $data->currency ?? 'Unknown';
+
+                if (!isset($currencies[$currency])) {
+                    $currencies[$currency] = [
+                        'total_cash_images' => 0,
+                        'total_cash_amount' => 0
+                    ];
+                }
+
+                $currencies[$currency]['total_cash_images'] += $data->total_cash_images;
+                $currencies[$currency]['total_cash_amount'] += $data->total_cash_amount;
+                $total_images_for_agent += $data->total_cash_images;
+
+                // Add to grand totals
+                if (!isset($grand_totals_by_currency[$currency])) {
+                    $grand_totals_by_currency[$currency] = [
+                        'total_cash_images' => 0,
+                        'total_cash_amount' => 0
+                    ];
+                }
+                $grand_totals_by_currency[$currency]['total_cash_images'] += $data->total_cash_images;
+                $grand_totals_by_currency[$currency]['total_cash_amount'] += $data->total_cash_amount;
+            }
+
+            $grand_total_images += $total_images_for_agent;
+
+            $agent_summaries[] = [
+                'agent_id' => $agent_id,
+                'name' => $agent_name,
+                'total_cash_images' => $total_images_for_agent,
+                'currencies' => $currencies,
+                // Legacy fields for backward compatibility (will show first currency or 0)
+                'total_cash_amount' => !empty($currencies) ? array_values($currencies)[0]['total_cash_amount'] : 0,
+            ];
+        }
+
+        // Sort by total images descending (အများဆုံးရရှိသူကို အပေါ်မှာ ပြမယ်)
+        usort($agent_summaries, function($a, $b) {
+            return $b['total_cash_images'] <=> $a['total_cash_images'];
+        });
+
+        return [
+            'month' => Carbon::parse($this->date)->format('F Y'), // July 2025
+            'period' => [
+                'start_date' => $this->start_date,
+                'end_date' => $this->end_date
+            ],
+            'total_agents' => count($agent_summaries),
+            'grand_total_cash_images' => $grand_total_images,
+            'grand_totals_by_currency' => $grand_totals_by_currency,
+            // Legacy field for backward compatibility
+            'grand_total_cash_amount' => !empty($grand_totals_by_currency) ?
+                array_values($grand_totals_by_currency)[0]['total_cash_amount'] : 0,
+            // NEW: Add expense totals for THB and MMK
+            'expense_summary' => [
+                'thb' => $expense_totals['THB'] ?? 0,
+                'mmk' => $expense_totals['MMK'] ?? 0,
+            ],
+            'agents' => $agent_summaries
+        ];
     }
 
     /**
