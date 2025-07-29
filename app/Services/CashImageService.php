@@ -4,11 +4,10 @@ namespace App\Services;
 
 use App\Http\Resources\Accountance\CashImageListResource as AccountanceCashImageResource;
 use App\Models\CashImage;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
 use Exception;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class CashImageService
@@ -17,7 +16,7 @@ class CashImageService
     const MAX_PER_PAGE = 100;
 
     const VALID_INTERACT_BANK = [
-        'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management','pay_to_driver'
+        'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management', 'pay_to_driver'
     ];
     const VALID_CURRENCY = [
         'MMK', 'THB', 'USD'
@@ -62,6 +61,8 @@ class CashImageService
             ];
 
         } catch (InvalidArgumentException $e) {
+            Log::error($e);
+
             return [
                 'success' => false,
                 'data' => null,
@@ -69,6 +70,8 @@ class CashImageService
                 'error_type' => 'validation'
             ];
         } catch (Exception $e) {
+            Log::error($e);
+
             return [
                 'success' => false,
                 'data' => null,
@@ -207,7 +210,7 @@ class CashImageService
             $startDate = $dates[0];
             $endDate = $dates[1];
             $query->whereDate('date', '>=', $startDate)
-                  ->whereDate('date', '<=', $endDate);
+                ->whereDate('date', '<=', $endDate);
         } else {
             // Single date
             $singleDate = $dates[0];
@@ -270,11 +273,13 @@ class CashImageService
                 $query->whereHas('taxReceipts', function ($q) {
                     $q->whereNotNull('tax_receipts.id');
                 });
+
                 break;
 
             case 'missing':
                 // Show only BookingItemGroups without tax receipts
                 $query->whereDoesntHave('taxReceipts');
+
                 break;
 
             case 'all':
@@ -298,44 +303,44 @@ class CashImageService
         // If relatable_type is specified, we can optimize the query
         if ($relatableType === 'App\Models\Booking') {
             $query->where('relatable_type', 'App\Models\Booking')
-                  ->whereExists(function ($existsQuery) use ($crmId) {
-                      $existsQuery->select(DB::raw(1))
-                                ->from('bookings')
-                                ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                  });
+                ->whereExists(function ($existsQuery) use ($crmId) {
+                    $existsQuery->select(DB::raw(1))
+                        ->from('bookings')
+                        ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                        ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                });
         } elseif ($relatableType === 'App\Models\BookingItemGroup') {
             // ADD THIS: Handle BookingItemGroup CRM filtering
             $query->where('relatable_type', 'App\Models\BookingItemGroup')
-                  ->whereExists(function ($existsQuery) use ($crmId) {
-                      $existsQuery->select(DB::raw(1))
-                                ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                                ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                  });
+                ->whereExists(function ($existsQuery) use ($crmId) {
+                    $existsQuery->select(DB::raw(1))
+                        ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                        ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                        ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                });
         } else {
             // General case - check all possible relatable types that might have crm_id
             $query->where(function ($q) use ($crmId) {
                 // Booking
                 $q->where(function ($bookingQuery) use ($crmId) {
                     $bookingQuery->where('relatable_type', 'App\Models\Booking')
-                                 ->whereExists(function ($existsQuery) use ($crmId) {
-                                     $existsQuery->select(DB::raw(1))
-                                               ->from('bookings')
-                                               ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                                               ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                                 });
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('bookings')
+                                ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
 
                 // ADD THIS: BookingItemGroup
                 $q->orWhere(function ($bookingItemGroupQuery) use ($crmId) {
                     $bookingItemGroupQuery->where('relatable_type', 'App\Models\BookingItemGroup')
-                                         ->whereExists(function ($existsQuery) use ($crmId) {
-                                             $existsQuery->select(DB::raw(1))
-                                                       ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                                                       ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                                                       ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                                         });
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
 
                 // Add other model types that have crm_id if needed
@@ -443,10 +448,10 @@ class CashImageService
     {
         try {
             $types = CashImage::select('relatable_type')
-                             ->distinct()
-                             ->whereNotNull('relatable_type')
-                             ->pluck('relatable_type')
-                             ->toArray();
+                ->distinct()
+                ->whereNotNull('relatable_type')
+                ->pluck('relatable_type')
+                ->toArray();
 
             // Filter only valid types
             $validTypes = array_intersect($types, self::VALID_RELATABLE_TYPES);
@@ -473,12 +478,12 @@ class CashImageService
     {
         try {
             $counts = CashImage::select('relatable_type', DB::raw('COUNT(*) as count'))
-                              ->whereNotNull('relatable_type')
-                              ->whereIn('relatable_type', self::VALID_RELATABLE_TYPES)
-                              ->groupBy('relatable_type')
-                              ->get()
-                              ->pluck('count', 'relatable_type')
-                              ->toArray();
+                ->whereNotNull('relatable_type')
+                ->whereIn('relatable_type', self::VALID_RELATABLE_TYPES)
+                ->groupBy('relatable_type')
+                ->get()
+                ->pluck('count', 'relatable_type')
+                ->toArray();
 
             return [
                 'success' => true,
