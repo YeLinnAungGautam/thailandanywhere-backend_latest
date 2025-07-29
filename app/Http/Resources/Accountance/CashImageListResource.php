@@ -2,13 +2,10 @@
 
 namespace App\Http\Resources\Accountance;
 
-use App\Http\Resources\BookingItemGroupResource;
-use App\Http\Resources\BookingResource;
-use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CashImageListResource extends JsonResource
 {
@@ -88,6 +85,7 @@ class CashImageListResource extends JsonResource
             return $hasInvoice;
         } catch (\Exception $e) {
             Log::error("Error checking invoice for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
+
             return false;
         }
     }
@@ -139,6 +137,7 @@ class CashImageListResource extends JsonResource
             return $taxReceipts;
         } catch (\Exception $e) {
             Log::error("Error getting tax receipts for BookingItemGroup {$this->relatable_id}: " . $e->getMessage());
+
             return [];
         }
     }
@@ -174,6 +173,7 @@ class CashImageListResource extends JsonResource
             return 0;
         } catch (\Exception $e) {
             Log::error("Error calculating VAT for CashImage {$this->id}: " . $e->getMessage());
+
             return 0;
         }
     }
@@ -204,6 +204,7 @@ class CashImageListResource extends JsonResource
             return 0;
         } catch (\Exception $e) {
             Log::error("Error calculating BookingItemGroup VAT for group {$this->relatable_id}: " . $e->getMessage());
+
             return 0;
         }
     }
@@ -224,6 +225,7 @@ class CashImageListResource extends JsonResource
                 if ($commission > 0) {
                     return $commission - ($commission / 1.07);
                 }
+
                 return 0;
 
             } elseif ($this->relatable_type === 'App\Models\BookingItemGroup') {
@@ -234,6 +236,7 @@ class CashImageListResource extends JsonResource
             return 0;
         } catch (\Exception $e) {
             Log::error("Error calculating Net VAT for CashImage {$this->id}: " . $e->getMessage());
+
             return 0;
         }
     }
@@ -265,6 +268,7 @@ class CashImageListResource extends JsonResource
             return 0;
         } catch (\Exception $e) {
             Log::error("Error getting commission for CashImage {$this->id}: " . $e->getMessage());
+
             return 0;
         }
     }
@@ -274,9 +278,14 @@ class CashImageListResource extends JsonResource
      */
     public function getProductType()
     {
-        if($this->relatable_type == 'App\Models\BookingItemGroup') {
-            return $this->relatable->bookingItems->first()->product_type ?? null;
+        if ($this->relatable_type == 'App\Models\BookingItemGroup') {
+            if ($this->relatable && $this->relatable->relationLoaded('bookingItems') && $this->relatable->bookingItems && $this->relatable->bookingItems->isNotEmpty()) {
+                return $this->relatable->bookingItems->first()->product_type ?? null;
+            }
+
+            return null;
         }
+
         return null;
     }
 
@@ -299,6 +308,7 @@ class CashImageListResource extends JsonResource
                 $booking = \App\Models\Booking::select('crm_id')
                     ->where('id', $this->relatable_id)
                     ->first();
+
                 return $booking ? $booking->crm_id : null;
 
             } elseif ($this->relatable_type === 'App\Models\BookingItemGroup') {
@@ -312,6 +322,7 @@ class CashImageListResource extends JsonResource
                     $booking = \App\Models\Booking::select('crm_id')
                         ->where('id', $group->booking_id)
                         ->first();
+
                     return $booking ? $booking->crm_id : null;
                 }
             }
@@ -319,6 +330,7 @@ class CashImageListResource extends JsonResource
             return null;
         } catch (\Exception $e) {
             Log::error("Error getting CRM ID for CashImage {$this->id}: " . $e->getMessage());
+
             return null;
         }
     }
@@ -331,6 +343,7 @@ class CashImageListResource extends JsonResource
         if (is_string($date)) {
             $date = \Carbon\Carbon::parse($date);
         }
+
         return $date->format('d-m-Y H:i:s');
     }
 }
