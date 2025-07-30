@@ -3,241 +3,230 @@
 namespace App\Http\Controllers\Accountance;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Accountance\CashImageResource;
 use App\Http\Resources\CashImageBookingResource;
+use App\Models\CashImage;
 use App\Models\CashImageBooking;
 use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CashImageBookingController extends Controller
 {
     use HttpResponses;
-    public function index(Request $request)
-    {
-        $query = CashImageBooking::with(['cashImage', 'booking']);
-
-        // Filter by cash_image_id if provided
-        if ($request->has('cash_image_id')) {
-            $query->where('cash_image_id', $request->cash_image_id);
-        }
-
-        // Filter by booking_id if provided
-        if ($request->has('booking_id')) {
-            $query->where('booking_id', $request->booking_id);
-        }
-
-        $attachments = $query->get();
-
-        return $this->success(CashImageBookingResource::collection($attachments), 'Attachments retrieved successfully');
-    }
+    use ImageManager;
 
     /**
-     * Store a newly created cash image booking attachment
+     * Create cash image and attach to multiple bookings
      */
-    public function store(Request $request)
+    public function createAndAttach(Request $request)
     {
         $validated = $request->validate([
-            'cash_image_id' => 'required|exists:cash_images,id',
-            'booking_id' => 'required|exists:bookings,id',
-            'deposit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string'
+            // Cash Image data
+            'image' => 'required',
+            'date' => 'required|date_format:Y-m-d H:i:s',
+            'sender' => 'required|string|max:255',
+            'receiver' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'interact_bank' => 'nullable|string|max:255',
+            'currency' => 'required|string|max:10',
+            'relatable_type' => 'required|string',
+            'relatable_id' => 'required|integer',
+
+            // Booking attachments
+            'bookings' => 'required|array|min:1',
+            'bookings.*.booking_id' => 'required|exists:bookings,id',
+            'bookings.*.deposit' => 'nullable|numeric|min:0',
+            'bookings.*.notes' => 'nullable|string'
         ]);
 
-        // Check if attachment already exists
-        $existing = CashImageBooking::where('cash_image_id', $validated['cash_image_id'])
-            ->where('booking_id', $validated['booking_id'])
-            ->first();
+        DB::beginTransaction();
 
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This cash image is already attached to this booking',
-                'data' => $existing
-            ], 409);
-        }
+        try {
+            // Create cash image
+            $fileData = $this->uploads($validated['image'], 'images/');
 
-        $attachment = CashImageBooking::create([
-            'cash_image_id' => $validated['cash_image_id'],
-            'booking_id' => $validated['booking_id'],
-            'deposit' => $validated['deposit'] ?? 0,
-            'notes' => $validated['notes']
-        ]);
-
-        $attachment->load(['cashImage', 'booking']);
-
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'Cash image attached to booking successfully',
-        //     'data' => $attachment
-        // ], 201);
-
-        return $this->success(new CashImageBookingResource($attachment), 'Cash image attached to booking successfully');
-    }
-
-    /**
-     * Display the specified cash image booking attachment
-     */
-    public function show($id)
-    {
-        $attachment = CashImageBooking::with(['cashImage', 'booking'])->find($id);
-
-        if (!$attachment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Attachment not found'
-            ], 404);
-        }
-
-        // return response()->json([
-        //     'success' => true,
-        //     'data' => $attachment
-        // ]);
-
-        return $this->success(new CashImageBookingResource($attachment), 'Attachment retrieved successfully');
-    }
-
-    /**
-     * Update the specified cash image booking attachment
-     */
-    public function update(Request $request, $id)
-    {
-        $attachment = CashImageBooking::find($id);
-
-        if (!$attachment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Attachment not found'
-            ], 404);
-        }
-
-        $validated = $request->validate([
-            'cash_image_id' => 'sometimes|exists:cash_images,id',
-            'booking_id' => 'sometimes|exists:bookings,id',
-            'deposit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string'
-        ]);
-
-        // If updating cash_image_id or booking_id, check for duplicates
-        if (isset($validated['cash_image_id']) || isset($validated['booking_id'])) {
-            $cashImageId = $validated['cash_image_id'] ?? $attachment->cash_image_id;
-            $bookingId = $validated['booking_id'] ?? $attachment->booking_id;
-
-            $existing = CashImageBooking::where('cash_image_id', $cashImageId)
-                ->where('booking_id', $bookingId)
-                ->where('id', '!=', $id)
-                ->first();
-
-            if ($existing) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This cash image is already attached to this booking'
-                ], 409);
-            }
-        }
-
-        $attachment->update($validated);
-        $attachment->load(['cashImage', 'booking']);
-
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'Attachment updated successfully',
-        //     'data' => $attachment
-        // ]);
-
-        return $this->success(new CashImageBookingResource($attachment), 'Attachment updated successfully');
-    }
-
-    /**
-     * Remove the specified cash image booking attachment
-     */
-    public function destroy($id)
-    {
-        $attachment = CashImageBooking::find($id);
-
-        if (!$attachment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Attachment not found'
-            ], 404);
-        }
-
-        $attachment->delete();
-
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'Attachment deleted successfully'
-        // ]);
-
-        return $this->success(null, 'Attachment deleted successfully');
-    }
-
-    /**
-     * Bulk create attachments
-     */
-    public function bulkStore(Request $request)
-    {
-        $validated = $request->validate([
-            'attachments' => 'required|array',
-            'attachments.*.cash_image_id' => 'required|exists:cash_images,id',
-            'attachments.*.booking_id' => 'required|exists:bookings,id',
-            'attachments.*.deposit' => 'nullable|numeric|min:0',
-            'attachments.*.notes' => 'nullable|string'
-        ]);
-
-        $created = [];
-        $errors = [];
-
-        foreach ($validated['attachments'] as $index => $attachmentData) {
-            // Check if attachment already exists
-            $existing = CashImageBooking::where('cash_image_id', $attachmentData['cash_image_id'])
-                ->where('booking_id', $attachmentData['booking_id'])
-                ->first();
-
-            if ($existing) {
-                $errors[] = [
-                    'index' => $index,
-                    'message' => 'Cash image ' . $attachmentData['cash_image_id'] . ' is already attached to booking ' . $attachmentData['booking_id']
-                ];
-                continue;
-            }
-
-            $attachment = CashImageBooking::create([
-                'cash_image_id' => $attachmentData['cash_image_id'],
-                'booking_id' => $attachmentData['booking_id'],
-                'deposit' => $attachmentData['deposit'] ?? 0,
-                'notes' => $attachmentData['notes'] ?? null
+            $cashImage = CashImage::create([
+                'image' => $fileData['fileName'],
+                'date' => $validated['date'],
+                'sender' => $validated['sender'],
+                'receiver' => $validated['receiver'],
+                'amount' => $validated['amount'],
+                'currency' => $validated['currency'],
+                'interact_bank' => $validated['interact_bank'] ?? null,
+                'relatable_type' => $validated['relatable_type'],
+                'relatable_id' => $validated['relatable_id'],
+                'image_path' => $fileData['filePath'],
             ]);
 
-            $attachment->load(['cashImage', 'booking']);
-            $created[] = $attachment;
+            // Attach to multiple bookings
+            $attachments = [];
+            foreach ($validated['bookings'] as $bookingData) {
+                $attachment = CashImageBooking::create([
+                    'cash_image_id' => $cashImage->id,
+                    'booking_id' => $bookingData['booking_id'],
+                    'deposit' => $bookingData['deposit'] ?? 0,
+                    'notes' => $bookingData['notes'] ?? null
+                ]);
+
+                $attachment->load(['cashImage', 'booking']);
+                $attachments[] = $attachment;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cash image created and attached to bookings successfully',
+                'data' => [
+                    'cash_image' => new CashImageResource($cashImage),
+                    'attachments' => CashImageBookingResource::collection($attachments),
+                    'attached_count' => count($attachments)
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Clean up uploaded file if it exists
+            if (isset($fileData['fileName'])) {
+                Storage::delete('images/' . $fileData['fileName']);
+            }
+
+            return $this->error(null, 'Failed to create cash image and attachments: ' . $e->getMessage(), 500);
         }
-
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => count($created) . ' attachments created successfully',
-        //     'data' => $created,
-        //     'errors' => $errors
-        // ], 201);
-
-        return $this->success(CashImageBookingResource::collection($created), 'Attachments created successfully');
     }
 
     /**
-     * Bulk delete attachments
+     * Update cash image data and sync booking attachments
      */
-    public function bulkDestroy(Request $request)
+    public function update(Request $request, String $id)
     {
+        $cashImage = CashImage::find($id);
+
+        if (!$cashImage) {
+            return $this->error(null, 'Cash image not found', 404);
+        }
+
+        // Handle both FormData and JSON requests
         $validated = $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:cash_image_bookings,id'
+            // Cash Image data (image is optional for updates)
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:10240',
+            'date' => 'sometimes|required|date_format:Y-m-d H:i:s',
+            'sender' => 'sometimes|required|string|max:255',
+            'receiver' => 'sometimes|required|string|max:255',
+            'amount' => 'sometimes|required|numeric|min:0',
+            'interact_bank' => 'nullable|string|max:255',
+            'currency' => 'sometimes|required|string|max:10',
+
+            // Booking attachments
+            'bookings' => 'nullable|array',
+            'bookings.*.id' => 'nullable|exists:cash_image_bookings,id',
+            'bookings.*.booking_id' => 'required|exists:bookings,id',
+            'bookings.*.deposit' => 'nullable|numeric|min:0',
+            'bookings.*.notes' => 'nullable|string|max:1000'
         ]);
 
-        CashImageBooking::whereIn('id', $validated['ids'])->delete();
+        DB::beginTransaction();
 
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => $deleted . ' attachments deleted successfully'
-        // ]);
+        try {
+            // Update cash image data - only update provided fields
+            $updateData = [];
 
-        return $this->success(null, 'Attachments deleted successfully');
+            if (isset($validated['date'])) {
+                $updateData['date'] = $validated['date'];
+            }
+            if (isset($validated['sender'])) {
+                $updateData['sender'] = $validated['sender'];
+            }
+            if (isset($validated['receiver'])) {
+                $updateData['receiver'] = $validated['receiver'];
+            }
+            if (isset($validated['amount'])) {
+                $updateData['amount'] = $validated['amount'];
+            }
+            if (isset($validated['currency'])) {
+                $updateData['currency'] = $validated['currency'];
+            }
+            if (array_key_exists('interact_bank', $validated)) {
+                $updateData['interact_bank'] = $validated['interact_bank'];
+            }
+
+            // Update cash image if there are fields to update
+            if (!empty($updateData)) {
+                $cashImage->update($updateData);
+            }
+
+            // Handle booking attachments sync
+            $currentAttachments = CashImageBooking::where('cash_image_id', $id)->get();
+            $providedBookings = $validated['bookings'] ?? [];
+
+            // Remove attachments that are no longer in the provided list
+            foreach ($currentAttachments as $current) {
+                $isInProvided = collect($providedBookings)->contains(function ($provided) use ($current) {
+                    return (isset($provided['id']) && $provided['id'] == $current->id) ||
+                           (!isset($provided['id']) && $provided['booking_id'] == $current->booking_id);
+                });
+
+                if (!$isInProvided) {
+                    $current->delete();
+                }
+            }
+
+            // Process provided bookings
+            $attachments = [];
+            foreach ($providedBookings as $bookingData) {
+                if (isset($bookingData['id']) && $bookingData['id']) {
+                    // Update existing attachment
+                    $attachment = CashImageBooking::find($bookingData['id']);
+                    if ($attachment && $attachment->cash_image_id == $id) {
+                        $attachment->update([
+                            'booking_id' => $bookingData['booking_id'],
+                            'deposit' => $bookingData['deposit'] ?? 0,
+                            'notes' => $bookingData['notes'] ?? null
+                        ]);
+                        $attachment->load(['cashImage', 'booking.customer']);
+                        $attachments[] = $attachment;
+                    }
+                } else {
+                    // Create new attachment
+                    $attachment = CashImageBooking::create([
+                        'cash_image_id' => $id,
+                        'booking_id' => $bookingData['booking_id'],
+                        'deposit' => $bookingData['deposit'] ?? 0,
+                        'notes' => $bookingData['notes'] ?? null
+                    ]);
+                    $attachment->load(['cashImage', 'booking.customer']);
+                    $attachments[] = $attachment;
+                }
+            }
+
+            DB::commit();
+
+            // Load updated cash image with relationships
+            $cashImage->load(['bookings.customer']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cash image updated successfully',
+                'data' => [
+                    'cash_image' => $cashImage,
+                    'attachments' => CashImageBookingResource::collection($attachments),
+                    'attached_count' => count($attachments)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Clean up uploaded file if it exists and there was an error
+            if (isset($fileData['fileName'])) {
+                Storage::delete('images/' . $fileData['fileName']);
+            }
+
+            return $this->error(null, 'Failed to update cash image: ' . $e->getMessage(), 500);
+        }
     }
 }

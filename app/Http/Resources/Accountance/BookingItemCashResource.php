@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Accountance;
 
+use App\Http\Resources\BookingResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CashImageBookingResource extends JsonResource
+class BookingItemCashResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,11 +17,9 @@ class CashImageBookingResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'cash_image_id' => $this->cash_image_id,
-            'booking_id' => $this->booking_id,
-            // 'crm_id' => $this->booking->crm_id,
-            'deposit' => $this->deposit,
-            'notes' => $this->notes
+            'booking' => new BookingCashImageResource($this),
+            'crm_id' => $this->crm_id,
+            'pivot' => $this->pivot,
         ];
     }
 }

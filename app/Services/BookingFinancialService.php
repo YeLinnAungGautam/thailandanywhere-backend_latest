@@ -33,18 +33,35 @@ class BookingFinancialService // Renamed from BookingFinancialSummaryService in 
                 throw new InvalidArgumentException("Invalid start or end date in the range.");
             }
 
-            $query = CashImage::query()->with(['relatable']);
-            $query->whereBetween('date', [$startDate, $endDate]);
-            $query->where('interact_bank','company');
-            $query->where('relatable_type', 'App\Models\Booking');
+            // Get all cash images in the date range with company interact_bank
+            $allCashImages = CashImage::query()
+                ->with(['relatable'])
+                ->whereBetween('date', [$startDate, $endDate])
+                ->where('interact_bank', 'company')
+                ->get();
 
-            $cashImages = $query->get();
+            $cashImageAll = CashImage::query()
+            ->with(['relatable'])
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+
+            // Separate income and expense
+            $incomeCashImages = $cashImageAll->where('relatable_type', 'App\Models\Booking')->where('currency', 'THB');
+            $incomeCashImagesMMK = $cashImageAll->where('relatable_type', 'App\Models\Booking')->where('currency', 'MMK');
+            $expenseCashImages = $cashImageAll->where('relatable_type', '!=', 'App\Models\Booking',)->where('currency', 'THB');
+            $expenseCashImagesMMK = $cashImageAll->where('relatable_type', '!=', 'App\Models\Booking',)->where('currency', 'MMK');
+
+            // Calculate totals
+            $total_income = $incomeCashImages->sum('amount');
+            $total_expense = $expenseCashImages->sum('amount');
+            $total_income_mmk = $incomeCashImagesMMK->sum('amount');
+            $total_expense_mmk = $expenseCashImagesMMK->sum('amount');
 
             $total_vat = 0;
             $total_commission = 0;
             $total_net_vat = 0;
 
-            foreach ($cashImages as $cashImage) {
+            foreach ($incomeCashImages as $cashImage) {
                 $booking = $cashImage->relatable;
 
                 if ($booking) {
@@ -56,6 +73,10 @@ class BookingFinancialService // Renamed from BookingFinancialSummaryService in 
 
             return [
                 'success' => true,
+                'total_income' => $total_income,
+                'total_expense' => $total_expense,
+                'total_income_mmk' => $total_income_mmk,
+                'total_expense_mmk' => $total_expense_mmk,
                 'total_vat' => $total_vat,
                 'total_commission' => $total_commission,
                 'total_net_vat' => $total_net_vat,
@@ -65,6 +86,10 @@ class BookingFinancialService // Renamed from BookingFinancialSummaryService in 
         } catch (InvalidArgumentException $e) {
             return [
                 'success' => false,
+                'total_income' => 0,
+                'total_expense' => 0,
+                'total_income_mmk' => 0,
+                'total_expense_mmk' => 0,
                 'total_vat' => 0,
                 'total_commission' => 0,
                 'total_net_vat' => 0,
@@ -73,6 +98,10 @@ class BookingFinancialService // Renamed from BookingFinancialSummaryService in 
         } catch (Exception $e) {
             return [
                 'success' => false,
+                'total_income' => 0,
+                'total_expense' => 0,
+                'total_income_mmk' => 0,
+                'total_expense_mmk' => 0,
                 'total_vat' => 0,
                 'total_commission' => 0,
                 'total_net_vat' => 0,
