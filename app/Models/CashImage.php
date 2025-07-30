@@ -36,9 +36,13 @@ class CashImage extends Model
 
     public function bookings()
     {
-        return $this->belongsToMany(Booking::class, 'cash_image_bookings')
-                    ->withPivot('deposit', 'notes')
-                    ->withTimestamps();
+        return $this->belongsToMany(
+            Booking::class,
+            'cash_image_bookings', // pivot table name
+            'cash_image_id',       // foreign key for cash_image
+            'booking_id'           // foreign key for booking
+        )->withPivot('deposit', 'notes', 'id')
+         ->withTimestamps();
     }
 
     // Helper method to get all related bookings (both polymorphic and pivot)

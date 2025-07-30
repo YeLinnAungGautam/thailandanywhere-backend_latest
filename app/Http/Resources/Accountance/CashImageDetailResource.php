@@ -5,6 +5,7 @@ namespace App\Http\Resources\Accountance;
 use App\Http\Resources\BookingItemGroupResource;
 use App\Http\Resources\BookingResource;
 use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
+use App\Http\Resources\CashImageBookingResource;
 use App\Http\Resources\TaxReceiptResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -56,6 +57,9 @@ class CashImageDetailResource extends JsonResource
                 'relatable_id' => $this->relatable_id,
                 'relatable' => $relatable,
                 'grouped_items' => $groupedItems,
+                'attached_bookings' => $this->bookings->map(function ($booking) {
+                    return new BookingItemCashResource($booking);
+                })->toArray(),
             ];
         }
 

@@ -454,9 +454,13 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
 
     # Cash Image Booking
-    Route::apiResource('cash-image-bookings', CashImageBookingController::class);
-    Route::post('cash-image-bookings/bulk', [CashImageBookingController::class, 'bulkStore']);
-    Route::delete('cash-image-bookings/bulk', [CashImageBookingController::class, 'bulkDestroy']);
+    Route::prefix('cash-image-bookings')->group(function () {
+        // Standard CRUD
+        Route::put('/update-and-attach/{id}', [CashImageBookingController::class, 'update']);
+
+        // New methods for creating cash images without relatable_id
+        Route::post('/create-and-attach', [CashImageBookingController::class, 'createAndAttach']);
+    });
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

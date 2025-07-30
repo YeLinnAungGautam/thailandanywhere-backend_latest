@@ -92,7 +92,7 @@ class CashImageController extends Controller
 
     public function show(string $id)
     {
-        $find = CashImage::find($id);
+        $find = CashImage::find($id)->load(['relatable', 'bookings']);
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }

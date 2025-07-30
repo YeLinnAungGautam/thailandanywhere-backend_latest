@@ -149,9 +149,12 @@ class Booking extends Model
     // New: Many-to-many relationship
     public function cashImagesPivot()
     {
-        return $this->belongsToMany(CashImage::class, 'cash_image_bookings')
-                    ->withPivot('deposit', 'notes')
-                    ->withTimestamps();
+        return $this->belongsToMany(CashImage::class,
+            'cash_image_bookings', // pivot table name
+            'booking_id',       // foreign key for cash_image
+            'cash_image_id'           // foreign key for booking
+        )->withPivot('deposit', 'notes', 'id')
+         ->withTimestamps();
     }
 
     // Helper method to get all cash images

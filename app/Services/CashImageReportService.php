@@ -204,25 +204,17 @@ class CashImageReportService
 
         // Get expense totals for THB and MMK only
         $expense_totals = CashImage::query()
-            ->join('bookings', function ($join) {
-                $join->on('cash_images.relatable_id', '=', 'bookings.id')
-                     ->whereIn('cash_images.relatable_type', [
-                         'App\\Models\\BookingItemGroup',
-                         'App\\Models\\CashBook'
-                     ]);
-            })
-            ->when($created_by, function ($q) use ($created_by) {
-                $q->whereIn('bookings.created_by', explode(',', $created_by));
-            })
-            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
-            ->whereIn('cash_images.currency', ['THB', 'MMK'])
-            ->select(
-                'cash_images.currency',
-                DB::raw('SUM(cash_images.amount) as total_expense_amount')
-            )
-            ->groupBy('cash_images.currency')
-            ->get()
-            ->pluck('total_expense_amount', 'currency');
+        ->where('cash_images.relatable_type', '!=', Booking::class)
+        ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+        ->whereIn('cash_images.currency', ['THB', 'MMK'])
+        ->select(
+            'cash_images.currency',
+            DB::raw('SUM(cash_images.amount) as total_expense_amount'),
+            DB::raw('COUNT(cash_images.id) as total_expense_images')
+        )
+        ->groupBy('cash_images.currency')
+        ->get()
+        ->keyBy('currency');
 
         return $this->generateMonthlySummaryResponseWithExpenseTotals($monthly_summary, $expense_totals, $created_by);
     }
@@ -305,10 +297,16 @@ class CashImageReportService
             // Legacy field for backward compatibility
             'grand_total_cash_amount' => !empty($grand_totals_by_currency) ?
                 array_values($grand_totals_by_currency)[0]['total_cash_amount'] : 0,
-            // NEW: Add expense totals for THB and MMK
+            // UPDATED: Add expense totals with both amount and count for THB and MMK
             'expense_summary' => [
-                'thb' => $expense_totals['THB'] ?? 0,
-                'mmk' => $expense_totals['MMK'] ?? 0,
+                'thb' => [
+                    'amount' => $expense_totals['THB']->total_expense_amount ?? 0,
+                    'count' => $expense_totals['THB']->total_expense_images ?? 0,
+                ],
+                'mmk' => [
+                    'amount' => $expense_totals['MMK']->total_expense_amount ?? 0,
+                    'count' => $expense_totals['MMK']->total_expense_images ?? 0,
+                ],
             ],
             'agents' => $agent_summaries
         ];

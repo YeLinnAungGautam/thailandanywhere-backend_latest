@@ -34,6 +34,10 @@ class VatCalculationController extends Controller
                     'total_vat' => $summary['total_vat'],
                     'total_commission' => $summary['total_commission'],
                     'total_net_vat' => $summary['total_net_vat'],
+                    'total_income' => $summary['total_income'],
+                    'total_expense' => $summary['total_expense'],
+                    'total_income_mmk' => $summary['total_income_mmk'],
+                    'total_expense_mmk' => $summary['total_expense_mmk'],
                 ],
                 'message' => $summary['message'],
             ]);

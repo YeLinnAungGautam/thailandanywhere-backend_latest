@@ -49,12 +49,106 @@ class CashImageListResource extends JsonResource
                 $this->getTaxReceipts()
             ),
 
-            // Remove these expensive operations from list view
-            // 'relatable' => $relatable,
-            // 'grouped_items' => $groupedItems,
-            // 'product_type' => $this->getProductType(),
+            // NEW: Many-to-many bookings info (only when relatable_id = 0)
+            'bookings_count' => $this->when(
+                $request->input('include_relatable') && $this->relatable_id == 0,
+                $this->getBookingsCount()
+            ),
+            'bookings' => $this->when(
+                $request->input('include_relatable') && $this->relatable_id == 0 && $request->input('include_bookings'),
+                $this->getBookingsData()
+            ),
+
             'product_type' => $this->when($request->input('include_relatable'), $this->getProductType()),
         ];
+    }
+
+    /**
+     * NEW: Get bookings count for many-to-many relationship
+     */
+    public function getBookingsCount()
+    {
+        if ($this->relatable_type !== 'App\Models\Booking' || $this->relatable_id != 0) {
+            return 0;
+        }
+
+        try {
+            if ($this->relationLoaded('bookings')) {
+                return $this->bookings->count();
+            }
+
+            // If not loaded, count from database
+            return \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                ->where('cash_image_bookings.cash_image_id', $this->id)
+                ->count();
+
+        } catch (\Exception $e) {
+            Log::error("Error getting bookings count for CashImage {$this->id}: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * NEW: Get bookings data for many-to-many relationship
+     */
+    public function getBookingsData()
+    {
+        if ($this->relatable_type !== 'App\Models\Booking' || $this->relatable_id != 0) {
+            return [];
+        }
+
+        try {
+            if ($this->relationLoaded('bookings')) {
+                return $this->bookings->map(function ($booking) {
+                    return [
+                        'id' => $booking->id,
+                        'crm_id' => $booking->crm_id,
+                        'invoice_number' => $booking->invoice_number,
+                        'grand_total' => $booking->grand_total,
+                        'customer_name' => optional($booking->customer)->name,
+                        'pivot' => [
+                            'deposit' => $booking->pivot->deposit ?? null,
+                            'notes' => $booking->pivot->notes ?? null,
+                            'created_at' => $booking->pivot->created_at ?? null,
+                        ]
+                    ];
+                });
+            }
+
+            // If not loaded, fetch from database
+            return \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                ->leftJoin('customers', 'bookings.customer_id', '=', 'customers.id')
+                ->where('cash_image_bookings.cash_image_id', $this->id)
+                ->select([
+                    'bookings.id',
+                    'bookings.crm_id',
+                    'bookings.invoice_number',
+                    'bookings.grand_total',
+                    'customers.name as customer_name',
+                    'cash_image_bookings.deposit',
+                    'cash_image_bookings.notes',
+                    'cash_image_bookings.created_at as pivot_created_at'
+                ])
+                ->get()
+                ->map(function ($booking) {
+                    return [
+                        'id' => $booking->id,
+                        'crm_id' => $booking->crm_id,
+                        'invoice_number' => $booking->invoice_number,
+                        'grand_total' => $booking->grand_total,
+                        'customer_name' => $booking->customer_name,
+                        'pivot' => [
+                            'deposit' => $booking->deposit,
+                            'notes' => $booking->notes,
+                            'created_at' => $booking->pivot_created_at,
+                        ]
+                    ];
+                });
+
+        } catch (\Exception $e) {
+            Log::error("Error getting bookings data for CashImage {$this->id}: " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -143,27 +237,33 @@ class CashImageListResource extends JsonResource
     }
 
     /**
-     * Calculate VAT based on relatable_type
+     * Calculate VAT based on relatable_type (UPDATED for many-to-many)
      */
     public function calculateVat()
     {
-        if (!$this->relatable_type || !$this->relatable_id) {
+        if (!$this->relatable_type) {
             return null;
         }
 
         try {
             if ($this->relatable_type === 'App\Models\Booking') {
-                // For Booking: use output_vat directly
-                if ($this->relationLoaded('relatable') && $this->relatable) {
-                    return $this->relatable->output_vat ?? 0;
+                // Case 1: Single booking (relatable_id > 0)
+                if ($this->relatable_id > 0) {
+                    if ($this->relationLoaded('relatable') && $this->relatable) {
+                        return $this->relatable->output_vat ?? 0;
+                    }
+
+                    // If not loaded, fetch just the output_vat
+                    $booking = \App\Models\Booking::select('output_vat')
+                        ->where('id', $this->relatable_id)
+                        ->first();
+
+                    return $booking ? ($booking->output_vat ?? 0) : 0;
                 }
-
-                // If not loaded, fetch just the output_vat
-                $booking = \App\Models\Booking::select('output_vat')
-                    ->where('id', $this->relatable_id)
-                    ->first();
-
-                return $booking ? ($booking->output_vat ?? 0) : 0;
+                // Case 2: Multiple bookings (relatable_id = 0)
+                elseif ($this->relatable_id == 0) {
+                    return $this->calculateMultipleBookingsVat();
+                }
 
             } elseif ($this->relatable_type === 'App\Models\BookingItemGroup') {
                 // For BookingItemGroup: calculate VAT from bookingItems total_cost_price
@@ -174,6 +274,22 @@ class CashImageListResource extends JsonResource
         } catch (\Exception $e) {
             Log::error("Error calculating VAT for CashImage {$this->id}: " . $e->getMessage());
 
+            return 0;
+        }
+    }
+
+    /**
+     * NEW: Calculate VAT for multiple bookings (many-to-many)
+     */
+    protected function calculateMultipleBookingsVat()
+    {
+        try {
+            if ($this->relationLoaded('bookings')) {
+                return $this->bookings->sum('grand_total') - ($this->bookings->sum('grand_total') / 1.07);
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Error calculating multiple bookings VAT for CashImage {$this->id}: " . $e->getMessage());
             return 0;
         }
     }
@@ -210,20 +326,25 @@ class CashImageListResource extends JsonResource
     }
 
     /**
-     * Calculate Net VAT
+     * Calculate Net VAT (UPDATED for many-to-many)
      */
     public function calculateNetVat()
     {
-        if (!$this->relatable_type || !$this->relatable_id) {
+        if (!$this->relatable_type) {
             return null;
         }
 
         try {
             if ($this->relatable_type === 'App\Models\Booking') {
-                // For Booking: commission - (commission / 1.07)
-                $commission = $this->getCommission();
-                if ($commission > 0) {
-                    return $commission - ($commission / 1.07);
+                if ($this->relatable_id > 0) {
+                    // Single booking case
+                    $commission = $this->getCommission();
+                    if ($commission > 0) {
+                        return $commission - ($commission / 1.07);
+                    }
+                } elseif ($this->relatable_id == 0) {
+                    // Multiple bookings case
+                    return $this->calculateMultipleBookingsNetVat();
                 }
 
                 return 0;
@@ -242,32 +363,76 @@ class CashImageListResource extends JsonResource
     }
 
     /**
-     * Get commission value
+     * NEW: Calculate Net VAT for multiple bookings
+     */
+    protected function calculateMultipleBookingsNetVat()
+    {
+        try {
+            $totalCommission = 0;
+
+            $totalCommission = $this->bookings->sum('grand_total');
+
+            $totalCommission = $totalCommission/2;
+
+            if ($totalCommission > 0) {
+                return $totalCommission - ($totalCommission / 1.07);
+            }
+
+            return 0;
+        } catch (\Exception $e) {
+            Log::error("Error calculating multiple bookings Net VAT for CashImage {$this->id}: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get commission value (UPDATED for many-to-many)
      */
     public function getCommission()
     {
-        if (!$this->relatable_type || !$this->relatable_id) {
+        if (!$this->relatable_type) {
             return null;
         }
 
         try {
             if ($this->relatable_type === 'App\Models\Booking') {
-                if ($this->relationLoaded('relatable') && $this->relatable) {
-                    return $this->relatable->commission ?? 0;
+                if ($this->relatable_id > 0) {
+                    // Single booking case
+                    if ($this->relationLoaded('relatable') && $this->relatable) {
+                        return $this->relatable->commission ?? 0;
+                    }
+
+                    // If not loaded, fetch just the commission
+                    $booking = \App\Models\Booking::select('commission')
+                        ->where('id', $this->relatable_id)
+                        ->first();
+
+                    return $booking ? ($booking->commission ?? 0) : 0;
+                } elseif ($this->relatable_id == 0) {
+                    // Multiple bookings case
+                    return $this->getMultipleBookingsCommission();
                 }
-
-                // If not loaded, fetch just the commission
-                $booking = \App\Models\Booking::select('commission')
-                    ->where('id', $this->relatable_id)
-                    ->first();
-
-                return $booking ? ($booking->commission ?? 0) : 0;
             }
 
             // For BookingItemGroup, commission might not be applicable
             return 0;
         } catch (\Exception $e) {
             Log::error("Error getting commission for CashImage {$this->id}: " . $e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
+     * NEW: Get commission for multiple bookings
+     */
+    protected function getMultipleBookingsCommission()
+    {
+        try {
+            $commission = $this->bookings->sum('grand_total');
+
+            return $commission/2;
+        } catch (\Exception $e) {
 
             return 0;
         }
@@ -290,26 +455,32 @@ class CashImageListResource extends JsonResource
     }
 
     /**
-     * Get CRM ID
+     * Get CRM ID (UPDATED for many-to-many)
      */
     public function getCrmId()
     {
-        if (!$this->relatable_type || !$this->relatable_id) {
+        if (!$this->relatable_type) {
             return null;
         }
 
         try {
-            if ($this->relationLoaded('relatable') && $this->relatable) {
-                return $this->relatable->crm_id ?? null;
-            }
-
-            // If not loaded, fetch just the crm_id
             if ($this->relatable_type === 'App\Models\Booking') {
-                $booking = \App\Models\Booking::select('crm_id')
-                    ->where('id', $this->relatable_id)
-                    ->first();
+                if ($this->relatable_id > 0) {
+                    // Single booking case
+                    if ($this->relationLoaded('relatable') && $this->relatable) {
+                        return $this->relatable->crm_id ?? null;
+                    }
 
-                return $booking ? $booking->crm_id : null;
+                    // If not loaded, fetch just the crm_id
+                    $booking = \App\Models\Booking::select('crm_id')
+                        ->where('id', $this->relatable_id)
+                        ->first();
+
+                    return $booking ? $booking->crm_id : null;
+                } elseif ($this->relatable_id == 0) {
+                    // Multiple bookings case - return first booking's CRM ID or comma-separated list
+                    return $this->getMultipleBookingsCrmId();
+                }
 
             } elseif ($this->relatable_type === 'App\Models\BookingItemGroup') {
                 // BookingItemGroup might not have crm_id directly,
@@ -331,6 +502,27 @@ class CashImageListResource extends JsonResource
         } catch (\Exception $e) {
             Log::error("Error getting CRM ID for CashImage {$this->id}: " . $e->getMessage());
 
+            return null;
+        }
+    }
+
+    /**
+     * NEW: Get CRM ID for multiple bookings
+     */
+    protected function getMultipleBookingsCrmId()
+    {
+        try {
+
+                // Option 1: Return first booking's CRM ID
+                // $firstBooking = $this->bookings->first();
+                // return $firstBooking ? $firstBooking->crm_id : null;
+
+                // Option 2: Return comma-separated CRM IDs (uncomment if needed)
+                return $this->bookings->pluck('crm_id')->filter()->implode(', ');
+
+
+        } catch (\Exception $e) {
+            Log::error("Error getting multiple bookings CRM ID for CashImage {$this->id}: " . $e->getMessage());
             return null;
         }
     }

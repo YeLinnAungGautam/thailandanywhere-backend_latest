@@ -22,12 +22,10 @@ class CashImageService
         'MMK', 'THB', 'USD'
     ];
 
-    // Add valid polymorphic types
     const VALID_RELATABLE_TYPES = [
         'App\Models\Booking',
         'App\Models\BookingItemGroup',
         'App\Models\CashBook',
-        // Add other model types as needed
     ];
 
     const VALID_TAX_RECEIPT_FILTERS = [
@@ -39,7 +37,7 @@ class CashImageService
     ];
 
     /**
-     * Get all cash images with filtering and pagination (Optimized)
+     * Get all cash images with filtering and pagination (Simple update for relatable_id = 0)
      */
     public function getAll(Request $request)
     {
@@ -82,7 +80,7 @@ class CashImageService
     }
 
     /**
-     * Validate request parameters (Added relatable_type validation)
+     * Validate request parameters
      */
     private function validateRequest(Request $request)
     {
@@ -134,11 +132,10 @@ class CashImageService
     }
 
     /**
-     * Build optimized query with relatable_type filtering
+     * Build optimized query (Simple load for relatable_id = 0)
      */
     private function buildOptimizedQuery($filters)
     {
-        // Select only necessary columns for better performance
         $query = CashImage::select([
             'id',
             'date',
@@ -159,67 +156,26 @@ class CashImageService
             $this->applyDateFilter($query, $filters['date']);
         }
 
-        // Apply search filters (including relatable_type)
+        // Apply search filters
         $this->applySearchFilters($query, $filters);
 
-        // Apply sorting - MOVED FROM applySearchFilters to avoid conflicts
+        // Apply sorting
         $this->applySorting($query, $filters);
+
+        // Load relationships conditionally
+        $query->with(['relatable']);
+
+        // Load bookings only when relatable_id = 0 (many-to-many case)
+        $query->with(['bookings' => function($q) {
+            $q->select('bookings.id', 'bookings.crm_id', 'bookings.invoice_number', 'bookings.grand_total', 'bookings.customer_id')
+              ->with('customer:id,name');
+        }]);
 
         return $query;
     }
 
     /**
-     * Apply sorting logic separately to avoid conflicts
-     */
-    private function applySorting($query, $filters)
-    {
-        if (!empty($filters['sort_by']) && !empty($filters['sort_order'])) {
-            $sortBy = $filters['sort_by'];
-            $sortOrder = strtolower($filters['sort_order']); // normalize to lowercase
-
-            // Validate allowed sort fields
-            $allowedSortFields = ['sender', 'receiver', 'amount', 'date'];
-            if (!in_array($sortBy, $allowedSortFields)) {
-                return; // or throw an exception if you prefer
-            }
-
-            // For string fields (sender, receiver), ensure case-insensitive sorting
-            if (in_array($sortBy, ['sender', 'receiver'])) {
-                if ($sortOrder === 'asc') {
-                    $query->orderByRaw("LOWER($sortBy) ASC");
-                } elseif ($sortOrder === 'desc') {
-                    $query->orderByRaw("LOWER($sortBy) DESC");
-                }
-            }
-            // For numeric (amount) or date fields, use regular orderBy
-            else {
-                $query->orderBy($sortBy, $sortOrder);
-            }
-        }
-    }
-
-    /**
-     * Apply date filter (optimized)
-     */
-    private function applyDateFilter($query, $dateFilter)
-    {
-        $dates = array_map('trim', explode(',', $dateFilter));
-
-        if (count($dates) === 2) {
-            // Date range - using DATE() function for better index usage
-            $startDate = $dates[0];
-            $endDate = $dates[1];
-            $query->whereDate('date', '>=', $startDate)
-                ->whereDate('date', '<=', $endDate);
-        } else {
-            // Single date
-            $singleDate = $dates[0];
-            $query->whereDate('date', $singleDate);
-        }
-    }
-
-    /**
-     * Apply search filters (REMOVED sort_by logic from here)
+     * Apply search filters (Updated CRM filter for many-to-many)
      */
     private function applySearchFilters($query, $filters)
     {
@@ -243,113 +199,174 @@ class CashImageService
             $query->where('currency', $filters['currency']);
         }
 
-        // Add relatable_type filter
         if (!empty($filters['relatable_type'])) {
             $query->where('relatable_type', $filters['relatable_type']);
         }
 
-        // Apply tax receipts filter (only for BookingItemGroup)
+        // Apply tax receipts filter
         if (!empty($filters['tax_receipts']) && $filters['tax_receipts'] !== 'all') {
             $this->applyTaxReceiptsFilter($query, $filters['tax_receipts']);
         }
 
-        // CRM ID filter (optimized for specific relatable_type)
+        // CRM ID filter (Updated to handle both cases simply)
         if (!empty($filters['crm_id'])) {
             $this->applyCrmIdFilter($query, $filters['crm_id'], $filters['relatable_type'] ?? null);
         }
     }
 
     /**
-     * Apply tax receipts filter (only for BookingItemGroup)
-     */
-    private function applyTaxReceiptsFilter($query, $taxReceiptsFilter)
-    {
-        // Ensure we only apply to BookingItemGroup records
-        $query->where('relatable_type', 'App\Models\BookingItemGroup');
-
-        switch ($taxReceiptsFilter) {
-            case 'have':
-                // Show only BookingItemGroups with tax receipts
-                $query->whereHas('taxReceipts', function ($q) {
-                    $q->whereNotNull('tax_receipts.id');
-                });
-
-                break;
-
-            case 'missing':
-                // Show only BookingItemGroups without tax receipts
-                $query->whereDoesntHave('taxReceipts');
-
-                break;
-
-            case 'all':
-                // No additional filtering needed
-                break;
-
-            default:
-                // Optionally handle invalid filter values
-                break;
-        }
-    }
-
-    /**
-     * Apply CRM ID filter (optimized for specific relatable_type)
-     */
-    /**
-     * Apply CRM ID filter (FIXED to support BookingItemGroup)
+     * Apply CRM ID filter (Simple version for both polymorphic and many-to-many)
      */
     private function applyCrmIdFilter($query, $crmId, $relatableType = null)
     {
-        // If relatable_type is specified, we can optimize the query
         if ($relatableType === 'App\Models\Booking') {
-            $query->where('relatable_type', 'App\Models\Booking')
-                ->whereExists(function ($existsQuery) use ($crmId) {
-                    $existsQuery->select(DB::raw(1))
-                        ->from('bookings')
-                        ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                        ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+            $query->where(function ($mainQuery) use ($crmId) {
+                // Case 1: Direct polymorphic relationship (relatable_id > 0)
+                $mainQuery->where(function ($polyQuery) use ($crmId) {
+                    $polyQuery->where('relatable_type', 'App\Models\Booking')
+                             ->where('relatable_id', '>', 0)
+                             ->whereExists(function ($existsQuery) use ($crmId) {
+                                 $existsQuery->select(DB::raw(1))
+                                            ->from('bookings')
+                                            ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                             });
                 });
+
+                // Case 2: Many-to-many relationship (relatable_id = 0)
+                $mainQuery->orWhere(function ($manyQuery) use ($crmId) {
+                    $manyQuery->where('relatable_type', 'App\Models\Booking')
+                             ->where('relatable_id', 0)
+                             ->whereExists(function ($existsQuery) use ($crmId) {
+                                 $existsQuery->select(DB::raw(1))
+                                            ->from('cash_image_bookings')
+                                            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
+                                            ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
+                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                             });
+                });
+            });
         } elseif ($relatableType === 'App\Models\BookingItemGroup') {
-            // ADD THIS: Handle BookingItemGroup CRM filtering
             $query->where('relatable_type', 'App\Models\BookingItemGroup')
-                ->whereExists(function ($existsQuery) use ($crmId) {
-                    $existsQuery->select(DB::raw(1))
-                        ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                        ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                        ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                });
+                  ->whereExists(function ($existsQuery) use ($crmId) {
+                      $existsQuery->select(DB::raw(1))
+                                 ->from('booking_item_groups')
+                                 ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                 ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                                 ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                  });
         } else {
-            // General case - check all possible relatable types that might have crm_id
+            // General case - check all possible types
             $query->where(function ($q) use ($crmId) {
-                // Booking
+                // Direct Booking polymorphic
                 $q->where(function ($bookingQuery) use ($crmId) {
                     $bookingQuery->where('relatable_type', 'App\Models\Booking')
-                        ->whereExists(function ($existsQuery) use ($crmId) {
-                            $existsQuery->select(DB::raw(1))
-                                ->from('bookings')
-                                ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                        });
+                                ->where('relatable_id', '>', 0)
+                                ->whereExists(function ($existsQuery) use ($crmId) {
+                                    $existsQuery->select(DB::raw(1))
+                                               ->from('bookings')
+                                               ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                               ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                                });
                 });
 
-                // ADD THIS: BookingItemGroup
-                $q->orWhere(function ($bookingItemGroupQuery) use ($crmId) {
-                    $bookingItemGroupQuery->where('relatable_type', 'App\Models\BookingItemGroup')
-                        ->whereExists(function ($existsQuery) use ($crmId) {
-                            $existsQuery->select(DB::raw(1))
-                                ->from('booking_item_groups')->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                                ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                        });
+                // Many-to-many Booking
+                $q->orWhere(function ($manyQuery) use ($crmId) {
+                    $manyQuery->where('relatable_type', 'App\Models\Booking')
+                             ->where('relatable_id', 0)
+                             ->whereExists(function ($existsQuery) use ($crmId) {
+                                 $existsQuery->select(DB::raw(1))
+                                            ->from('cash_image_bookings')
+                                            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
+                                            ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
+                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                             });
                 });
 
-                // Add other model types that have crm_id if needed
+                // BookingItemGroup
+                $q->orWhere(function ($itemGroupQuery) use ($crmId) {
+                    $itemGroupQuery->where('relatable_type', 'App\Models\BookingItemGroup')
+                                  ->whereExists(function ($existsQuery) use ($crmId) {
+                                      $existsQuery->select(DB::raw(1))
+                                                 ->from('booking_item_groups')
+                                                 ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                                 ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                                                 ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                                  });
+                });
             });
         }
     }
 
     /**
-     * Extract filters from request (UPDATED to include sort parameters)
+     * Apply sorting logic
+     */
+    private function applySorting($query, $filters)
+    {
+        if (!empty($filters['sort_by']) && !empty($filters['sort_order'])) {
+            $sortBy = $filters['sort_by'];
+            $sortOrder = strtolower($filters['sort_order']);
+
+            $allowedSortFields = ['sender', 'receiver', 'amount', 'date'];
+            if (!in_array($sortBy, $allowedSortFields)) {
+                return;
+            }
+
+            if (in_array($sortBy, ['sender', 'receiver'])) {
+                if ($sortOrder === 'asc') {
+                    $query->orderByRaw("LOWER($sortBy) ASC");
+                } elseif ($sortOrder === 'desc') {
+                    $query->orderByRaw("LOWER($sortBy) DESC");
+                }
+            } else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        }
+    }
+
+    /**
+     * Apply date filter
+     */
+    private function applyDateFilter($query, $dateFilter)
+    {
+        $dates = array_map('trim', explode(',', $dateFilter));
+
+        if (count($dates) === 2) {
+            $startDate = $dates[0];
+            $endDate = $dates[1];
+            $query->whereDate('date', '>=', $startDate)
+                  ->whereDate('date', '<=', $endDate);
+        } else {
+            $singleDate = $dates[0];
+            $query->whereDate('date', $singleDate);
+        }
+    }
+
+    /**
+     * Apply tax receipts filter
+     */
+    private function applyTaxReceiptsFilter($query, $taxReceiptsFilter)
+    {
+        $query->where('relatable_type', 'App\Models\BookingItemGroup');
+
+        switch ($taxReceiptsFilter) {
+            case 'have':
+                $query->whereHas('taxReceipts', function ($q) {
+                    $q->whereNotNull('tax_receipts.id');
+                });
+                break;
+
+            case 'missing':
+                $query->whereDoesntHave('taxReceipts');
+                break;
+
+            case 'all':
+                break;
+        }
+    }
+
+    /**
+     * Extract filters from request
      */
     private function extractFilters(Request $request)
     {
@@ -368,7 +385,7 @@ class CashImageService
     }
 
     /**
-     * Alternative: Get basic list with relatable_type filtering (ALSO FIXED)
+     * Get basic list (Updated for simple many-to-many handling)
      */
     public function getBasicList(Request $request)
     {
@@ -389,12 +406,10 @@ class CashImageService
                 'relatable_id'
             ]);
 
-            // Only apply date filter if provided (most common filter)
             if ($request->filled('date')) {
                 $query->whereDate('date', $request->input('date'));
             }
 
-            // Apply relatable_type filter if provided
             if ($request->filled('relatable_type')) {
                 $relatableType = $request->input('relatable_type');
                 if (in_array($relatableType, self::VALID_RELATABLE_TYPES)) {
@@ -402,7 +417,6 @@ class CashImageService
                 }
             }
 
-            // Apply tax receipts filter
             if ($request->filled('tax_receipts')) {
                 $taxReceiptsFilter = $request->input('tax_receipts');
                 if (in_array($taxReceiptsFilter, self::VALID_TAX_RECEIPT_FILTERS) && $taxReceiptsFilter !== 'all') {
@@ -410,15 +424,13 @@ class CashImageService
                 }
             }
 
-            // FIXED: Apply sorting logic properly
             if ($request->filled('sort_by') && in_array($request->input('sort_by'), self::VALID_SORTS)) {
                 $sortOrder = $request->input('sort_order', 'desc');
                 if (!in_array($sortOrder, ['asc', 'desc'])) {
-                    $sortOrder = 'desc'; // Default to desc if invalid
+                    $sortOrder = 'desc';
                 }
                 $query->orderBy($request->input('sort_by'), $sortOrder);
             } else {
-                // Default sorting when no custom sort is specified
                 $query->orderBy('date', 'desc')->orderBy('created_at', 'desc');
             }
 
@@ -439,69 +451,8 @@ class CashImageService
         }
     }
 
-    // ... rest of the methods remain the same ...
-
     /**
-     * Get available relatable types for filtering
-     */
-    public function getAvailableRelatableTypes()
-    {
-        try {
-            $types = CashImage::select('relatable_type')
-                ->distinct()
-                ->whereNotNull('relatable_type')
-                ->pluck('relatable_type')
-                ->toArray();
-
-            // Filter only valid types
-            $validTypes = array_intersect($types, self::VALID_RELATABLE_TYPES);
-
-            return [
-                'success' => true,
-                'data' => array_values($validTypes),
-                'message' => 'Available relatable types retrieved successfully'
-            ];
-
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'data' => null,
-                'message' => 'An error occurred: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get cash images count by relatable type
-     */
-    public function getCountByRelatableType()
-    {
-        try {
-            $counts = CashImage::select('relatable_type', DB::raw('COUNT(*) as count'))
-                ->whereNotNull('relatable_type')
-                ->whereIn('relatable_type', self::VALID_RELATABLE_TYPES)
-                ->groupBy('relatable_type')
-                ->get()
-                ->pluck('count', 'relatable_type')
-                ->toArray();
-
-            return [
-                'success' => true,
-                'data' => $counts,
-                'message' => 'Counts by relatable type retrieved successfully'
-            ];
-
-        } catch (Exception $e) {
-            return [
-                'success' => false,
-                'data' => null,
-                'message' => 'An error occurred: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get all cash images summary with related booking data
+     * Get all cash images summary (Simple version for many-to-many)
      */
     public function getAllSummary(Request $request)
     {
@@ -519,7 +470,6 @@ class CashImageService
                 return $this->transformCashImageToSummary($cashImage);
             });
 
-            // Replace the collection with transformed data
             $data->setCollection($transformedData);
 
             return [
@@ -562,7 +512,7 @@ class CashImageService
     }
 
     /**
-     * Build optimized query for summary with eager loading (UPDATED with proper sorting)
+     * Build summary query (Simple version)
      */
     private function buildSummaryQuery($filters)
     {
@@ -579,36 +529,29 @@ class CashImageService
             'cash_images.relatable_type'
         ]);
 
-        // Apply date filter
         if (!empty($filters['date'])) {
             $this->applyDateFilter($query, $filters['date']);
         }
 
-        // Apply search filters
         $this->applySearchFilters($query, $filters);
-
-        // Apply sorting
         $this->applySorting($query, $filters);
 
-        // Conditionally eager load based on relatable_type
-        $query->with(['relatable' => function ($morphQuery) {
-            // This will only load the polymorphic relationship
-            // Additional loading will be handled in the transform method
-        }]);
-
-        // If we're filtering by booking type, we can optimize further
-        if (!empty($filters['relatable_type']) && $filters['relatable_type'] === 'App\Models\Booking') {
-            $query->with([
-                'relatable.items.product',
-                'relatable.customer'
-            ]);
-        }
+        // Simple loading for both cases
+        $query->with([
+            'relatable' => function ($morphQuery) {
+                // Load only if relatable_id > 0
+            },
+            'bookings' => function ($bookingsQuery) {
+                // Load only if relatable_id = 0
+                $bookingsQuery->with(['items.product', 'customer']);
+            }
+        ]);
 
         return $query;
     }
 
     /**
-     * Transform cash image data to summary format
+     * Transform cash image data to summary format (Simple handling for both cases)
      */
     private function transformCashImageToSummary($cashImage)
     {
@@ -636,83 +579,133 @@ class CashImageService
             'commission' => 0,
         ];
 
-        // Process only if related to booking
-        if ($cashImage->relatable_type === 'App\Models\Booking' && $cashImage->relatable) {
-            $booking = $cashImage->relatable;
+        if ($cashImage->relatable_type === 'App\Models\Booking') {
+            if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                // Single booking case (polymorphic)
+                $booking = $cashImage->relatable;
+                $this->fillBookingData($summary, $booking);
+            } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings && $cashImage->bookings->count() > 0) {
+                // Multiple bookings case (many-to-many) - အရိုးရှင်းဆုံး: ပထမဆုံး booking ကိုပဲ ယူမယ်
+                $firstBooking = $cashImage->bookings->first();
+                $this->fillBookingData($summary, $firstBooking);
 
-            $summary['invoice_id'] = $booking->id ?? null;
-            $summary['crm_id'] = $booking->crm_id ?? null;
-
-            // Load customer if not already loaded
-            if (!$booking->relationLoaded('customer') && $booking->customer_id) {
-                $booking->load('customer');
+                // Or you can aggregate all bookings data if needed:
+                // $this->fillAggregatedBookingsData($summary, $cashImage->bookings);
             }
-            $summary['customer_name'] = optional($booking->customer)->name;
-
-            // Load booking items if not already loaded
-            if (!$booking->relationLoaded('items')) {
-                $booking->load('items.product');
-            }
-
-            // Calculate service totals from booking items
-            $hotelTotal = 0;
-            $hotelCost = 0;
-            $ticketTotal = 0;
-            $ticketCost = 0;
-            $hotelVat = 0;
-            $hotelCommission = 0;
-            $ticketVat = 0;
-            $ticketCommission = 0;
-
-            if ($booking->items && $booking->items->count() > 0) {
-                foreach ($booking->items as $item) {
-                    $productType = $item->product_type ?? null;
-                    $amount = $item->amount ?? 0;
-                    $cost = $item->total_cost_price ?? 0;
-                    $vat = $item->output_vat ?? 0;
-                    $commission = $item->commission ?? 0;
-
-                    if ($productType === 'App\\Models\\Hotel') {
-                        $hotelTotal += $amount;
-                        $hotelCost += $cost;
-                        $hotelVat += $vat;
-                        $hotelCommission += $commission;
-                    } elseif ($productType === 'App\\Models\\EntranceTicket') {
-                        $ticketTotal += $amount;
-                        $ticketCost += $cost;
-                        $ticketVat += $vat;
-                        $ticketCommission += $commission;
-                    }
-                }
-            }
-
-            $summary['hotel_service_total'] = $hotelTotal;
-            $summary['hotel_service_cost'] = $hotelCost;
-            $summary['hotel_service_vat'] = $hotelVat;
-            $summary['hotel_service_commission'] = $hotelCommission;
-            $summary['ticket_service_total'] = $ticketTotal;
-            $summary['ticket_service_cost'] = $ticketCost;
-            $summary['ticket_service_vat'] = $ticketVat;
-            $summary['ticket_service_commission'] = $ticketCommission;
-            $summary['total_price'] = $booking->total_price ?? ($hotelTotal + $ticketTotal);
-            $summary['total_sales'] = $booking->grand_total ?? 0;
-            $summary['total_before_vat'] = $booking->total_before_vat ?? 0;
-            $summary['vat'] = $booking->output_vat ?? 0;
-            $summary['commission'] = $booking->commission ?? 0;
         }
 
         return $summary;
     }
 
     /**
-     * Get summary statistics
+     * Fill booking data into summary (Simple helper)
      */
+    private function fillBookingData(&$summary, $booking)
+    {
+        $summary['invoice_id'] = $booking->id ?? null;
+        $summary['crm_id'] = $booking->crm_id ?? null;
+        $summary['customer_name'] = optional($booking->customer)->name;
+
+        if (!$booking->relationLoaded('items') && $booking->id) {
+            $booking->load('items.product');
+        }
+
+        // Calculate service totals
+        $hotelTotal = 0; $hotelCost = 0; $hotelVat = 0; $hotelCommission = 0;
+        $ticketTotal = 0; $ticketCost = 0; $ticketVat = 0; $ticketCommission = 0;
+
+        if ($booking->items && $booking->items->count() > 0) {
+            foreach ($booking->items as $item) {
+                $productType = $item->product_type ?? null;
+                $amount = $item->amount ?? 0;
+                $cost = $item->total_cost_price ?? 0;
+                $vat = $item->output_vat ?? 0;
+                $commission = $item->commission ?? 0;
+
+                if ($productType === 'App\\Models\\Hotel') {
+                    $hotelTotal += $amount; $hotelCost += $cost;
+                    $hotelVat += $vat; $hotelCommission += $commission;
+                } elseif ($productType === 'App\\Models\\EntranceTicket') {
+                    $ticketTotal += $amount; $ticketCost += $cost;
+                    $ticketVat += $vat; $ticketCommission += $commission;
+                }
+            }
+        }
+
+        $summary['hotel_service_total'] = $hotelTotal;
+        $summary['hotel_service_cost'] = $hotelCost;
+        $summary['hotel_service_vat'] = $hotelVat;
+        $summary['hotel_service_commission'] = $hotelCommission;
+        $summary['ticket_service_total'] = $ticketTotal;
+        $summary['ticket_service_cost'] = $ticketCost;
+        $summary['ticket_service_vat'] = $ticketVat;
+        $summary['ticket_service_commission'] = $ticketCommission;
+        $summary['total_price'] = $booking->total_price ?? ($hotelTotal + $ticketTotal);
+        $summary['total_sales'] = $booking->grand_total ?? 0;
+        $summary['total_before_vat'] = $booking->total_before_vat ?? 0;
+        $summary['vat'] = $booking->output_vat ?? 0;
+        $summary['commission'] = $booking->commission ?? 0;
+    }
+
+    // ... rest of the existing methods remain the same ...
+
+    public function getAvailableRelatableTypes()
+    {
+        try {
+            $types = CashImage::select('relatable_type')
+                ->distinct()
+                ->whereNotNull('relatable_type')
+                ->pluck('relatable_type')
+                ->toArray();
+
+            $validTypes = array_intersect($types, self::VALID_RELATABLE_TYPES);
+
+            return [
+                'success' => true,
+                'data' => array_values($validTypes),
+                'message' => 'Available relatable types retrieved successfully'
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function getCountByRelatableType()
+    {
+        try {
+            $counts = CashImage::select('relatable_type', DB::raw('COUNT(*) as count'))
+                ->whereNotNull('relatable_type')
+                ->whereIn('relatable_type', self::VALID_RELATABLE_TYPES)
+                ->groupBy('relatable_type')
+                ->get()
+                ->pluck('count', 'relatable_type')
+                ->toArray();
+
+            return [
+                'success' => true,
+                'data' => $counts,
+                'message' => 'Counts by relatable type retrieved successfully'
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ];
+        }
+    }
+
     public function getSummaryStatistics(Request $request)
     {
         try {
             $filters = $this->extractFilters($request);
 
-            // Build base query for statistics
             $query = CashImage::select([
                 'cash_images.id',
                 'cash_images.amount',
@@ -721,7 +714,6 @@ class CashImageService
                 'cash_images.relatable_type'
             ]);
 
-            // Apply filters
             if (!empty($filters['date'])) {
                 $this->applyDateFilter($query, $filters['date']);
             }
@@ -733,22 +725,21 @@ class CashImageService
                 'total_cash_records' => $cashImages->count(),
                 'total_cash_amount_by_currency' => [],
                 'booking_related_count' => 0,
-                'total_hotel_services' => 0,
-                'total_ticket_services' => 0,
+                'multiple_booking_connections' => 0, // relatable_id = 0 အရေအတွက်
+                'single_booking_connections' => 0,   // relatable_id > 0 အရေအတွက်
                 'average_transaction_amount' => 0
             ];
 
-            // Group by currency
             $currencyGroups = $cashImages->groupBy('currency');
             foreach ($currencyGroups as $currency => $items) {
                 $statistics['total_cash_amount_by_currency'][$currency] = $items->sum('amount');
             }
 
-            // Count booking related records
             $bookingRelated = $cashImages->where('relatable_type', 'App\Models\Booking');
             $statistics['booking_related_count'] = $bookingRelated->count();
+            $statistics['multiple_booking_connections'] = $bookingRelated->where('relatable_id', 0)->count();
+            $statistics['single_booking_connections'] = $bookingRelated->where('relatable_id', '>', 0)->count();
 
-            // Calculate average
             if ($cashImages->count() > 0) {
                 $statistics['average_transaction_amount'] = $cashImages->avg('amount');
             }
