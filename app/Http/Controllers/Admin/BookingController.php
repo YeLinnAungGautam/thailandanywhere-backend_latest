@@ -39,6 +39,8 @@ class BookingController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $crmId = $request->query('crm_id');
+        $priceMin = $request->query('price_min');
+        $priceMax = $request->query('price_max');
         $verify = $request->query('verify_status');
         $filter = $request->query('filter');
         $paymentStatus = $request->query('status');
@@ -77,6 +79,13 @@ class BookingController extends Controller
 
         if ($crmId) {
             $query->where('crm_id', 'LIKE', "%{$crmId}%");
+        }
+
+        if ($priceMin) {
+            $query->whereRaw('CAST(grand_total AS DECIMAL(10,2)) >= ?', [$priceMin]);
+        }
+        if ($priceMax) {
+            $query->whereRaw('CAST(grand_total AS DECIMAL(10,2)) <= ?', [$priceMax]);
         }
 
         // Booking date range filter
