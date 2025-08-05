@@ -448,10 +448,10 @@
 
                 <!-- Image Section - Moved outside and at the end -->
                 <div class="page-break"></div>
-                <div class="image-container">
-                    {{-- <h3>CRM ID: {{ $url['crm_id'] ?? 'N/A' }}</h3> --}}
-                    <img src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
-                </div>
+                {{-- <div class="image-container"> --}}
+                {{-- <h3>CRM ID: {{ $url['crm_id'] ?? 'N/A' }}</h3> --}}
+                <img src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
+                {{-- </div> --}}
             </div>
         @endforeach
     @endif
