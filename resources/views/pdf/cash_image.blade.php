@@ -180,7 +180,9 @@
                                         </td>
                                         <td style="text-align: center">
                                             {{ $item['quantity'] ?? 1 }}</td>
-                                        <td>{{ number_format($item['selling_price'] ?? 0) }} thb</td>
+                                        <td>
+                                            {{ number_format(($item['amount'] ?? 0) / ($item['quantity'] ?? 1)) }} thb
+                                        </td>
                                         <td>{{ number_format($item['amount'] ?? 0) }} thb</td>
                                     </tr>
                                 @endforeach
@@ -447,7 +449,7 @@
                 <!-- Image Section - Moved outside and at the end -->
                 <div class="page-break"></div>
                 <div class="image-container">
-                    <h3>CRM ID: {{ $url['crm_id'] ?? 'N/A' }}</h3>
+                    {{-- <h3>CRM ID: {{ $url['crm_id'] ?? 'N/A' }}</h3> --}}
                     <img src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
                 </div>
             </div>

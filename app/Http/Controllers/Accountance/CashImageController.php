@@ -179,12 +179,12 @@ class CashImageController extends Controller
     {
         try {
 
-            // $data = $this->cashImageService->onlyImages($request);
-            // return response()->json([
-            //     'success' => true,
-            //     'data' => $data,
-            //     'message' => 'Data retrieved successfully'
-            // ]);
+            $data = $this->cashImageService->onlyImages($request);
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'message' => 'Data retrieved successfully'
+            ]);
             // Generate unique job ID
             $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
 
@@ -196,7 +196,7 @@ class CashImageController extends Controller
                 'success' => true,
                 'message' => 'PDF generation started in background',
                 'job_id' => $jobId,
-                'status_url' => url("/api/pdf-status/{$jobId}"),
+                'status_url' => url("/admin/pdf-status/{$jobId}"),
                 'estimated_time' => 'This may take 2-5 minutes for large datasets'
             ], 202); // 202 = Accepted (processing)
 

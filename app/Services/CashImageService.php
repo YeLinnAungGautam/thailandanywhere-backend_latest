@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Resources\Accountance\CashImageListResource as AccountanceCashImageResource;
 use App\Models\Booking;
 use App\Models\CashImage;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -587,6 +588,7 @@ class CashImageService
                         'id', 'crm_id', 'grand_total', 'customer_id', 'commission',
                         'created_at', 'start_date', 'end_date', 'booking_date',
                         'payment_method', 'payment_status', 'bank_name', 'discount', 'sub_total',
+
                     ]);
                 },
                 'relatable.customer' => function($query) {
@@ -596,7 +598,7 @@ class CashImageService
                     $query->select([
                         'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
                         'total_cost_price', 'discount', 'product_type', 'amount',
-                        'comment', 'service_date', 'days',
+                        'comment', 'service_date', 'days','checkin_date','checkout_date',
                     ]);
                 },
                 'relatable.items.product'
@@ -704,6 +706,7 @@ class CashImageService
                 'service_dates_string' => implode(', ', $serviceDates),
                 'comments' => $comments,
                 'items_count' => $items->count(),
+
             ];
         })->values();
 
