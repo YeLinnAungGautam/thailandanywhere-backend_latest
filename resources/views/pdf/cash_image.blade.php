@@ -352,7 +352,10 @@
                                             <td style="text-align: center">
                                                 {{ (int) ($item['quantity'] ?? 1) * (int) ($item['days'] ?? 1) }}
                                             </td>
-                                            <td>{{ number_format((float) ($item['selling_price'] ?? 0)) }} thb</td>
+                                            {{-- <td>{{ number_format((float) ($item['selling_price'] ?? 0)) }} thb</td> --}}
+                                            <td style="text-align: center">
+                                                {{ number_format((($item['amount'] ?? 0) / (int) ($item['quantity'] ?? 1)) * (int) ($item['days'] ?? 1)) }}
+                                            </td>
                                             <td>{{ number_format($item['amount'] ?? 0) }} thb</td>
                                         </tr>
                                     @endforeach

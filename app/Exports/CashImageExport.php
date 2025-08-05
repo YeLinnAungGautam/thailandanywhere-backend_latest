@@ -22,6 +22,7 @@ class CashImageExport implements
 {
     protected $searchParams;
     protected $cashImageService;
+    protected $invoiceCounter = 1;
 
     public function __construct(array $searchParams = [])
     {
@@ -55,6 +56,7 @@ class CashImageExport implements
     {
         return [
             'Date',
+            'Crm Number',
             'Invoice Number',
             'Customer Name',
             'Taxpayer Identification Number',
@@ -69,7 +71,8 @@ class CashImageExport implements
             'Profit Share',
             'Cash Amount',
             'Interact Bank',
-            'Deposit Count'
+            'Deposit Count',
+            'DateTime',
         ];
     }
 
@@ -78,10 +81,12 @@ class CashImageExport implements
      */
     public function map($cashImage): array
     {
+        $customInvoiceNumber = $this->generateCustomInvoiceNumber($cashImage['cash_image_date'] ?? '');
         // Safely access array elements with null coalescing
         return [
             $this->formatDateForExport($cashImage['cash_image_date'] ?? ''),
-            $cashImage['invoice_id'] ?? '',
+            $cashImage['crm_id'] ?? '',
+            $customInvoiceNumber ?? '',
             $cashImage['customer_name'] ?? '',
             $cashImage['taxpayer_id'] ?? '000000000000', // Make this configurable or from data
             $cashImage['establishment'] ?? '00000', // Make this configurable or from data
@@ -95,8 +100,31 @@ class CashImageExport implements
             $this->formatAmount($cashImage['commission'] ?? 0),
             $this->formatCurrency($cashImage['cash_amount'] ?? 0, $cashImage['currency'] ?? ''),
             $this->formatBankName($cashImage['bank'] ?? ''),
-            $cashImage['deposit'] ?? ''
+            $cashImage['deposit'] ?? '',
+            $this->formatTimeForExport($cashImage['cash_image_date'] ?? ''),
         ];
+    }
+
+    private function generateCustomInvoiceNumber($dateString)
+    {
+        $month = '07'; // Default month
+
+        if ($dateString) {
+            try {
+                $date = new \DateTime($dateString);
+                $month = $date->format('m'); // Get month as 01-12
+            } catch (\Exception $e) {
+                $month = '07'; // Fallback to 07 if date parsing fails
+            }
+        }
+
+        // Format: INV + month + 5-digit sequential number
+        $invoiceNumber = 'INV' . $month . str_pad($this->invoiceCounter, 5, '0', STR_PAD_LEFT);
+
+        // Increment counter for next invoice
+        $this->invoiceCounter++;
+
+        return $invoiceNumber;
     }
 
     /**
@@ -127,9 +155,21 @@ class CashImageExport implements
 
         try {
             $date = new \DateTime($dateString);
-            return $date->format('d M y, H:i');
+            return $date->format('d M y');
         } catch (\Exception $e) {
             return $dateString;
+        }
+    }
+
+    private function formatTimeForExport($timeString)
+    {
+        if (!$timeString) return '';
+
+        try {
+            $time = new \DateTime($timeString);
+            return $time->format('d M y H:i');
+        } catch (\Exception $e) {
+            return $timeString;
         }
     }
 
