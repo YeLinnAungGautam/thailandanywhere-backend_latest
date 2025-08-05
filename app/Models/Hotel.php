@@ -15,6 +15,10 @@ class Hotel extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'slug' => 'array', // Cast JSON to array
+    ];
+
     const TYPES = [
         'direct_booking' => 'direct_booking',
         'other_booking' => 'other_booking'

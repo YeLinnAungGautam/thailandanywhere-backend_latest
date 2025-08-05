@@ -23,9 +23,9 @@ class HotelController extends Controller
                 // 'contracts',
                 'facilities',
             )
-            ->when($request->search, function ($s_query) use ($request) {
-                $s_query->where('name', 'LIKE', "{$request->search}%");
-            })
+            // ->when($request->search, function ($s_query) use ($request) {
+            //     $s_query->where('name', 'LIKE', "{$request->search}%");
+            // })
             ->when($request->max_price, function ($q) use ($request) {
                 $q->whereIn('id', function ($q1) use ($request) {
                     $q1->select('hotel_id')
@@ -60,6 +60,17 @@ class HotelController extends Controller
                 });
             })
             ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
+
+        if ($request->search) {
+            $searchTerm = strtolower(trim($request->search));
+
+            $query->where(function ($searchQuery) use ($searchTerm) {
+                // Search in hotel name
+                $searchQuery->where('name', 'LIKE', $searchTerm . '%')
+                // OR search in slug
+                ->orWhereRaw('JSON_SEARCH(slug, "one", ?) IS NOT NULL', ['%' . $searchTerm . '%']);
+            });
+        }
 
         if ($request->order_by) {
             if ($request->order_by == 'top_selling_products') {

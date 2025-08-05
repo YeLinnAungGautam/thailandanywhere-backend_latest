@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
+use function PHPUnit\Framework\isEmpty;
+
 class AuthController extends Controller
 {
     use HttpResponses;
@@ -22,6 +24,10 @@ class AuthController extends Controller
         ]);
 
         $partner = Partner::where('email', $request->email)->first();
+
+        if (!isEmpty($partner->parent_id) || !is_null($partner->parent_id)) {
+            return response()->json(['message' => 'You are not allowed to login with this account.'], 401);
+        }
 
         if (is_null($partner) || !Hash::check($request->password, $partner->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);

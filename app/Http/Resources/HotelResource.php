@@ -58,6 +58,7 @@ class HotelResource extends JsonResource
             'official_phone_number' => $this->official_phone_number,
             'official_email' => $this->official_email,
             'official_remark' => $this->official_remark,
+            'slug' => $this->slug,
         ];
     }
 
