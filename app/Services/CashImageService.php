@@ -3,12 +3,15 @@
 namespace App\Services;
 
 use App\Http\Resources\Accountance\CashImageListResource as AccountanceCashImageResource;
+use App\Models\Booking;
 use App\Models\CashImage;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+
 
 class CashImageService
 {
@@ -451,6 +454,9 @@ class CashImageService
         }
     }
 
+    // Add property to store CRM deposit counters
+    private $crmDepositCounters = [];
+
     /**
      * Get all cash images summary (Simple version for many-to-many)
      */
@@ -461,6 +467,13 @@ class CashImageService
 
             $limit = min((int) $request->get('limit', self::PER_PAGE), self::MAX_PER_PAGE);
             $filters = $this->extractFilters($request);
+
+            // Reset deposit counters for each request
+            $this->crmDepositCounters = [];
+
+            // IMPORTANT: Pre-calculate deposit numbers for ALL records (not just current page)
+            // This ensures correct deposit numbering even when sorting/filtering
+            $this->preCalculateAllDepositNumbers($filters);
 
             $query = $this->buildSummaryQuery($filters);
             $data = $query->paginate($limit);
@@ -511,6 +524,297 @@ class CashImageService
         }
     }
 
+    public function getAllSummaryForExport(Request $request)
+    {
+        try {
+            $this->validateRequest($request);
+            $filters = $this->extractFilters($request);
+
+            // Reset deposit counters for each request
+            $this->crmDepositCounters = [];
+
+            // Pre-calculate deposit numbers for ALL records
+            $this->preCalculateAllDepositNumbers($filters);
+
+            // Build query without pagination
+            $query = $this->buildSummaryQuery($filters);
+            $allData = $query->get(); // Get ALL records, no pagination
+
+            // Transform the data to include summary information
+            $transformedData = $allData->map(function ($cashImage) {
+                return $this->transformCashImageToSummary($cashImage);
+            });
+
+            return [
+                'status' => 1,
+                'message' => 'All cash images summary retrieved successfully',
+                'result' => [
+                    'data' => $transformedData,
+                    'total_records' => $transformedData->count(),
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
+    public function onlyImages(Request $request) {
+        try {
+            $this->validateRequest($request);
+            $filters = $this->extractFilters($request);
+
+            // Build query with select for cash images
+            $query = $this->buildSummaryQuery($filters);
+            $allData = $query->select([
+                'id',
+                'image',
+                'relatable_id',
+                'relatable_type',
+            ])->with([
+                'relatable' => function($query) {
+                    $query->select([
+                        'id', 'crm_id', 'grand_total', 'customer_id', 'commission',
+                        'created_at', 'start_date', 'end_date', 'booking_date',
+                        'payment_method', 'payment_status', 'bank_name', 'discount', 'sub_total',
+                    ]);
+                },
+                'relatable.customer' => function($query) {
+                    $query->select(['id', 'name', 'phone_number']);
+                },
+                'relatable.items' => function($query) {
+                    $query->select([
+                        'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
+                        'total_cost_price', 'discount', 'product_type', 'amount',
+                        'comment', 'service_date', 'days',
+                    ]);
+                },
+                'relatable.items.product'
+            ])->get();
+
+            // Transform the data
+            $transformedData = $allData->map(function ($cashImage) use (&$nextInvoiceIndex) {
+                $booking = null;
+                $crmId = 'N/A';
+                $invoice_generate = null;
+
+                // Determine which booking to use and extract CRM ID
+                if ($cashImage->relatable_type === 'App\Models\Booking') {
+                    if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                        // Case 1: Direct polymorphic relationship (relatable_id > 0)
+                        $booking = $cashImage->relatable;
+                        $crmId = $booking->crm_id ?? 'N/A';
+                    } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings && $cashImage->bookings->count() > 0) {
+                        // Case 2: Many-to-many relationship (relatable_id = 0)
+                        // Use the first booking or you can modify this logic based on your needs
+                        $booking = $cashImage->bookings->first();
+                        $crmId = $booking->crm_id ?? 'N/A';
+                    }
+                }
+
+                if ($booking) {
+
+                    $balance = $booking->grand_total - $booking->commission;
+                    $booking->sub_total_with_vat = $balance;
+                    $booking->vat = $balance - ($balance / 1.07);
+                    $booking->total_excluding_vat = $balance - $booking->vat;
+
+                    // Process items grouping
+                    $booking = $this->processBookingItems($booking);
+                    $invoice_generate = "INV".date('m', strtotime($booking->booking_date))."000".$nextInvoiceIndex+1;
+                    $booking->invoice_generate = $invoice_generate;
+                    $nextInvoiceIndex++;
+                }
+
+                return [
+                    'cash_image_id' => $cashImage->id,
+                    'crm_id' => $this->getCrmIdFromCashImage($cashImage),
+                    'image' => Storage::url('images/' . $cashImage->image),
+                    'booking' => $booking,
+                ];
+            });
+
+            return [
+                'result' => $transformedData->toArray()
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
+    /**
+     * Process booking items and group by product type
+     */
+    private function processBookingItems($booking) {
+        if (!$booking->items || $booking->items->count() === 0) {
+            $booking->grouped_items = collect([]);
+            return $booking;
+        }
+
+        $groupedItems = $booking->items->groupBy('product_type')->map(function ($items, $productType) {
+            // Get all service dates and format them
+            $serviceDates = $items->whereNotNull('service_date')
+                                ->pluck('service_date')
+                                ->unique()
+                                ->sort()
+                                ->map(function($date) {
+                                    return date('Y-m-d', strtotime($date));
+                                })
+                                ->values()
+                                ->toArray();
+
+            // Get all unique comments
+            $comments = $items->whereNotNull('comment')
+                             ->pluck('comment')
+                             ->unique()
+                             ->filter()
+                             ->implode(', ');
+
+            return [
+                'product_type' => $productType,
+                'product_name' => $this->getProductNameByType($productType),
+                'quantity' => $items->sum('quantity'),
+                'amount' => round($items->sum('amount'), 2),
+                'discount' => round($items->sum('discount'), 2),
+                'selling_price' => round($items->sum('selling_price'), 2),
+                'total_cost_price' => round($items->sum('total_cost_price'), 2),
+                'days' => $items->sum('days'),
+                'service_dates' => $serviceDates,
+                'service_dates_string' => implode(', ', $serviceDates),
+                'comments' => $comments,
+                'items_count' => $items->count(),
+            ];
+        })->values();
+
+        $booking->grouped_items = $groupedItems;
+        return $booking;
+    }
+
+    /**
+     * Get human-readable product name based on product type
+     */
+    private function getProductNameByType($productType) {
+        $productTypeMap = [
+            'App\\Models\\Hotel' => 'Hotel Service',
+            'App\\Models\\EntranceTicket' => 'Ticket Service',
+            'App\\Models\\PrivateVanTour' => 'Car Rental Service',
+        ];
+
+        return $productTypeMap[$productType] ?? 'General Service';
+    }
+
+    private function preCalculateAllDepositNumbers($filters)
+    {
+        // Get ALL cash images that match the filters (without pagination)
+        $allQuery = CashImage::select([
+            'cash_images.id',
+            'cash_images.date',
+            'cash_images.relatable_id',
+            'cash_images.relatable_type'
+        ]);
+
+        // Apply same filters as main query (except sorting for deposit calculation)
+        if (!empty($filters['date'])) {
+            $this->applyDateFilter($allQuery, $filters['date']);
+        }
+        $this->applySearchFilters($allQuery, $filters);
+
+        // Load relationships for CRM ID access
+        $allQuery->with([
+            'relatable' => function ($morphQuery) {
+                $morphQuery->when($morphQuery->getModel() instanceof \App\Models\BookingItemGroup, function ($q) {
+                    $q->with('booking:id,crm_id');
+                });
+            },
+            'bookings:id,crm_id'
+        ]);
+
+        $allCashImages = $allQuery->get();
+
+        // Group by CRM ID
+        $crmGroups = [];
+
+        foreach ($allCashImages as $cashImage) {
+            $crmId = $this->getCrmIdFromCashImage($cashImage);
+
+            if ($crmId) {
+                if (!isset($crmGroups[$crmId])) {
+                    $crmGroups[$crmId] = [];
+                }
+                $crmGroups[$crmId][] = $cashImage;
+            }
+        }
+
+        // For each CRM group, sort by date and assign deposit numbers
+        foreach ($crmGroups as $crmId => $cashImageGroup) {
+            // Sort by date (earliest first) - this is the CORRECT order for deposits
+            usort($cashImageGroup, function($a, $b) {
+                return strtotime($a->date) - strtotime($b->date);
+            });
+
+            // Assign deposit numbers
+            foreach ($cashImageGroup as $index => $cashImage) {
+                $depositNumber = $index + 1;
+                $totalInGroup = count($cashImageGroup);
+
+                if ($totalInGroup == 1) {
+                    $this->crmDepositCounters[$cashImage->id] = 'final deposit';
+                } else {
+                    if ($index == $totalInGroup - 1) {
+                        $this->crmDepositCounters[$cashImage->id] = 'final deposit';
+                    } else {
+                        $this->crmDepositCounters[$cashImage->id] = 'deposit ' . $depositNumber;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Get CRM ID from cash image (handle both polymorphic and many-to-many cases)
+     */
+    private function getCrmIdFromCashImage($cashImage)
+    {
+        if ($cashImage->relatable_type === 'App\Models\Booking') {
+            if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                // Single booking case (polymorphic)
+                return $cashImage->relatable->crm_id ?? null;
+            } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings && $cashImage->bookings->count() > 0) {
+                // Multiple bookings case (many-to-many) - use first booking's CRM ID
+                $firstBooking = $cashImage->bookings->first();
+                return $firstBooking->crm_id ?? null;
+            }
+        } elseif ($cashImage->relatable_type === 'App\Models\BookingItemGroup' && $cashImage->relatable) {
+            // BookingItemGroup case - get CRM ID through booking relationship
+            if ($cashImage->relatable->relationLoaded('booking')) {
+                return $cashImage->relatable->booking->crm_id ?? null;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Build summary query (Simple version)
      */
@@ -518,6 +822,7 @@ class CashImageService
     {
         $query = CashImage::select([
             'cash_images.id',
+            'cash_images.image',
             'cash_images.date',
             'cash_images.sender',
             'cash_images.receiver',
@@ -550,6 +855,31 @@ class CashImageService
         return $query;
     }
 
+    private function onlyImageForm($cashImage){
+        $result = [
+            'cash_image_id' => $cashImage->id,
+            'crm_id' => null,
+            'image' => $cashImage->image,
+        ];
+
+        if ($cashImage->relatable_type === 'App\Models\Booking') {
+            if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                // Single booking case (polymorphic)
+                $booking = $cashImage->relatable;
+                $this->fillBookingData($result, $booking);
+            } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings && $cashImage->bookings->count() > 0) {
+                // Multiple bookings case (many-to-many) - အရိုးရှင်းဆုံး: ပထမဆုံး booking ကိုပဲ ယူမယ်
+                $firstBooking = $cashImage->bookings->first();
+                $this->fillBookingData($result, $firstBooking);
+
+                // Or you can aggregate all bookings data if needed:
+                // $this->fillAggregatedBookingsData($result, $cashImage->bookings);
+            }
+        }
+
+        return $result;
+    }
+
     /**
      * Transform cash image data to summary format (Simple handling for both cases)
      */
@@ -577,6 +907,7 @@ class CashImageService
             'total_before_vat' => 0,
             'vat' => 0,
             'commission' => 0,
+            'deposit' => 'final deposit',
         ];
 
         if ($cashImage->relatable_type === 'App\Models\Booking') {
@@ -592,6 +923,11 @@ class CashImageService
                 // Or you can aggregate all bookings data if needed:
                 // $this->fillAggregatedBookingsData($summary, $cashImage->bookings);
             }
+        }
+
+        // Set deposit value from pre-calculated counters
+        if (isset($this->crmDepositCounters[$cashImage->id])) {
+            $summary['deposit'] = $this->crmDepositCounters[$cashImage->id];
         }
 
         return $summary;

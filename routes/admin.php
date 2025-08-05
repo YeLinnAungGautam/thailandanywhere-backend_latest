@@ -106,6 +106,10 @@ Route::get('reservations/report/export', [ReservationExportController::class, 'e
 
 Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 
+Route::get('/print/cash-image', [CashImageController::class, 'printCashImage']);
+Route::get('/pdf-status/{jobId}', [CashImageController::class, 'checkPdfStatus']);
+
+
 Route::get('/super', function () {
     return 'this is super admin only';
 })->middleware(['auth:sanctum', 'abilities:*']);
@@ -252,6 +256,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
+    Route::post('hotels/{id}/slug', [HotelController::class, 'addSlug']);
 
     Route::patch('hotels/{id}/restore', [HotelController::class, 'restore']);
     Route::delete('hotels/{id}/force', [HotelController::class, 'hardDelete']);
@@ -449,6 +454,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('cash-images', CashImageController::class);
     # Cash Image Summary Report
     Route::get('summary-report', [CashImageController::class, 'summary']);
+    Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);
+
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
@@ -461,6 +468,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         // New methods for creating cash images without relatable_id
         Route::post('/create-and-attach', [CashImageBookingController::class, 'createAndAttach']);
     });
+
+
 
     require __DIR__ . '/sub_routes/admin_v2.php';
 });

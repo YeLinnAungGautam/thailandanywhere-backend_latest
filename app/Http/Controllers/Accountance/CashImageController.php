@@ -2,26 +2,42 @@
 
 namespace App\Http\Controllers\Accountance;
 
+use App\Exports\CashImageExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageResource;
+use App\Jobs\GenerateCashImagePdfJob;
 use App\Models\CashImage;
 use App\Services\CashImageInvoiceService;
 use App\Services\CashImageService;
 use App\Services\CompanyCashBookingService;
+use App\Services\CsvExportService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class CashImageController extends Controller
 {
     use HttpResponses;
     use ImageManager;
+
+    protected $cashImageService;
+    protected $csvExportService;
+
+    public function __construct(
+        CashImageService $cashImageService,
+    ) {
+        $this->cashImageService = $cashImageService;
+    }
     public function index(Request $request)
     {
-        $cashImageService = new CashImageService();
-        $result = $cashImageService->getAll($request);
+
+        $result = $this->cashImageService->getAll($request);
 
         if ($result['success']) {
             return response()->json([
@@ -39,8 +55,8 @@ class CashImageController extends Controller
     }
 
     public function summary(Request $request){
-        $cashImageService = new CashImageService();
-        $result = $cashImageService->getAllSummary($request);
+
+        $result = $this->cashImageService->getAllSummary($request);
 
         if ($result['status'] == 1) {
             return response()->json([
@@ -132,5 +148,83 @@ class CashImageController extends Controller
         Storage::delete('images/' . $find->image);
         $find->delete();
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function exportSummaryToCsv(Request $request)
+    {
+        try {
+            $file_name = "cash_image_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+            // Pass request parameters to the export class
+            $export = new CashImageExport($request->all());
+
+            // Check if there's any data to export
+            if ($export->collection()->isEmpty()) {
+                return $this->error(null, 'No data available for export', 404);
+            }
+
+            \Excel::store($export, "export/" . $file_name);
+
+            return $this->success(
+                ['download_link' => get_file_link('export', $file_name)],
+                'CSV export is successful',
+                200
+            );
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function printCashImage(Request $request)
+    {
+        try {
+
+            // $data = $this->cashImageService->onlyImages($request);
+            // return response()->json([
+            //     'success' => true,
+            //     'data' => $data,
+            //     'message' => 'Data retrieved successfully'
+            // ]);
+            // Generate unique job ID
+            $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
+
+            // Dispatch the PDF generation job
+            GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
+                ->onQueue('pdf-generation'); // Optional: specific queue
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF generation started in background',
+                'job_id' => $jobId,
+                'status_url' => url("/api/pdf-status/{$jobId}"),
+                'estimated_time' => 'This may take 2-5 minutes for large datasets'
+            ], 202); // 202 = Accepted (processing)
+
+        } catch (Exception $e) {
+            Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function checkPdfStatus($jobId)
+    {
+        $status = Cache::get("pdf_job_{$jobId}");
+
+        if (!$status) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Job not found or expired'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'job_id' => $jobId,
+            'status' => $status['status'],
+            'download_url' => $status['download_url'] ?? null,
+            'filename' => $status['filename'] ?? null,
+            'error' => $status['error'] ?? null,
+            'progress' => $status['progress'] ?? null
+        ]);
     }
 }

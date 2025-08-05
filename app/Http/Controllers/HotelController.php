@@ -13,6 +13,7 @@ use App\Traits\ImageManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class HotelController extends Controller
 {
@@ -387,4 +388,47 @@ class HotelController extends Controller
             ->response()
             ->getData(), 'Hotel List');
     }
+
+    public function addSlug(Request $request, $id)
+        {
+            $hotel = Hotel::find($id);
+
+            if (!$hotel) {
+                return $this->error(null, 'Hotel not found', 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'slugs' => 'required|array|min:1',
+                'slugs.*' => 'required|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'result' => 0,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            try {
+                // Clean and prepare slugs
+                $slugs = array_map(function($slug) {
+                    return strtolower(trim($slug));
+                }, $request->slugs);
+
+                // Remove empty values and duplicates
+                $slugs = array_values(array_unique(array_filter($slugs)));
+
+                // Update hotel with new slugs (replace all)
+                $hotel->update(['slug' => $slugs]);
+
+
+                $hotel->refresh();
+
+                return $this->success(null, 'Slugs updated successfully');
+
+            } catch (\Exception $e) {
+                return $this->error(null, $e->getMessage(), 500);
+            }
+        }
 }
