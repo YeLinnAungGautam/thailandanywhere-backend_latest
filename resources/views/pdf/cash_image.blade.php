@@ -72,12 +72,6 @@
             margin-bottom: 20px;
         }
 
-        img {
-            max-width: 75%;
-            min-height: 80%;
-            height: auto;
-        }
-
         .checkbox {
             display: inline-block;
             width: 16px;
@@ -448,10 +442,18 @@
 
                 <!-- Image Section - Moved outside and at the end -->
                 <div class="page-break"></div>
-                {{-- <div class="image-container"> --}}
-                {{-- <h3>CRM ID: {{ $url['crm_id'] ?? 'N/A' }}</h3> --}}
-                <img src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
-                {{-- </div> --}}
+                <div class="image-container">
+                    <h3 style="margin: 0 0 20px 0; text-align: center; page-break-after: avoid; font-size: 16px;">
+                        CRM ID: {{ $url['crm_id'] ?? 'N/A' }}
+                    </h3>
+
+                    {{-- <img src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}"> --}}
+                    <div style="text-align: center; margin-top: 30px;">
+                        <img style="width: auto; height: 800px; max-width: 90%; display: block; margin: 0 auto;"
+                            src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
+                    </div>
+
+                </div>
             </div>
         @endforeach
     @endif
