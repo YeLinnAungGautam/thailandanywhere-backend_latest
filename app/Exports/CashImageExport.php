@@ -90,7 +90,7 @@ class CashImageExport implements
             $cashImage['taxpayer_id'] ?? '000000000000', // Make this configurable or from data
             $cashImage['establishment'] ?? '00000', // Make this configurable or from data
             $this->formatAmount($cashImage['total_sales'] ?? 0),
-            $this->formatAmount($this->calculateVat($cashImage['commission'])),
+            $this->formatAmount($this->calculateVat($cashImage['total_sales'], $cashImage['commission'])),
             $this->hasHotelService($cashImage) ? '✓' : '',
             '', // Restaurant
             $this->hasTicketService($cashImage) ? '✓' : '',
@@ -173,10 +173,11 @@ class CashImageExport implements
         }
     }
 
-    private function calculateVat($commission)
+    private function calculateVat($total,$commission)
     {
-        $vatAmount = $commission - ($commission / 1.07); // 7% VAT on commission
-        return $vatAmount;
+        $vatAmount = $total - $commission;
+        $vatCalc = $vatAmount -  ( $vatAmount / 1.07);
+        return $vatCalc;
     }
 
     /**
