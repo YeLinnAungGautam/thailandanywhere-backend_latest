@@ -8,18 +8,15 @@ use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageResource;
 use App\Jobs\GenerateCashImagePdfJob;
 use App\Models\CashImage;
-use App\Services\CashImageInvoiceService;
 use App\Services\CashImageService;
-use App\Services\CompanyCashBookingService;
-use App\Services\CsvExportService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CashImageController extends Controller
 {
@@ -54,7 +51,8 @@ class CashImageController extends Controller
         }
     }
 
-    public function summary(Request $request){
+    public function summary(Request $request)
+    {
 
         $result = $this->cashImageService->getAllSummary($request);
 
@@ -112,6 +110,7 @@ class CashImageController extends Controller
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
+
         return $this->success(new CashImageDetailResource($find), 'Successfully retrieved');
     }
 
@@ -147,6 +146,7 @@ class CashImageController extends Controller
         }
         Storage::delete('images/' . $find->image);
         $find->delete();
+
         return $this->success(null, 'Successfully deleted');
     }
 
@@ -190,7 +190,7 @@ class CashImageController extends Controller
 
             // Dispatch the PDF generation job
             GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
-                ->onQueue('pdf-generation'); // Optional: specific queue
+                ->onQueue('pdf_generation'); // Optional: specific queue
 
             return response()->json([
                 'success' => true,
@@ -202,6 +202,7 @@ class CashImageController extends Controller
 
         } catch (Exception $e) {
             Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+
             return $this->error(null, $e->getMessage(), 500);
         }
     }
