@@ -56,7 +56,6 @@ class CashImageExport implements
     {
         return [
             'Date',
-            'Crm Number',
             'Invoice Number',
             'Customer Name',
             'Taxpayer Identification Number',
@@ -73,6 +72,7 @@ class CashImageExport implements
             'Interact Bank',
             'Deposit Count',
             'DateTime',
+            'Crm Number',
         ];
     }
 
@@ -85,12 +85,11 @@ class CashImageExport implements
         // Safely access array elements with null coalescing
         return [
             $this->formatDateForExport($cashImage['cash_image_date'] ?? ''),
-            $cashImage['crm_id'] ?? '',
             $customInvoiceNumber ?? '',
             $cashImage['customer_name'] ?? '',
             $cashImage['taxpayer_id'] ?? '000000000000', // Make this configurable or from data
             $cashImage['establishment'] ?? '00000', // Make this configurable or from data
-            $this->formatCurrency($cashImage['total_sales'] ?? 0, $cashImage['currency'] ?? ''),
+            $this->formatAmount($cashImage['total_sales'] ?? 0),
             $this->formatAmount($this->calculateVat($cashImage['commission'])),
             $this->hasHotelService($cashImage) ? '✓' : '',
             '', // Restaurant
@@ -98,10 +97,11 @@ class CashImageExport implements
             $this->formatAmount($cashImage['hotel_service_total'] ?? 0),
             $this->formatAmount($cashImage['ticket_service_total'] ?? 0),
             $this->formatAmount($cashImage['commission'] ?? 0),
-            $this->formatCurrency($cashImage['cash_amount'] ?? 0, $cashImage['currency'] ?? ''),
+            $this->formatAmount($cashImage['cash_amount'] ?? 0),
             $this->formatBankName($cashImage['bank'] ?? ''),
             $cashImage['deposit'] ?? '',
             $this->formatTimeForExport($cashImage['cash_image_date'] ?? ''),
+            $cashImage['crm_id'] ?? '',
         ];
     }
 
