@@ -97,7 +97,7 @@ class CashImageExport implements
             $this->formatAmount($cashImage['hotel_service_total'] ?? 0),
             $this->formatAmount($cashImage['ticket_service_total'] ?? 0),
             $this->formatAmount($cashImage['commission'] ?? 0),
-            $this->formatCurrency($cashImage['cash_amount'] ?? 0, $cashImage['currency'] ?? ''),
+            $this->formatAmount($cashImage['cash_amount'] ?? 0),
             $this->formatBankName($cashImage['bank'] ?? ''),
             $cashImage['deposit'] ?? '',
             $this->formatTimeForExport($cashImage['cash_image_date'] ?? ''),
