@@ -107,6 +107,7 @@ Route::get('reservations/report/export', [ReservationExportController::class, 'e
 Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 
 Route::get('/print/cash-image', [CashImageController::class, 'printCashImage']);
+Route::get('/print/cash-parchase-image', [CashImageController::class, 'printCashParchaseImage']);
 Route::get('/pdf-status/{jobId}', [CashImageController::class, 'checkPdfStatus']);
 
 
@@ -455,7 +456,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Cash Image Summary Report
     Route::get('summary-report', [CashImageController::class, 'summary']);
     Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);
-
+    Route::get('/parchase/export-csv', [CashImageController::class, 'exportParchaseToCsv']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
