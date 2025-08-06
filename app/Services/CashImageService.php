@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageListResource as AccountanceCashImageResource;
+use App\Http\Resources\Accountance\CashParchaseDetailResource;
 use App\Models\Booking;
 use App\Models\CashImage;
 use Carbon\Carbon;
@@ -553,6 +555,72 @@ class CashImageService
                     'data' => $transformedData,
                     'total_records' => $transformedData->count(),
                 ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
+    public function getAllParchaseForExport(Request $request)
+    {
+        try {
+            $this->validateRequest($request);
+
+            $filters = $this->extractFilters($request);
+
+            $query = $this->buildOptimizedQuery($filters);
+            $data = $query->get();
+
+            $resourceCollection = AccountanceCashImageResource::collection($data);
+
+            return [
+                'status' => 1,
+                'message' => 'All cash images summary retrieved successfully',
+                'result' => [
+                    'data' => $resourceCollection->response()->getData(true),
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
+    public function getAllParchaseForPrint(Request $request)
+    {
+        try {
+            $this->validateRequest($request);
+
+            $filters = $this->extractFilters($request);
+
+            $query = $this->buildOptimizedQuery($filters);
+            $data = $query->get();
+
+            $resourceCollection = CashParchaseDetailResource::collection($data);
+
+            return [
+                'result' => $resourceCollection->response()->getData(true)
             ];
 
         } catch (InvalidArgumentException $e) {

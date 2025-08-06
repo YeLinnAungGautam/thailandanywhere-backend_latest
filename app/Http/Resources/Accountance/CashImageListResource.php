@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Accountance;
 
+use App\Http\Resources\BookingItemGroupResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,26 @@ class CashImageListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+
+        $relatable = null;
+        $groupedItems = [];
+
+        // Check if relatable relationship exists before processing
+        if ($this->relatable) {
+            switch ($this->relatable_type) {
+
+                case 'App\Models\BookingItemGroup':
+                    if (!$this->relatable->relationLoaded('bookingItems')) {
+                        $this->relatable->load('bookingItems', 'customerDocuments', 'taxReceipts'); // Changed from 'customer_documents' and 'tax_receipts'
+                    }
+                    $relatable = new BookingItemGroupResource($this->relatable);
+                    break;
+
+                default:
+                    // Handle unknown relatable types
+                    $relatable = null;
+            }
+        }
         // Option 1: Minimal data for list view (FASTEST)
         return [
             'id' => $this->id,
@@ -28,7 +49,7 @@ class CashImageListResource extends JsonResource
             'amount' => $this->amount,
             'currency' => $this->currency,
             'interact_bank' => $this->interact_bank,
-
+            'relatable' => $this->when($request->input('include_relatable'), $relatable),
             // Only include relatable data if explicitly requested
             'relatable_type' => $this->when($request->input('include_relatable'), $this->relatable_type),
             'relatable_id' => $this->when($request->input('include_relatable'), $this->relatable_id),
