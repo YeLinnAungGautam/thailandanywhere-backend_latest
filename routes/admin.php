@@ -69,6 +69,7 @@ use App\Http\Controllers\DriverController;
 use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
 use App\Http\Controllers\EntranceTicketVariationExportImportController;
+use App\Http\Controllers\File\FileController;
 use App\Http\Controllers\GroupTourExportImportController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelExportImportController;
@@ -470,6 +471,17 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         Route::post('/create-and-attach', [CashImageBookingController::class, 'createAndAttach']);
     });
 
+    # Storage File
+    // Count files in specific directory
+    Route::get('/files/{type}/count', [FileController::class, 'countFiles']);
+
+    // List all files in directory
+    Route::get('/files/{type}/list', [FileController::class, 'listFiles']);
+
+    // Get storage statistics
+    Route::get('/storage/stats', [FileController::class, 'getStorageStats']);
+
+    Route::delete('/files/{type}/{filename}', [FileController::class, 'deleteFile']);
 
 
     require __DIR__ . '/sub_routes/admin_v2.php';
