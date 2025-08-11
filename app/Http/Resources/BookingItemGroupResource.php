@@ -25,7 +25,6 @@ class BookingItemGroupResource extends JsonResource
             'invoice_date' => $this->invoice_date,
             'invoice_due_date' => $this->invoice_due_date,
             'invoice_amount' => $this->invoice_amount,
-
             'sent_booking_request' => $this->sent_booking_request,
             'booking_request_proof' => get_file($this->booking_request_proof, 'booking_item_groups'),
             // 'booking_confirm_letter' => $this->customerDocuments->contains('type', 'booking_confirm_letter') ? CustomerDocumentResource::collection($this->customerDocuments->where('type', 'booking_confirm_letter')) : [],

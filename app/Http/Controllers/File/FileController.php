@@ -9,24 +9,67 @@ use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
-    private array $allowedTypes = ['export', 'pdfs'];
+    private array $allowedParentTypes = ['export', 'pdfs'];
+
+    // Method to validate if a path is allowed
+    private function isValidPath(string $path): bool
+    {
+        // Check if it's a direct parent directory
+        if (in_array($path, $this->allowedParentTypes)) {
+            return true;
+        }
+
+        // Check if it's a subdirectory of an allowed parent
+        foreach ($this->allowedParentTypes as $parent) {
+            if (str_starts_with($path, $parent . '/')) {
+                // Additional security: prevent directory traversal
+                if (!str_contains($path, '..')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Handle subdirectory paths - this method combines type and subtype
+    public function countFilesWithSubdir(string $type, string $subtype = null): JsonResponse
+    {
+        $fullPath = $subtype ? "{$type}/{$subtype}" : $type;
+        return $this->countFiles($fullPath);
+    }
+
+    public function listFilesWithSubdir(string $type, string $subtype = null): JsonResponse
+    {
+        $fullPath = $subtype ? "{$type}/{$subtype}" : $type;
+        return $this->listFiles($fullPath);
+    }
+
+    public function getFilteredFilesWithSubdir(Request $request, string $type, string $subtype = null): JsonResponse
+    {
+        $fullPath = $subtype ? "{$type}/{$subtype}" : $type;
+        return $this->getFilteredFiles($request, $fullPath);
+    }
+
+    public function deleteFileWithSubdir(string $type, string $subtype, string $filename): JsonResponse
+    {
+        $fullPath = "{$type}/{$subtype}";
+        return $this->deleteFile($fullPath, $filename);
+    }
 
     public function countFiles(string $type): JsonResponse
     {
         try {
-            // Validate file type
-            if (!in_array($type, $this->allowedTypes)) {
+            if (!$this->isValidPath($type)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid directory type'
                 ], 400);
             }
 
-            // Get all files in directory
             $files = Storage::files($type);
             $count = count($files);
 
-            // Get directory size
             $totalSize = 0;
             foreach ($files as $file) {
                 $totalSize += Storage::size($file);
@@ -51,7 +94,7 @@ class FileController extends Controller
     public function listFiles(string $type): JsonResponse
     {
         try {
-            if (!in_array($type, $this->allowedTypes)) {
+            if (!$this->isValidPath($type)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid directory type'
@@ -94,7 +137,7 @@ class FileController extends Controller
             $totalFiles = 0;
             $totalSize = 0;
 
-            foreach ($this->allowedTypes as $type) {
+            foreach ($this->allowedParentTypes as $type) {
                 if (Storage::exists($type)) {
                     $files = Storage::files($type);
                     $directorySize = 0;
@@ -141,11 +184,10 @@ class FileController extends Controller
         }
     }
 
-    // Advanced method with filtering
     public function getFilteredFiles(Request $request, string $type): JsonResponse
     {
         try {
-            if (!in_array($type, $this->allowedTypes)) {
+            if (!$this->isValidPath($type)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid directory type'
@@ -155,7 +197,6 @@ class FileController extends Controller
             $files = Storage::files($type);
             $fileDetails = [];
 
-            // Filter parameters
             $extension = $request->get('extension');
             $minSize = $request->get('min_size', 0);
             $maxSize = $request->get('max_size');
@@ -173,7 +214,6 @@ class FileController extends Controller
                     'extension' => pathinfo($file, PATHINFO_EXTENSION)
                 ];
 
-                // Apply filters
                 if ($extension && $fileInfo['extension'] !== $extension) {
                     continue;
                 }
@@ -222,8 +262,7 @@ class FileController extends Controller
     public function deleteFile(string $type, string $filename): JsonResponse
     {
         try {
-            // Validate file type
-            if (!in_array($type, $this->allowedTypes)) {
+            if (!$this->isValidPath($type)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid file type'
@@ -232,7 +271,6 @@ class FileController extends Controller
 
             $filePath = "{$type}/{$filename}";
 
-            // Check if file exists
             if (!Storage::exists($filePath)) {
                 return response()->json([
                     'success' => false,
@@ -240,7 +278,6 @@ class FileController extends Controller
                 ], 404);
             }
 
-            // Security check - prevent directory traversal
             if (str_contains($filename, '..') || str_contains($filename, '/')) {
                 return response()->json([
                     'success' => false,
@@ -248,7 +285,6 @@ class FileController extends Controller
                 ], 400);
             }
 
-            // Delete the file
             Storage::delete($filePath);
 
             return response()->json([
@@ -262,5 +298,44 @@ class FileController extends Controller
                 'message' => 'Error deleting file: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    // Add this method to your FileController class
+
+    public function serveFile(string $type, string $filename): \Symfony\Component\HttpFoundation\Response
+    {
+        try {
+            if (!$this->isValidPath($type)) {
+                abort(404, 'Invalid file type');
+            }
+
+            $filePath = "{$type}/{$filename}";
+
+            if (!Storage::exists($filePath)) {
+                abort(404, 'File not found');
+            }
+
+            // Security check - prevent directory traversal
+            if (str_contains($filename, '..') || str_contains($filename, '/')) {
+                abort(404, 'Invalid filename');
+            }
+
+            $fileContents = Storage::get($filePath);
+            $mimeType = Storage::mimeType($filePath);
+
+            return response($fileContents)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+
+        } catch (\Exception $e) {
+            abort(500, 'Error serving file: ' . $e->getMessage());
+        }
+    }
+
+    // For subdirectories
+    public function serveFileWithSubdir(string $type, string $subtype, string $filename): \Symfony\Component\HttpFoundation\Response
+    {
+        $fullPath = "{$type}/{$subtype}";
+        return $this->serveFile($fullPath, $filename);
     }
 }

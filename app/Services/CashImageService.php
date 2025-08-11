@@ -607,20 +607,48 @@ class CashImageService
         }
     }
 
-    public function getAllParchaseForPrint(Request $request)
+    public function getTotalRecordsCount(Request $request)
     {
         try {
             $this->validateRequest($request);
-
             $filters = $this->extractFilters($request);
 
             $query = $this->buildOptimizedQuery($filters);
-            $data = $query->get();
+            return $query->count();
+
+        } catch (Exception $e) {
+            Log::error('Error getting total records count: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Batch အတွက် specific data ယူမယ် (offset နဲ့ limit နဲ့)
+     */
+    public function getAllPurchaseForPrintBatch(Request $request, int $offset, int $limit)
+    {
+        try {
+            $this->validateRequest($request);
+            $filters = $this->extractFilters($request);
+
+            $query = $this->buildOptimizedQuery($filters);
+
+            // Offset နဲ့ limit သုံးပြီး specific batch ယူမယ်
+            $data = $query->offset($offset)
+                         ->limit($limit)
+                         ->get();
 
             $resourceCollection = CashParchaseDetailResource::collection($data);
 
             return [
-                'result' => $resourceCollection->response()->getData(true)
+                'result' => $resourceCollection->response()->getData(true),
+                'batch_info' => [
+                    'offset' => $offset,
+                    'limit' => $limit,
+                    'count' => $data->count(),
+                    'from_record' => $offset + 1,
+                    'to_record' => $offset + $data->count()
+                ]
             ];
 
         } catch (InvalidArgumentException $e) {
@@ -632,7 +660,7 @@ class CashImageService
         } catch (Exception $e) {
             return [
                 'status' => 'Error has occurred.',
-                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'message' => 'An error occurred while retrieving batch data. Error: ' . $e->getMessage(),
                 'result' => null
             ];
         }

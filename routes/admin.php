@@ -110,6 +110,7 @@ Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 Route::get('/print/cash-image', [CashImageController::class, 'printCashImage']);
 Route::get('/print/cash-parchase-image', [CashImageController::class, 'printCashParchaseImage']);
 Route::get('/pdf-status/{jobId}', [CashImageController::class, 'checkPdfStatus']);
+Route::get('/pdf-batch-status/{jobId}', [CashImageController::class, 'checkPdfBatchStatus']);
 
 
 Route::get('/super', function () {
@@ -472,16 +473,33 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     });
 
     # Storage File
-    // Count files in specific directory
-    Route::get('/files/{type}/count', [FileController::class, 'countFiles']);
+    Route::prefix('admin/files')->group(function () {
+        // Get overall storage stats (must be first to avoid conflicts)
+        Route::get('stats', [FileController::class, 'getStorageStats']);
 
-    // List all files in directory
-    Route::get('/files/{type}/list', [FileController::class, 'listFiles']);
+        // Routes for subdirectories (pdfs/batches) - these must come before single param routes
+        Route::get('{type}/{subtype}/count', [FileController::class, 'countFilesWithSubdir'])
+            ->where('type', '[a-zA-Z0-9_-]+')
+            ->where('subtype', '[a-zA-Z0-9_-]+');
 
-    // Get storage statistics
-    Route::get('/storage/stats', [FileController::class, 'getStorageStats']);
+        Route::get('{type}/{subtype}/list', [FileController::class, 'listFilesWithSubdir'])
+            ->where('type', '[a-zA-Z0-9_-]+')
+            ->where('subtype', '[a-zA-Z0-9_-]+');
 
-    Route::delete('/files/{type}/{filename}', [FileController::class, 'deleteFile']);
+        Route::get('{type}/{subtype}/filtered', [FileController::class, 'getFilteredFilesWithSubdir'])
+            ->where('type', '[a-zA-Z0-9_-]+')
+            ->where('subtype', '[a-zA-Z0-9_-]+');
+
+        Route::delete('{type}/{subtype}/{filename}', [FileController::class, 'deleteFileWithSubdir'])
+            ->where('type', '[a-zA-Z0-9_-]+')
+            ->where('subtype', '[a-zA-Z0-9_-]+');
+
+        // Routes for single-level directories (pdfs, export)
+        Route::get('{type}/count', [FileController::class, 'countFiles']);
+        Route::get('{type}/list', [FileController::class, 'listFiles']);
+        Route::get('{type}/filtered', [FileController::class, 'getFilteredFiles']);
+        Route::delete('{type}/{filename}', [FileController::class, 'deleteFile']);
+    });
 
 
     require __DIR__ . '/sub_routes/admin_v2.php';
