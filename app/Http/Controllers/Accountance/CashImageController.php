@@ -233,35 +233,35 @@ class CashImageController extends Controller
         }
     }
 
-    public function printCashParchaseImage(Request $request)
-    {
-        try {
+    // public function printCashParchaseImage(Request $request)
+    // {
+    //     try {
 
-            // $data = $this->cashImageService->getAllParchaseForPrint($request);
-            // return response()->json([
-            //     'data' => $data
-            // ]);
-            // Generate unique job ID
-            $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
+    //         // $data = $this->cashImageService->getAllParchaseForPrint($request);
+    //         // return response()->json([
+    //         //     'data' => $data
+    //         // ]);
+    //         // Generate unique job ID
+    //         $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
 
-            // Dispatch the PDF generation job
-                GenerateCashParchasePdfJob::dispatch($request->all(), $jobId)
-                ->onQueue('pdf_generation'); // Optional: specific queue
+    //         // Dispatch the PDF generation job
+    //             GenerateCashParchasePdfJob::dispatch($request->all(), $jobId)
+    //             ->onQueue('pdf_generation'); // Optional: specific queue
 
-            return response()->json([
-                'success' => true,
-                'message' => 'PDF generation started in background',
-                'job_id' => $jobId,
-                'status_url' => url("/admin/pdf-status/{$jobId}"),
-                'estimated_time' => 'This may take 2-5 minutes for large datasets'
-            ], 202); // 202 = Accepted (processing)
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'PDF generation started in background',
+    //             'job_id' => $jobId,
+    //             'status_url' => url("/admin/pdf-status/{$jobId}"),
+    //             'estimated_time' => 'This may take 2-5 minutes for large datasets'
+    //         ], 202); // 202 = Accepted (processing)
 
-        } catch (Exception $e) {
-            Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+    //     } catch (Exception $e) {
+    //         Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
 
-            return $this->error(null, $e->getMessage(), 500);
-        }
-    }
+    //         return $this->error(null, $e->getMessage(), 500);
+    //     }
+    // }
 
     public function checkPdfStatus($jobId)
     {
@@ -282,6 +282,99 @@ class CashImageController extends Controller
             'filename' => $status['filename'] ?? null,
             'error' => $status['error'] ?? null,
             'progress' => $status['progress'] ?? null
+        ]);
+    }
+
+    public function printCashParchaseImage(Request $request)
+    {
+        try {
+            // Total records ရေ ရမယ်
+            $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
+
+            if ($totalRecords === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No data found to generate PDF'
+                ], 404);
+            }
+
+            $batchSize = 50; // တစ်ခါမှာ 50 items ပဲ
+            $totalBatches = ceil($totalRecords / $batchSize);
+
+            // Job ID generate လုပ်မယ်
+            $jobId = "cash_batch_pdf_" . date('Y-m-d-H-i-s');
+
+            // Batch status initialize လုပ်မယ်
+            Cache::put("batch_pdf_job_{$jobId}", [
+                'status' => 'processing',
+                'total_records' => $totalRecords,
+                'total_batches' => $totalBatches,
+                'completed_batches' => 0,
+                'batch_files' => [],
+                'created_at' => now(),
+                'progress' => 0
+            ], 7200); // 2 hours
+
+            // ပထမ batch ကို စမယ်
+            $this->dispatchNextBatch($request->all(), $jobId, 0, $batchSize, 1, $totalBatches);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF batch generation started',
+                'job_id' => $jobId,
+                'total_records' => $totalRecords,
+                'total_batches' => $totalBatches,
+                'batch_size' => $batchSize,
+                'status_url' => url("/admin/pdf-batch-status/{$jobId}"),
+                'estimated_time' => 'Each batch takes 1-2 minutes'
+            ], 202);
+
+        } catch (Exception $e) {
+            Log::error('PDF Batch Job Dispatch Error: ' . $e->getMessage());
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    private function dispatchNextBatch($requestData, $jobId, $offset, $batchSize, $batchNumber, $totalBatches)
+    {
+        GenerateCashParchasePdfJob::dispatch(
+            $requestData,
+            $jobId,
+            $offset,
+            $batchSize,
+            $batchNumber,
+            $totalBatches
+        )->onQueue('pdf_generation');
+    }
+
+    public function checkPdfBatchStatus($jobId)
+    {
+        $status = Cache::get("batch_pdf_job_{$jobId}");
+
+        if (!$status) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Job not found or expired'
+            ], 404);
+        }
+
+        // Progress calculate လုပ်မယ်
+        $progress = 0;
+        if ($status['total_batches'] > 0) {
+            $progress = ($status['completed_batches'] / $status['total_batches']) * 100;
+        }
+
+        return response()->json([
+            'success' => true,
+            'job_id' => $jobId,
+            'status' => $status['status'],
+            'progress' => round($progress, 1),
+            'total_records' => $status['total_records'],
+            'total_batches' => $status['total_batches'],
+            'completed_batches' => $status['completed_batches'],
+            'batch_files' => $status['batch_files'], // အားလုံး files list
+            'created_at' => $status['created_at'],
+            'updated_at' => $status['updated_at'] ?? null
         ]);
     }
 }

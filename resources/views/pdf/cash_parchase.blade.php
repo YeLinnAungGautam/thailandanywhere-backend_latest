@@ -123,7 +123,8 @@
                     <table class="full-width-table">
                         <tr>
                             <td class="image-cell">
-                                <img src="{{ $data['image'] }}" alt="Booking Image" style="width: 210mm; height: 280mm;">
+                                <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1753459293_19866_6883aa5d5efff"
+                                    alt="Booking Image" style="width: 210mm; height: 280mm;">
                             </td>
                         </tr>
                         <tr>
@@ -144,8 +145,8 @@
                             <tr>
                                 <td class="image-cell">
                                     @if (isset($letter['file']) && $letter['file'])
-                                        <img src="{{ $letter['file'] }}" alt="Confirmation Letter"
-                                            style="width: 210mm; height: 280mm;">
+                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/68846527d2b7e_2025-07-26-11-48-31.png"
+                                            alt="Confirmation Letter" style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
                                             <p>Confirmation Letter {{ $letterIndex + 1 }}<br>Image not available</p>
@@ -172,8 +173,8 @@
                             <tr>
                                 <td class="image-cell">
                                     @if (isset($receipt['receipt_image']) && $receipt['receipt_image'])
-                                        <img src="{{ $receipt['receipt_image'] }}" alt="Tax Receipt"
-                                            style="width: 210mm; height: 280mm;">
+                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1754732319_99311_6897171f88cc5"
+                                            alt="Tax Receipt" style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
                                             <p>Tax Receipt {{ $receiptIndex + 1 }}<br>Image not available</p>
