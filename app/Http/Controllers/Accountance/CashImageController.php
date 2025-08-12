@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Accountance;
 
 use App\Exports\CashImageExport;
 use App\Exports\CashParchaseExport;
+use App\Exports\CashParchaseTaxExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageResource;
@@ -11,6 +12,7 @@ use App\Jobs\GenerateCashImagePdfJob;
 use App\Jobs\GenerateCashParchasePdfJob;
 use App\Models\CashImage;
 use App\Services\CashImageService;
+use App\Services\PrintPDFService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -27,11 +29,14 @@ class CashImageController extends Controller
 
     protected $cashImageService;
     protected $csvExportService;
+    protected $printPDFService;
 
     public function __construct(
         CashImageService $cashImageService,
+        PrintPDFService $printPDFService
     ) {
         $this->cashImageService = $cashImageService;
+        $this->printPDFService = $printPDFService;
     }
     public function index(Request $request)
     {
@@ -180,6 +185,8 @@ class CashImageController extends Controller
     public function exportParchaseToCsv(Request $request)
     {
         try {
+            // $data = $this->printPDFService->getExportCSVData($request);
+            // return $this->success($data, 'CSV export is successful', 200);
             $file_name = "cash_parchase_export_" . date('Y-m-d-H-i-s') . ".csv";
 
             $export = new CashParchaseExport($request->all());
@@ -201,17 +208,37 @@ class CashImageController extends Controller
         }
     }
 
+    public function exportParchaseTaxToCsv(Request $request)
+    {
+        try {
+            // $data = $this->printPDFService->getExportCSVData($request);
+            // return response()->json([
+            //     'data' => $data
+            // ]);
+            $file_name = "cash_parchase_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+            $export = new CashParchaseTaxExport($request->all());
+
+            // Check if there's any data to export
+            if ($export->collection()->isEmpty()) {
+                return $this->error(null, 'No data available for export', 404);
+            }
+
+            \Excel::store($export, "export/" . $file_name);
+
+            return $this->success(
+                ['download_link' => get_file_link('export', $file_name)],
+                'CSV export is successful',
+                200
+            );
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function printCashImage(Request $request)
     {
         try {
-
-            // $data = $this->cashImageService->onlyImages($request);
-            // return response()->json([
-            //     'success' => true,
-            //     'data' => $data,
-            //     'message' => 'Data retrieved successfully'
-            // ]);
-            // Generate unique job ID
             $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
 
             // Dispatch the PDF generation job
@@ -232,36 +259,6 @@ class CashImageController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
-
-    // public function printCashParchaseImage(Request $request)
-    // {
-    //     try {
-
-    //         // $data = $this->cashImageService->getAllParchaseForPrint($request);
-    //         // return response()->json([
-    //         //     'data' => $data
-    //         // ]);
-    //         // Generate unique job ID
-    //         $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
-
-    //         // Dispatch the PDF generation job
-    //             GenerateCashParchasePdfJob::dispatch($request->all(), $jobId)
-    //             ->onQueue('pdf_generation'); // Optional: specific queue
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'PDF generation started in background',
-    //             'job_id' => $jobId,
-    //             'status_url' => url("/admin/pdf-status/{$jobId}"),
-    //             'estimated_time' => 'This may take 2-5 minutes for large datasets'
-    //         ], 202); // 202 = Accepted (processing)
-
-    //     } catch (Exception $e) {
-    //         Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
-
-    //         return $this->error(null, $e->getMessage(), 500);
-    //     }
-    // }
 
     public function checkPdfStatus($jobId)
     {
@@ -289,7 +286,7 @@ class CashImageController extends Controller
     {
         try {
             // Total records ရေ ရမယ်
-            $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
+            $totalRecords = $this->printPDFService->getTotalRecordsCount($request);
 
             if ($totalRecords === 0) {
                 return response()->json([
@@ -298,7 +295,7 @@ class CashImageController extends Controller
                 ], 404);
             }
 
-            $batchSize = 50; // တစ်ခါမှာ 50 items ပဲ
+            $batchSize = 100; // တစ်ခါမှာ 50 items ပဲ
             $totalBatches = ceil($totalRecords / $batchSize);
 
             // Job ID generate လုပ်မယ်

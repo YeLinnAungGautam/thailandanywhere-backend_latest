@@ -85,7 +85,6 @@ class BookingItemResource extends JsonResource
                 'output_vat' => $this->output_vat,
                 'discount' => $this->discount,
                 'is_inclusive' => $this->is_inclusive,
-
                 'selling_price' => $this->selling_price,
                 // 'paid_slip' => $this->paid_slip ? Storage::url('images/' . $this->paid_slip) : null,
                 'created_at' => $this->created_at->format('d-m-Y H:i:s'),

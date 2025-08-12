@@ -117,19 +117,19 @@
 
         @foreach ($imageData as $index => $data)
             {{-- Main Booking Image Page --}}
-            @if (isset($data['image']) && $data['image'])
+            @if (isset($data['receipt_image']) && $data['receipt_image'])
                 <div class="page">
                     <!-- Using table for better PDF compatibility -->
                     <table class="full-width-table">
                         <tr>
                             <td class="image-cell">
-                                <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1753459293_19866_6883aa5d5efff"
-                                    alt="Booking Image" style="width: 210mm; height: 280mm;">
+                                <img src="{{ $data['receipt_image'] }}" alt="Booking Image"
+                                    style="width: 210mm; height: 280mm;">
                             </td>
                         </tr>
                         <tr>
                             <td class="index-cell">
-                                Booking Image - Page {{ $pageNumber }}
+                                Tax Receipt - Page {{ $pageNumber }}
                             </td>
                         </tr>
                     </table>
@@ -138,15 +138,15 @@
             @endif
 
             {{-- Booking Confirmation Letters --}}
-            @if (isset($data['relatable']['booking_confirm_letter']) && is_array($data['relatable']['booking_confirm_letter']))
-                @foreach ($data['relatable']['booking_confirm_letter'] as $letterIndex => $letter)
+            @if (isset($data['all_invoices']) && is_array($data['all_invoices']))
+                @foreach ($data['all_invoices'] as $letterIndex => $letter)
                     <div class="page">
                         <table class="full-width-table">
                             <tr>
                                 <td class="image-cell">
-                                    @if (isset($letter['file']) && $letter['file'])
-                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/68846527d2b7e_2025-07-26-11-48-31.png"
-                                            alt="Confirmation Letter" style="width: 210mm; height: 280mm;">
+                                    @if (isset($letter['image']) && $letter['image'])
+                                        <img src="{{ $letter['image'] }}" alt="Confirmation Letter"
+                                            style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
                                             <p>Confirmation Letter {{ $letterIndex + 1 }}<br>Image not available</p>
@@ -166,25 +166,25 @@
             @endif
 
             {{-- Tax Receipts --}}
-            @if (isset($data['relatable']['tax_credit']) && is_array($data['relatable']['tax_credit']))
-                @foreach ($data['relatable']['tax_credit'] as $receiptIndex => $receipt)
+            @if (isset($data['all_expenses']) && is_array($data['all_expenses']))
+                @foreach ($data['all_expenses'] as $receiptIndex => $receipt)
                     <div class="page">
                         <table class="full-width-table">
                             <tr>
                                 <td class="image-cell">
-                                    @if (isset($receipt['receipt_image']) && $receipt['receipt_image'])
-                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1754732319_99311_6897171f88cc5"
-                                            alt="Tax Receipt" style="width: 210mm; height: 280mm;">
+                                    @if (isset($receipt['image']) && $receipt['image'])
+                                        <img src="{{ $receipt['image'] }}" alt="Tax Receipt"
+                                            style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
-                                            <p>Tax Receipt {{ $receiptIndex + 1 }}<br>Image not available</p>
+                                            <p>Pay slip {{ $receiptIndex + 1 }}<br>Image not available</p>
                                         </div>
                                     @endif
                                 </td>
                             </tr>
                             <tr>
                                 <td class="index-cell">
-                                    Tax Receipt {{ $receiptIndex + 1 }} - Page {{ $pageNumber }}
+                                    Pay slip {{ $receiptIndex + 1 }} - Page {{ $pageNumber }}
                                 </td>
                             </tr>
                         </table>
