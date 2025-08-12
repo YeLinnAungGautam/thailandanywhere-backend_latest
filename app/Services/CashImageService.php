@@ -42,6 +42,10 @@ class CashImageService
         'date', 'sender', 'receiver', 'amount', 'interact_bank', 'currency', 'created_at'
     ];
 
+    const VALID_TYPE_FILTERS = [
+        'invoice_have', 'invoice_missing', 'tax_receipt_have', 'tax_receipt_missing'
+    ];
+
     /**
      * Get all cash images with filtering and pagination (Simple update for relatable_id = 0)
      */
@@ -97,6 +101,7 @@ class CashImageService
                 'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
                 'relatable_type' => 'nullable|in:' . implode(',', self::VALID_RELATABLE_TYPES),
                 'tax_receipts' => 'nullable|in:' . implode(',', self::VALID_TAX_RECEIPT_FILTERS),
+                'type' => 'nullable|in:' . implode(',', self::VALID_TYPE_FILTERS),
                 'sort_by' => 'nullable|in:' . implode(',', self::VALID_SORTS),
                 'sort_order' => 'nullable|in:asc,desc',
                 'sender' => 'nullable|string|max:255',
@@ -217,6 +222,85 @@ class CashImageService
         // CRM ID filter (Updated to handle both cases simply)
         if (!empty($filters['crm_id'])) {
             $this->applyCrmIdFilter($query, $filters['crm_id'], $filters['relatable_type'] ?? null);
+        }
+
+        // Apply filter type
+        if (!empty($filters['filter_type'])) {
+            $this->applyFilterType($query, $filters['filter_type']);
+        }
+    }
+
+    private function applyFilterType($query, $type)
+    {
+        switch ($type) {
+            case 'invoice_have':
+                $this->applyInvoiceFilter($query, true);
+                break;
+
+            case 'invoice_missing':
+                $this->applyInvoiceFilter($query, false);
+                break;
+
+            case 'tax_receipt_have':
+                $this->applyTaxReceiptFilter($query, true);
+                break;
+
+            case 'tax_receipt_missing':
+                $this->applyTaxReceiptFilter($query, false);
+                break;
+
+            default:
+                // No filter applied for unknown types
+                break;
+        }
+    }
+
+    private function applyInvoiceFilter($query, $hasInvoice = true)
+    {
+        // Only apply to BookingItemGroup relatable type
+        $query->where('relatable_type', 'App\Models\BookingItemGroup');
+
+        if ($hasInvoice) {
+            // Filter for cash images that have invoices
+            $query->whereExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('customer_documents')
+                           ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
+                           ->where('customer_documents.type', 'booking_confirm_letter');
+            });
+        } else {
+            // Filter for cash images that don't have invoices
+            $query->whereNotExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('customer_documents')
+                           ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
+                           ->where('customer_documents.type', 'booking_confirm_letter');
+            });
+        }
+    }
+
+    /**
+     * Apply tax receipt filter for BookingItemGroup
+     */
+    private function applyTaxReceiptFilter($query, $hasTaxReceipt = true)
+    {
+        // Only apply to BookingItemGroup relatable type
+        $query->where('relatable_type', 'App\Models\BookingItemGroup');
+
+        if ($hasTaxReceipt) {
+            // Filter for cash images that have tax receipts
+            $query->whereExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('tax_receipt_groups')
+                           ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+            });
+        } else {
+            // Filter for cash images that don't have tax receipts
+            $query->whereNotExists(function ($existsQuery) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('tax_receipt_groups')
+                           ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+            });
         }
     }
 
@@ -386,7 +470,8 @@ class CashImageService
             'date' => $request->input('date'),
             'crm_id' => $request->input('crm_id'),
             'sort_by' => $request->input('sort_by'),
-            'sort_order' => $request->input('sort_order')
+            'sort_order' => $request->input('sort_order'),
+            'filter_type' => $request->input('filter_type'),
         ];
     }
 

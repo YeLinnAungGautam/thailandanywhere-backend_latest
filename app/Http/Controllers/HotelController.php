@@ -136,6 +136,9 @@ class HotelController extends Controller
             'official_logo' => $official_logo_name,
             'official_email' => $request->official_email,
             'official_remark' => $request->official_remark,
+            'vat_id' => $request->vat_id,
+            'vat_name' => $request->vat_name,
+            'vat_address' => $request->vat_address,
         ]);
 
         $contractArr = [];
@@ -241,14 +244,17 @@ class HotelController extends Controller
             'nearby_places' => json_encode($hotel_nearby_places),
             'youtube_link' => $request->youtube_link ? json_encode($request->youtube_link) : $hotel->youtube_link,
             'email' => $request->email ? json_encode($request->email) : $hotel->email,
-            'check_in' => $request->check_in,
-            'check_out' => $request->check_out,
-            'cancellation_policy' => $request->cancellation_policy,
-            'official_address' => $request->official_address,
-            'official_phone_number' => $request->official_phone_number,
-            'official_logo' => $official_logo_name ?? $hotel->official_logo,
-            'official_email' => $request->official_email,
-            'official_remark' => $request->official_remark,
+            'check_in' => $request->check_in ?? $hotel->check_in,
+            'check_out' => $request->check_out ?? $hotel->check_out,
+            'cancellation_policy' => $request->cancellation_policy ?? $hotel->cancellation_policy,
+            'official_address' => $request->official_address ?? $hotel->official_address,
+            'official_phone_number' => $request->official_phone_number ?? $hotel->official_phone_number,
+            'official_logo' => $official_logo_name ?? $hotel->official_logo ,
+            'official_email' => $request->official_email ?? $hotel->official_email,
+            'official_remark' => $request->official_remark ?? $hotel->official_remark,
+            'vat_id' => $request->vat_id ?? $hotel->vat_id,
+            'vat_name' => $request->vat_name ?? $hotel->vat_name,
+            'vat_address' => $request->vat_address ?? $hotel->vat_address,
         ]);
 
         $contractArr = [];

@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\CashImageService;
+use App\Services\PrintPDFService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,7 +39,7 @@ class GenerateCashParchasePdfJob implements ShouldQueue
         $this->totalBatches = $totalBatches;
     }
 
-    public function handle(CashImageService $cashImageService)
+    public function handle(PrintPDFService $printPDFService)
     {
         try {
             Log::info("Processing batch {$this->batchNumber}/{$this->totalBatches} for job {$this->jobId}");
@@ -52,7 +52,19 @@ class GenerateCashParchasePdfJob implements ShouldQueue
             $request = new Request($this->requestData);
 
             // Current batch data ယူမယ်
-            $data = $cashImageService->getAllPurchaseForPrintBatch($request, $this->offset, $this->batchSize);
+
+            $data = $printPDFService->printPDFData($request, $this->offset, $this->batchSize);
+
+            // Check if we have data - handle both old and new response formats
+            $imageData = null;
+            if (isset($data['result']['data']) && !empty($data['result']['data'])) {
+                $imageData = $data['result']['data'];
+            } elseif (isset($data['data']) && !empty($data['data'])) {
+                $imageData = $data['data'];
+            } elseif (is_array($data) && !empty($data)) {
+                $imageData = $data;
+            }
+
 
             if (empty($data['result']['data'])) {
                 $this->markBatchComplete(null);
@@ -97,7 +109,9 @@ class GenerateCashParchasePdfJob implements ShouldQueue
             $this->markBatchComplete($fileInfo);
 
             // အောက်တစ်ခု ရှိရင် dispatch လုပ်မယ်
-            $this->dispatchNextBatchIfNeeded();
+            if ($this->batchNumber < $this->totalBatches) {
+                $this->dispatchNextBatchIfNeeded();
+            }
 
             Log::info("Batch {$this->batchNumber} completed: {$filename}");
 

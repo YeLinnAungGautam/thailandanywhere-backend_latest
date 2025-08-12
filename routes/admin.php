@@ -459,6 +459,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('summary-report', [CashImageController::class, 'summary']);
     Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);
     Route::get('/parchase/export-csv', [CashImageController::class, 'exportParchaseToCsv']);
+    Route::get('/parchase_tax/export-csv', [CashImageController::class, 'exportParchaseTaxToCsv']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
