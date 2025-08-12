@@ -27,6 +27,10 @@ class TaxReceiptController extends Controller
             $query->where('product_type', $request->product_type);
         }
 
+        if($request->invoice_number){
+            $query->where('invoice_number', $request->invoice_number);
+        }
+
         if ($request->product_id) {
             $query->where('product_id', $request->product_id);
         }
