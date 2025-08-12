@@ -185,7 +185,7 @@ class CashImageController extends Controller
     public function exportParchaseToCsv(Request $request)
     {
         try {
-            // $data = $this->printPDFService->getExportCSVData($request);
+            // $data = $this->cashImageService->getAllParchaseForExport($request);
             // return $this->success($data, 'CSV export is successful', 200);
             $file_name = "cash_parchase_export_" . date('Y-m-d-H-i-s') . ".csv";
 
@@ -286,7 +286,13 @@ class CashImageController extends Controller
     {
         try {
             // Total records ရေ ရမယ်
-            $totalRecords = $this->printPDFService->getTotalRecordsCount($request);
+            $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
+
+            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 0, 100);
+
+            // return response()->json([
+            //     'data' => $data
+            // ]);
 
             if ($totalRecords === 0) {
                 return response()->json([
