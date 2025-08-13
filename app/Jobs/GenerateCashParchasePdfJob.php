@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\PrintPDFService;
+use App\Services\CashImageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,7 +39,7 @@ class GenerateCashParchasePdfJob implements ShouldQueue
         $this->totalBatches = $totalBatches;
     }
 
-    public function handle(PrintPDFService $printPDFService)
+    public function handle(CashImageService $cashImageService)
     {
         try {
             Log::info("Processing batch {$this->batchNumber}/{$this->totalBatches} for job {$this->jobId}");
@@ -53,7 +53,7 @@ class GenerateCashParchasePdfJob implements ShouldQueue
 
             // Current batch data ယူမယ်
 
-            $data = $printPDFService->printPDFData($request, $this->offset, $this->batchSize);
+            $data = $cashImageService->getAllPurchaseForPrintBatch($request, $this->offset, $this->batchSize);
 
             // Check if we have data - handle both old and new response formats
             $imageData = null;

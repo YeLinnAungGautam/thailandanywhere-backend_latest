@@ -50,31 +50,33 @@ class CashParchaseExport implements
     }
 
     /**
-     * Define the headings for the CSV - matching frontend table
+     * Define the headings for the CSV - updated to match actual data structure
      */
     public function headings(): array
     {
         return [
-            'Date',
+            'TrDate',
             'EXP Number',
-            'Company',
-            'S. Total Value',
-            'S. Amount VAT',
-            'I. Total Value',
-            'I. Amount VAT',
-            'C. Total Value',
-            'C. Amount VAT',
-            'Hotel',
-            'Attraction',
             'Cash Amount',
-            'Deposit Count',
-            'Date Time',
-            'Crm Number',
+            'Tax Receipt Number',
+            'Tax Receipt Date',
+            'Supplier Name',
+            'Supplier VAT ID',
+            'Supplier Address',
+            'Company Name',
+            'Company VAT ID',
+            'Company Address',
+            'Order Description',
+            'Sale Value',
+            'VAT Value',
+            'CRM IDs',
+            'Invoice',
+            'Tr. Datetime'
         ];
     }
 
     /**
-     * Map each row of data - matching frontend logic
+     * Map each row of data - fixed to match actual data structure
      */
     public function map($cashImage): array
     {
@@ -86,90 +88,69 @@ class CashParchaseExport implements
         $counter++;
         $expNumber = "EXP0" . $selectedMonth . "000" . $counter;
 
-        // Get company legal name from relatable items
-        $companyName = '';
-        if (isset($cashImage['relatable']['items'][0]['product']['legal_name'])) {
-            $companyName = $cashImage['relatable']['items'][0]['product']['legal_name'];
+        // Get tax receipt information
+        $taxReceiptNumber = '';
+        $taxReceiptDate = '';
+        if (isset($cashImage['relatable']['tax_credit']) && !empty($cashImage['relatable']['tax_credit'])) {
+            $taxReceiptNumber = $cashImage['relatable']['tax_credit'][0]['invoice_number'] ?? '';
+            $taxReceiptDate = $this->formatDateForExport($cashImage['relatable']['tax_credit'][0]['receipt_date'] ?? '');
         }
 
-        // Calculate S. Total Value (like getTotalValue function)
-        $sTotalValue = '';
-        if ($cashImage['relatable_type'] == 'App\\Models\\BookingItemGroup' && isset($cashImage['relatable']['items'])) {
-            $total = 0;
-            foreach ($cashImage['relatable']['items'] as $item) {
-                $total += $item['total_cost_price'] ?? 0;
-            }
-            $sTotalValue = $this->formatAmount($total);
+        // Get supplier information from sender
+        $supplierName = $cashImage['relatable']['items'][0]['product']['vat_name'] ?? '';
+        $supplierVatId = $cashImage['relatable']['items'][0]['product']['vat_id']; // Not available in current data structure
+        $supplierAddress = $cashImage['relatable']['items'][0]['product']['vat_address']; // Not available in current data structure
+
+        // Get order description from product type
+        $orderDescription = '';
+        if (isset($cashImage['product_type'])) {
+            $orderDescription = str_replace('App\\Models\\', '', $cashImage['product_type']);
         }
 
-        // Calculate S. Amount VAT
-        $sAmountVat = isset($cashImage['vat']) ? $this->formatAmount($cashImage['vat']) : '-';
-
-        // Calculate I. Total Value (like calculateInvoiceTotal function)
-        $iTotalValue = '';
-        if (isset($cashImage['relatable']['booking_confirm_letter'])) {
-            $total = 0;
-            foreach ($cashImage['relatable']['booking_confirm_letter'] as $item) {
-                $total += $item['meta']['total_after_tax'] ?? 0;
-            }
-            $iTotalValue = $this->formatAmount($total);
-        }
-
-        // Calculate I. Amount VAT (like calculateInvoiceVat function)
-        $iAmountVat = '';
-        if (isset($cashImage['relatable']['booking_confirm_letter'])) {
-            $total = 0;
-            foreach ($cashImage['relatable']['booking_confirm_letter'] as $item) {
-                $total += $item['meta']['total_tax_withold'] ?? 0;
-            }
-            $iAmountVat = $this->formatAmount($total);
-        }
-
-        // Calculate C. Total Value (like calculateTaxTotal function)
-        $cTotalValue = '';
+        // Calculate Sale Value from relatable data
+        $saleValue = '';
+        $vatValue = '';
         if (isset($cashImage['relatable']['tax_credit'])) {
-            $total = 0;
-            foreach ($cashImage['relatable']['tax_credit'] as $item) {
-                $total += $item['total_after_tax'] ?? 0;
-            }
-            $cTotalValue = $this->formatAmount($total);
+            $saleValue = $this->formatAmount($cashImage['relatable']['tax_credit'][0]['total_after_tax'] ?? 0);
+            $vatValue = $this->formatAmount($cashImage['relatable']['tax_credit'][0]['total_tax_withold'] ?? 0);
         }
 
-        // Calculate C. Amount VAT (like calculateTaxVAT function)
-        $cAmountVat = '';
-        if (isset($cashImage['relatable']['tax_credit'])) {
-            $total = 0;
-            foreach ($cashImage['relatable']['tax_credit'] as $item) {
-                $total += $item['total_tax_withold'] ?? 0;
+        // Get CRM ID
+        $crmIds = '';
+        if (isset($cashImage['relatable']['items']) && is_array($cashImage['relatable']['items'])) {
+            for ($i = 0; $i < count($cashImage['relatable']['items']); $i++) {
+                if (isset($cashImage['relatable']['items'][$i]['crm_id'])) {
+                    $crmIds .= $cashImage['relatable']['items'][$i]['crm_id'] . ', ';
+                }
             }
-            $cAmountVat = $this->formatAmount($total);
+            // Remove the trailing comma and space
+            $crmIds = rtrim($crmIds, ', ');
         }
 
-        // Hotel check
-        $hotel = ($cashImage['relatable']['product_type'] ?? '') == "App\\Models\\Hotel" ? '✓' : '-';
-
-        // Attraction check
-        $attraction = ($cashImage['relatable']['product_type'] ?? '') == "App\\Models\\EntranceTicket" ? '✓' : '-';
+        // Invoice status
+        $invoiceStatus = isset($cashImage['has_invoice']) && $cashImage['has_invoice'] ? 'Yes' : 'No';
 
         // Date Time format
         $dateTime = $this->formatDateForExport($cashImage['date'] ?? '') . ' , ' . $this->formatTimeForExport($cashImage['date'] ?? '');
 
         return [
-            $this->formatDateForExport($cashImage['date'] ?? ''),           // Date
+            $this->formatDateForExport($cashImage['date'] ?? ''),           // TrDate
             $expNumber,                                                      // EXP Number
-            $companyName,                                                    // Company
-            $sTotalValue,                                                    // S. Total Value
-            $sAmountVat,                                                     // S. Amount VAT
-            $iTotalValue,                                                    // I. Total Value
-            $iAmountVat,                                                     // I. Amount VAT
-            $cTotalValue,                                                    // C. Total Value
-            $cAmountVat,                                                     // C. Amount VAT
-            $hotel,                                                          // Hotel
-            $attraction,                                                     // Attraction
             $this->formatAmount($cashImage['amount'] ?? 0),                  // Cash Amount
-            'final deposit',                                                 // Deposit Count
-            $dateTime,                                                       // Date Time
-            $cashImage['crm_id'] ?? '',                                      // Crm Number
+            $taxReceiptNumber,                                               // Tax Receipt Number
+            $taxReceiptDate,                                                 // Tax Receipt Date
+            $supplierName,                                                   // Supplier Name
+            $supplierVatId,                                                  // Supplier VAT ID
+            $supplierAddress,                                                // Supplier Address
+            'TH ANYWHERE CO.LTD.',                                           // Company Name
+            '0105565081822',                                                 // Company VAT ID
+            '143/50, Thepprasit Rd, Pattaya City, Bang Lamung District, Chon Buri 20150',
+            $orderDescription,                                               // Order Description
+            $saleValue,                                                      // Sale Value
+            $vatValue,                                                       // VAT Value
+            $crmIds,                                                          // CRM ID
+            $invoiceStatus,                                                  // Invoice Status
+            $dateTime,                                                       // Tr. Datetime
         ];
     }
 
