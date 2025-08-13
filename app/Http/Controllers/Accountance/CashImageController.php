@@ -288,7 +288,7 @@ class CashImageController extends Controller
             // Total records ရေ ရမယ်
             $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
 
-            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 0, 100);
+            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 100, 100);
 
             // return response()->json([
             //     'data' => $data
@@ -301,7 +301,7 @@ class CashImageController extends Controller
                 ], 404);
             }
 
-            $batchSize = 100; // တစ်ခါမှာ 50 items ပဲ
+            $batchSize = 50; // တစ်ခါမှာ 50 items ပဲ
             $totalBatches = ceil($totalRecords / $batchSize);
 
             // Job ID generate လုပ်မယ်
