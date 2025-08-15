@@ -47,13 +47,33 @@ class AuthPartnerController extends Controller
 
     public function loginUser(Request $request)
     {
-        $query = Partner::query();
+        $query = Partner::query()->with(['hotels', 'entranceTickets']);
         $query->where('id', Auth::id());
         $data = $query->first();
 
         return $this->success([
             'partner' => new PartnerResource($data),
         ], 'Partner Account Detail');
+    }
+
+    public function changePassword(Request $request, $id)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|confirmed',
+        ]);
+
+        $partner = Partner::find($id);
+
+        if (!Hash::check($request->current_password, $partner->password)) {
+            return $this->error(null, 'Password is incorrect');
+        }
+
+        $partner->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return $this->success($partner, 'Successfully changed password');
     }
 
     public function logout(Request $request)

@@ -692,6 +692,43 @@ class CashImageService
         }
     }
 
+    public function getAllParchaseLimitForExport(Request $request)
+    {
+        try {
+            $limit = $request->get('limit', 50);
+            $offset = $request->get('offset', 0);
+            $this->validateRequest($request);
+
+            $filters = $this->extractFilters($request);
+
+            $query = $this->buildOptimizedQuery($filters);
+            $data = $query->skip($offset)->take($limit)->get();
+
+            $resourceCollection = AccountanceCashImageResource::collection($data);
+
+            return [
+                'status' => 1,
+                'message' => 'All cash images summary retrieved successfully',
+                'result' => [
+                    'data' => $resourceCollection->response()->getData(true),
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving cash images summary. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
     public function getTotalRecordsCount(Request $request)
     {
         try {
