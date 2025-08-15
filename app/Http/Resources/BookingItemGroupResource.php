@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\BookingItemResource;
+use App\Http\Resources\Accountance\CashImageResource;
 use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -56,6 +57,8 @@ class BookingItemGroupResource extends JsonResource
             'booking' => new BookingResource($this->whenLoaded('booking')),
 
             'items' => BookingItemResource::collection($this->whenLoaded('bookingItems')),
+
+            'cash_images' => CashImageResource::collection($this->bCashImages),
         ];
     }
 }

@@ -42,7 +42,7 @@ class CashImage extends Model
             'cash_image_id',       // foreign key for cash_image
             'booking_id'           // foreign key for booking
         )->withPivot('deposit', 'notes', 'id')
-         ->withTimestamps();
+            ->withTimestamps();
     }
 
     // Helper method to get all related bookings (both polymorphic and pivot)
@@ -59,5 +59,26 @@ class CashImage extends Model
         $bookings = $bookings->merge($this->bookings);
 
         return $bookings->unique('id');
+    }
+
+    public function cashBookings()
+    {
+        return $this->morphedByMany(Booking::class, 'imageable', 'cash_imageables')
+            ->withPivot(['type', 'deposit', 'notes'])
+            ->withTimestamps();
+    }
+
+    public function cashBooks()
+    {
+        return $this->morphedByMany(CashBook::class, 'imageable', 'cash_imageables')
+            ->withPivot(['type', 'deposit', 'notes'])
+            ->withTimestamps();
+    }
+
+    public function cashBookingItemGroups()
+    {
+        return $this->morphedByMany(BookingItemGroup::class, 'imageable', 'cash_imageables')
+            ->withPivot(['type', 'deposit', 'notes'])
+            ->withTimestamps();
     }
 }

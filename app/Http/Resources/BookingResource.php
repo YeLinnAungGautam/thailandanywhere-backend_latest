@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
-use App\Models\Airline;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -88,6 +87,8 @@ class BookingResource extends JsonResource
             // timestamps
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
+
+            'cash_images' => CashImageResource::collection($this->bCashImages),
         ];
     }
 }
