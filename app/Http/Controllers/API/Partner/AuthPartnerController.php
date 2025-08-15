@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Hash;
 
 use function PHPUnit\Framework\isEmpty;
 
-class AuthController extends Controller
+class AuthPartnerController extends Controller
 {
     use HttpResponses;
 
-    public function login(Request $request)
+    public function loginPartner(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
@@ -34,6 +34,10 @@ class AuthController extends Controller
         }
 
         $token = $partner->createToken('partner-token')->plainTextToken;
+
+        $partner->update([
+            'login_count' => $partner->login_count + 1
+        ]);
 
         return success([
             'partner' => $partner,

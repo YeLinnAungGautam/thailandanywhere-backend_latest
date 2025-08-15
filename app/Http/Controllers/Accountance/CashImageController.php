@@ -288,7 +288,7 @@ class CashImageController extends Controller
             // Total records ရေ ရမယ်
             $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
 
-            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 100, 100);
+            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 0, 100);
 
             // return response()->json([
             //     'data' => $data

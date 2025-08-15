@@ -120,7 +120,7 @@
 
 
             {{-- Booking Confirmation Letters --}}
-            @if (isset($data['relatable']) && is_array($data['relatable']['tax_credit']))
+            {{-- @if (isset($data['relatable']) && is_array($data['relatable']['tax_credit']))
                 @foreach ($data['relatable']['tax_credit'] as $letterIndex => $letter)
                     <div class="page">
                         <table class="full-width-table">
@@ -145,7 +145,7 @@
                     </div>
                     @php $pageNumber++; @endphp
                 @endforeach
-            @endif
+            @endif --}}
 
             {{-- Tax Receipts --}}
             @if (isset($data['relatable']) && is_array($data['relatable']['booking_confirm_letter']))
@@ -155,8 +155,8 @@
                             <tr>
                                 <td class="image-cell">
                                     @if (isset($receipt['file']) && $receipt['file'])
-                                        <img src="{{ $receipt['file'] }}" alt="Tax Receipt"
-                                            style="width: 210mm; height: 280mm;">
+                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/687779f49d034_2025-07-16-16-37-48.jpg"
+                                            alt="Tax Receipt" style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
                                             <p> Invoice {{ $receiptIndex + 1 }}<br>Image not available</p>
@@ -165,9 +165,12 @@
                                 </td>
                             </tr>
                             <tr>
-                                <td class="index-cell">
-                                    Invoice {{ $receiptIndex + 1 }} - Page {{ $pageNumber }}
-                                </td>
+                                @if (isset($data['relatable']['items'][0]['crm_id']))
+                                    <td class="index-cell">
+                                        {{ $data['relatable']['items'][0]['crm_id'] }} Invoice {{ $receiptIndex + 1 }} -
+                                        Page {{ $pageNumber }}
+                                    </td>
+                                @endif
                             </tr>
                         </table>
                     </div>
@@ -181,13 +184,16 @@
                     <table class="full-width-table">
                         <tr>
                             <td class="image-cell">
-                                <img src="{{ $data['image'] }}" alt="Cash Image" style="width: 210mm; height: 280mm;">
+                                <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1751335174_66339_68634106d655e"
+                                    alt="Cash Image" style="width: 210mm; height: 280mm;">
                             </td>
                         </tr>
                         <tr>
-                            <td class="index-cell">
-                                Cash image - Page {{ $pageNumber }}
-                            </td>
+                            @if (isset($data['relatable']['items'][0]['crm_id']))
+                                <td class="index-cell">
+                                    {{ $data['relatable']['items'][0]['crm_id'] }} Cash image - Page {{ $pageNumber }}
+                                </td>
+                            @endif
                         </tr>
                     </table>
                 </div>
