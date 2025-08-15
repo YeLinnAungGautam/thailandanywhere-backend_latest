@@ -14,6 +14,16 @@ class PartnerResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'role' => $this->role,
+            'parent_id' => $this->parent_id,
+            'hotels' => $this->whenLoaded('hotels'),
+            'entranceTickets' => $this->whenLoaded('entranceTickets'),
+            'created_at' => $this->created_at,
+            'login_count' => $this->login_count
+        ];
     }
 }

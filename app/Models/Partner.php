@@ -14,6 +14,20 @@ class Partner extends Authenticatable
     use Notifiable;
 
     /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'role',
+        'parent_id',
+        'login_count'
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
@@ -38,23 +52,8 @@ class Partner extends Authenticatable
         return $this->morphedByMany(Hotel::class, 'productable', 'partner_has_products');
     }
 
-    public function privateVanTours()
-    {
-        return $this->morphedByMany(PrivateVanTour::class, 'productable', 'partner_has_products');
-    }
-
     public function entranceTickets()
     {
         return $this->morphedByMany(EntranceTicket::class, 'productable', 'partner_has_products');
-    }
-
-    public function groupTours()
-    {
-        return $this->morphedByMany(GroupTour::class, 'productable', 'partner_has_products');
-    }
-
-    public function inclusiveProducts()
-    {
-        return $this->morphedByMany(Inclusive::class, 'productable', 'partner_has_products');
     }
 }
