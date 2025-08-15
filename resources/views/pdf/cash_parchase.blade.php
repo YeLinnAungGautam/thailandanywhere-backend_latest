@@ -155,8 +155,8 @@
                             <tr>
                                 <td class="image-cell">
                                     @if (isset($receipt['file']) && $receipt['file'])
-                                        <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/687779f49d034_2025-07-16-16-37-48.jpg"
-                                            alt="Tax Receipt" style="width: 210mm; height: 280mm;">
+                                        <img src="{{ $receipt['file'] }}" alt="Tax Receipt"
+                                            style="width: 210mm; height: 280mm;">
                                     @else
                                         <div class="no-image">
                                             <p> Invoice {{ $receiptIndex + 1 }}<br>Image not available</p>
@@ -184,8 +184,7 @@
                     <table class="full-width-table">
                         <tr>
                             <td class="image-cell">
-                                <img src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1751335174_66339_68634106d655e"
-                                    alt="Cash Image" style="width: 210mm; height: 280mm;">
+                                <img src="{{ $data['image'] }}" alt="Cash Image" style="width: 210mm; height: 280mm;">
                             </td>
                         </tr>
                         <tr>
