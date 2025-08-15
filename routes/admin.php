@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\BookingItemVerifyController;
 use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
+use App\Http\Controllers\Admin\CashImageableController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
 use App\Http\Controllers\Admin\CityController;
@@ -504,4 +505,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
 
     require __DIR__ . '/sub_routes/admin_v2.php';
+
+    // Cash Image
+    Route::prefix('cash-imageables')->group(function () {
+        Route::get('{modelType}/{modelId}', [CashImageableController::class, 'index']);
+        Route::post('{modelType}/{modelId}', [CashImageableController::class, 'store']);
+        Route::put('{modelType}/{modelId}/{cashImageId}', [CashImageableController::class, 'update']);
+        Route::delete('{modelType}/{modelId}/{cashImageId}', [CashImageableController::class, 'destroy']);
+
+        Route::post('bulk', [CashImageableController::class, 'store']);
+    });
 });
