@@ -79,6 +79,24 @@ class CashImageController extends Controller
         }
     }
 
+    public function remindTaxReceipt(Request $request)
+    {
+        $result = $this->cashImageService->getAllGroupedByProductForExport($request);
+        if ($result['status'] == 1) {
+            return response()->json([
+                'status' => 1,
+                'message' => $result['message'],
+                'result' => $result['result']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 0,
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = request()->validate([

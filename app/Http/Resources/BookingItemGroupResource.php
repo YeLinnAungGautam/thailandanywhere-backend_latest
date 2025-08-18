@@ -54,6 +54,7 @@ class BookingItemGroupResource extends JsonResource
             'confirmation_image' => get_file($this->confirmation_image, 'booking_item_groups'),
 
             'booking' => new BookingResource($this->whenLoaded('booking')),
+            'customer' => new CustomerResource($this->booking->customer),
 
             'items' => BookingItemResource::collection($this->whenLoaded('bookingItems')),
         ];

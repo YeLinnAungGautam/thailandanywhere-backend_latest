@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Partner\AuthPartnerController;
 use App\Http\Controllers\API\Partner\ForgotPasswordController;
+use App\Http\Controllers\API\Partner\ReservationController;
 use App\Http\Controllers\API\Partner\ResetPasswordController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,4 +21,8 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::post('change/{id}/password', [AuthPartnerController::class, 'changePassword']);
 
     Route::post('logout', [AuthPartnerController::class, 'logout']);
+
+    // reservation part
+    Route::get('booking_item_groups',[ReservationController::class, 'index']);
+    Route::get('booking_item_groups/{id}',[ReservationController::class, 'detail']);
 });
