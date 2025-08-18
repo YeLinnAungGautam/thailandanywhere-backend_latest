@@ -38,6 +38,8 @@ class TaxReceiptResource extends JsonResource
             'invoice_number' => $this->invoice_number,
             'groups' => $this->whenLoaded('groups'),
             'product' => $productResource,
+            'declaration' => $this->declaration,
+            'complete_print' => $this->complete_print,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];

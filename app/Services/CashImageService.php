@@ -228,9 +228,30 @@ class CashImageService
         if (!empty($filters['filter_type'])) {
             $this->applyFilterType($query, $filters['filter_type']);
         }
+
+        if (!empty($filters['filter_type_invoice'])) {
+            $this->applyFilterTypeInvoice($query, $filters['filter_type_invoice']);
+        }
     }
 
     private function applyFilterType($query, $type)
+    {
+        switch ($type) {
+            case 'tax_receipt_have':
+                $this->applyTaxReceiptFilter($query, true);
+                break;
+
+            case 'tax_receipt_missing':
+                $this->applyTaxReceiptFilter($query, false);
+                break;
+
+            default:
+                // No filter applied for unknown types
+                break;
+        }
+    }
+
+     private function applyFilterTypeInvoice($query, $type)
     {
         switch ($type) {
             case 'invoice_have':
@@ -239,14 +260,6 @@ class CashImageService
 
             case 'invoice_missing':
                 $this->applyInvoiceFilter($query, false);
-                break;
-
-            case 'tax_receipt_have':
-                $this->applyTaxReceiptFilter($query, true);
-                break;
-
-            case 'tax_receipt_missing':
-                $this->applyTaxReceiptFilter($query, false);
                 break;
 
             default:
@@ -472,8 +485,11 @@ class CashImageService
             'sort_by' => $request->input('sort_by'),
             'sort_order' => $request->input('sort_order'),
             'filter_type' => $request->input('filter_type'),
+            'filter_type_invoice' => $request->input('filter_type_invoice'),
         ];
     }
+
+
 
     /**
      * Get basic list (Updated for simple many-to-many handling)
@@ -729,6 +745,143 @@ class CashImageService
         }
     }
 
+    public function getAllGroupedByProductForExport(Request $request)
+    {
+        try {
+            $this->validateRequest($request);
+            $filters = $this->extractFilters($request);
+
+            // Get pagination parameters
+            $page = $request->get('page', 1);
+            $limit = $request->get('limit', 100);
+
+            // Build query with pagination
+            $query = $this->buildOptimizedQuery($filters);
+            $data = $query->paginate($limit, ['*'], 'page', $page);
+
+            // Transform to resource collection first
+            $resourceCollection = AccountanceCashImageResource::collection($data);
+            $resourceData = $resourceCollection->response()->getData(true);
+
+            // Group by product with tax receipt tracking
+            $groupedByProduct = [];
+            $includeRelatable = $request->get('include_relatable', false);
+            $relatableType = $request->get('relatable_type');
+
+            foreach ($data as $cashImage) {
+                $products = $this->extractProductsFromCashImageForExport($cashImage, $includeRelatable, $relatableType);
+
+                // Check tax receipt status for this cash image
+                $taxReceiptStatus = $this->getTaxReceiptStatus($cashImage);
+
+                foreach ($products as $productInfo) {
+                    $productName = $productInfo['product_name'];
+
+                    if (!isset($groupedByProduct[$productName])) {
+                        $groupedByProduct[$productName] = [
+                            'product_name' => $productName,
+                            'product_type' => $productInfo['product_type'],
+                            'total_records' => 0,
+                            'tax_receipt_summary' => [
+                                'have_tax_receipt' => 0,
+                                'missing_tax_receipt' => 0,
+                                'not_applicable' => 0  // For non-BookingItemGroup types
+                            ],
+                            'cash_images' => []
+                        ];
+                    }
+
+                    $groupedByProduct[$productName]['total_records']++;
+
+                    // Update tax receipt counters
+                    switch ($taxReceiptStatus) {
+                        case 'have':
+                            $groupedByProduct[$productName]['tax_receipt_summary']['have_tax_receipt']++;
+                            break;
+                        case 'missing':
+                            $groupedByProduct[$productName]['tax_receipt_summary']['missing_tax_receipt']++;
+                            break;
+                        case 'not_applicable':
+                            $groupedByProduct[$productName]['tax_receipt_summary']['not_applicable']++;
+                            break;
+                    }
+
+                    // Find the corresponding resource data for this cash image
+                    $resourceItem = collect($resourceData['data'])->firstWhere('id', $cashImage->id);
+
+                    if ($resourceItem) {
+                        // Add tax receipt status to the resource item
+                        $resourceItem['tax_receipt_status'] = $taxReceiptStatus;
+                        $resourceItem['tax_receipt_details'] = $this->getTaxReceiptDetails($cashImage);
+
+                        $groupedByProduct[$productName]['cash_images'][] = $resourceItem;
+                    }
+                }
+            }
+
+            // Sort groups by total records (descending)
+            uasort($groupedByProduct, function($a, $b) {
+                return $b['total_records'] <=> $a['total_records'];
+            });
+
+            // Calculate overall summary
+            $overallTaxReceiptSummary = [
+                'total_have_tax_receipt' => 0,
+                'total_missing_tax_receipt' => 0,
+                'total_not_applicable' => 0
+            ];
+
+            foreach ($groupedByProduct as $group) {
+                $overallTaxReceiptSummary['total_have_tax_receipt'] += $group['tax_receipt_summary']['have_tax_receipt'];
+                $overallTaxReceiptSummary['total_missing_tax_receipt'] += $group['tax_receipt_summary']['missing_tax_receipt'];
+                $overallTaxReceiptSummary['total_not_applicable'] += $group['tax_receipt_summary']['not_applicable'];
+            }
+
+            // Calculate summary
+            $summary = [
+                'total_cash_images' => $data->total(),
+                'current_page_count' => $data->count(),
+                'total_products' => count($groupedByProduct),
+                'current_page' => $data->currentPage(),
+                'last_page' => $data->lastPage(),
+                'per_page' => $data->perPage(),
+                'tax_receipt_summary' => $overallTaxReceiptSummary
+            ];
+
+            return [
+                'status' => 1,
+                'message' => 'All cash images grouped by product with tax receipt status retrieved successfully',
+                'result' => [
+                    'summary' => $summary,
+                    'grouped_data' => array_values($groupedByProduct),
+                    'pagination' => [
+                        'current_page' => $data->currentPage(),
+                        'last_page' => $data->lastPage(),
+                        'per_page' => $data->perPage(),
+                        'total' => $data->total(),
+                        'from' => $data->firstItem(),
+                        'to' => $data->lastItem(),
+                        'next_page_url' => $data->nextPageUrl(),
+                        'prev_page_url' => $data->previousPageUrl()
+                    ]
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        } catch (Exception $e) {
+            return [
+                'status' => 'Error has occurred.',
+                'message' => 'An error occurred while retrieving grouped cash images. Error: ' . $e->getMessage(),
+                'result' => null
+            ];
+        }
+    }
+
     public function getTotalRecordsCount(Request $request)
     {
         try {
@@ -743,6 +896,236 @@ class CashImageService
             return 0;
         }
     }
+
+    /**
+     * Get tax receipt status for a cash image
+     */
+    private function getTaxReceiptStatus($cashImage)
+    {
+        // Only BookingItemGroup can have tax receipts
+        if ($cashImage->relatable_type !== 'App\Models\BookingItemGroup') {
+            return 'not_applicable';
+        }
+
+        if (!$cashImage->relatable_id || !$cashImage->relatable) {
+            return 'not_applicable';
+        }
+
+        // Check if tax receipt exists for this booking item group
+        $hasTaxReceipt = DB::table('tax_receipt_groups')
+            ->where('booking_item_group_id', $cashImage->relatable_id)
+            ->exists();
+
+        return $hasTaxReceipt ? 'have' : 'missing';
+    }
+
+    /**
+     * Get detailed tax receipt information for a cash image
+     */
+    private function getTaxReceiptDetails($cashImage)
+    {
+        if ($cashImage->relatable_type !== 'App\Models\BookingItemGroup' || !$cashImage->relatable_id) {
+            return null;
+        }
+
+        try {
+            $taxReceipts = DB::table('tax_receipt_groups')
+                ->select(['id', 'tax_receipt_number', 'created_at'])
+                ->where('booking_item_group_id', $cashImage->relatable_id)
+                ->get();
+
+            if ($taxReceipts->isEmpty()) {
+                return [
+                    'status' => 'missing',
+                    'count' => 0,
+                    'receipts' => []
+                ];
+            }
+
+            return [
+                'status' => 'have',
+                'count' => $taxReceipts->count(),
+                'receipts' => $taxReceipts->map(function($receipt) {
+                    return [
+                        'id' => $receipt->id,
+                        'tax_receipt_number' => $receipt->tax_receipt_number,
+                        'created_at' => $receipt->created_at
+                    ];
+                })->toArray()
+            ];
+
+        } catch (Exception $e) {
+            Log::warning('Error getting tax receipt details: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => 'Could not retrieve tax receipt details'
+            ];
+        }
+    }
+
+    /**
+     * Extract products from cash image for export (enhanced with relatable search)
+     */
+    private function extractProductsFromCashImageForExport($cashImage, $includeRelatable = false, $relatableType = null)
+    {
+        $products = [];
+
+        if ($cashImage->relatable_type === 'App\Models\Booking') {
+            $bookings = [];
+
+            if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                $bookings = [$cashImage->relatable];
+            } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings) {
+                $bookings = $cashImage->bookings;
+            }
+
+            foreach ($bookings as $booking) {
+                if ($booking->items) {
+                    $products = array_merge($products, $this->extractProductsFromItems($booking->items));
+                }
+            }
+        } elseif ($cashImage->relatable_type === 'App\Models\BookingItemGroup' && $cashImage->relatable) {
+            // Check if items are loaded and extract products
+            if (isset($cashImage->relatable->items) && $cashImage->relatable->items) {
+                $products = $this->extractProductsFromItems($cashImage->relatable->items);
+            }
+
+            // If no products found and relatable_type is BookingItemGroup, search deeper
+            if (empty($products) && $relatableType === 'App\Models\BookingItemGroup' && $includeRelatable) {
+                $products = $this->searchProductsInRelatedItems($cashImage->relatable);
+            }
+
+            // If still no products but we have relatable data, try to get from relatable directly
+            if (empty($products) && $cashImage->relatable) {
+                // Try to load items if not already loaded
+                if (!$cashImage->relatable->relationLoaded('items')) {
+                    $cashImage->relatable->load('items.product');
+                }
+
+                if ($cashImage->relatable->items && $cashImage->relatable->items->count() > 0) {
+                    $products = $this->extractProductsFromItems($cashImage->relatable->items);
+                }
+            }
+        }
+
+        // Remove duplicates
+        $products = array_unique($products, SORT_REGULAR);
+
+        // If no products found, use a default category
+        if (empty($products)) {
+            $products[] = [
+                'product_name' => 'Uncategorized',
+                'product_type' => 'General'
+            ];
+        }
+
+        return $products;
+    }
+
+    /**
+     * Extract products from a collection of items
+     */
+    private function extractProductsFromItems($items)
+    {
+        $products = [];
+
+        foreach ($items as $item) {
+            if (isset($item->product) && $item->product) {
+                $productName = $item->product->name ?? 'Unknown Product';
+                $productType = $this->getProductTypeDisplayName($item->product_type);
+
+                $products[] = [
+                    'product_name' => $productName,
+                    'product_type' => $productType
+                ];
+            } else {
+                // If product relationship is not loaded but we have product_id, try to get product name
+                if (isset($item->product_id) && $item->product_id) {
+                    // You might want to load the product here or use a fallback name
+                    $productType = $this->getProductTypeDisplayName($item->product_type ?? null);
+                    $products[] = [
+                        'product_name' => 'Product ID: ' . $item->product_id,
+                        'product_type' => $productType
+                    ];
+                }
+            }
+        }
+
+        return $products;
+    }
+
+    /**
+     * Search for products in related items when not found in primary items
+     * For BookingItemGroup, search in related booking items or other sources
+     */
+    private function searchProductsInRelatedItems($bookingItemGroup)
+    {
+        $products = [];
+
+        try {
+            // Search in the parent booking's other items
+            if ($bookingItemGroup->booking && $bookingItemGroup->booking->items) {
+                foreach ($bookingItemGroup->booking->items as $item) {
+                    if ($item->product) {
+                        $products[] = [
+                            'product_name' => $item->product->name ?? 'Related Product',
+                            'product_type' => $this->getProductTypeDisplayName($item->product_type)
+                        ];
+                    }
+                }
+            }
+
+            // If still no products, search in other booking item groups of the same booking
+            if (empty($products) && $bookingItemGroup->booking) {
+                $otherItemGroups = $bookingItemGroup->booking->bookingItemGroups()
+                    ->where('id', '!=', $bookingItemGroup->id)
+                    ->with('items.product')
+                    ->get();
+
+                foreach ($otherItemGroups as $otherGroup) {
+                    if ($otherGroup->items) {
+                        foreach ($otherGroup->items as $item) {
+                            if ($item->product) {
+                                $products[] = [
+                                    'product_name' => $item->product->name ?? 'Alternative Product',
+                                    'product_type' => $this->getProductTypeDisplayName($item->product_type)
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception $e) {
+            Log::warning('Error searching related products: ' . $e->getMessage());
+            // Return fallback product
+            $products[] = [
+                'product_name' => 'Related Service',
+                'product_type' => 'General Service'
+            ];
+        }
+
+        return $products;
+    }
+
+    /**
+     * Get human-readable product type name
+     */
+    private function getProductTypeDisplayName($productType)
+    {
+        $typeMap = [
+            'App\\Models\\Hotel' => 'Hotel Service',
+            'App\\Models\\EntranceTicket' => 'Ticket Service',
+            'App\\Models\\PrivateVanTour' => 'Car Rental Service',
+        ];
+
+        return $typeMap[$productType] ?? 'General Service';
+    }
+
+    /**
+     * Enhanced validation for new parameters
+     */
+
 
     /**
      * Batch အတွက် specific data ယူမယ် (offset နဲ့ limit နဲ့)
