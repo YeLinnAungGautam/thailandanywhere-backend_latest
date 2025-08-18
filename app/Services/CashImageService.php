@@ -930,7 +930,6 @@ class CashImageService
 
         try {
             $taxReceipts = DB::table('tax_receipt_groups')
-                ->select(['id', 'tax_receipt_number', 'created_at'])
                 ->where('booking_item_group_id', $cashImage->relatable_id)
                 ->get();
 
