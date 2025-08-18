@@ -2,19 +2,16 @@
 
 namespace App\Services;
 
-use App\Http\Resources\Accountance\CashImageDetailResource;
 use App\Http\Resources\Accountance\CashImageListResource as AccountanceCashImageResource;
 use App\Http\Resources\Accountance\CashParchaseDetailResource;
 use App\Models\Booking;
 use App\Models\CashImage;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-
 
 class CashImageService
 {
@@ -177,9 +174,9 @@ class CashImageService
         $query->with(['relatable']);
 
         // Load bookings only when relatable_id = 0 (many-to-many case)
-        $query->with(['bookings' => function($q) {
+        $query->with(['bookings' => function ($q) {
             $q->select('bookings.id', 'bookings.crm_id', 'bookings.invoice_number', 'bookings.grand_total', 'bookings.customer_id')
-              ->with('customer:id,name');
+                ->with('customer:id,name');
         }]);
 
         return $query;
@@ -239,10 +236,12 @@ class CashImageService
         switch ($type) {
             case 'tax_receipt_have':
                 $this->applyTaxReceiptFilter($query, true);
+
                 break;
 
             case 'tax_receipt_missing':
                 $this->applyTaxReceiptFilter($query, false);
+
                 break;
 
             default:
@@ -251,15 +250,17 @@ class CashImageService
         }
     }
 
-     private function applyFilterTypeInvoice($query, $type)
+    private function applyFilterTypeInvoice($query, $type)
     {
         switch ($type) {
             case 'invoice_have':
                 $this->applyInvoiceFilter($query, true);
+
                 break;
 
             case 'invoice_missing':
                 $this->applyInvoiceFilter($query, false);
+
                 break;
 
             default:
@@ -277,17 +278,17 @@ class CashImageService
             // Filter for cash images that have invoices
             $query->whereExists(function ($existsQuery) {
                 $existsQuery->select(DB::raw(1))
-                           ->from('customer_documents')
-                           ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
-                           ->where('customer_documents.type', 'booking_confirm_letter');
+                    ->from('customer_documents')
+                    ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
+                    ->where('customer_documents.type', 'booking_confirm_letter');
             });
         } else {
             // Filter for cash images that don't have invoices
             $query->whereNotExists(function ($existsQuery) {
                 $existsQuery->select(DB::raw(1))
-                           ->from('customer_documents')
-                           ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
-                           ->where('customer_documents.type', 'booking_confirm_letter');
+                    ->from('customer_documents')
+                    ->whereColumn('customer_documents.booking_item_group_id', 'cash_images.relatable_id')
+                    ->where('customer_documents.type', 'booking_confirm_letter');
             });
         }
     }
@@ -304,15 +305,15 @@ class CashImageService
             // Filter for cash images that have tax receipts
             $query->whereExists(function ($existsQuery) {
                 $existsQuery->select(DB::raw(1))
-                           ->from('tax_receipt_groups')
-                           ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+                    ->from('tax_receipt_groups')
+                    ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
             });
         } else {
             // Filter for cash images that don't have tax receipts
             $query->whereNotExists(function ($existsQuery) {
                 $existsQuery->select(DB::raw(1))
-                           ->from('tax_receipt_groups')
-                           ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
+                    ->from('tax_receipt_groups')
+                    ->whereColumn('tax_receipt_groups.booking_item_group_id', 'cash_images.relatable_id');
             });
         }
     }
@@ -327,75 +328,75 @@ class CashImageService
                 // Case 1: Direct polymorphic relationship (relatable_id > 0)
                 $mainQuery->where(function ($polyQuery) use ($crmId) {
                     $polyQuery->where('relatable_type', 'App\Models\Booking')
-                             ->where('relatable_id', '>', 0)
-                             ->whereExists(function ($existsQuery) use ($crmId) {
-                                 $existsQuery->select(DB::raw(1))
-                                            ->from('bookings')
-                                            ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                             });
+                        ->where('relatable_id', '>', 0)
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('bookings')
+                                ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
 
                 // Case 2: Many-to-many relationship (relatable_id = 0)
                 $mainQuery->orWhere(function ($manyQuery) use ($crmId) {
                     $manyQuery->where('relatable_type', 'App\Models\Booking')
-                             ->where('relatable_id', 0)
-                             ->whereExists(function ($existsQuery) use ($crmId) {
-                                 $existsQuery->select(DB::raw(1))
-                                            ->from('cash_image_bookings')
-                                            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
-                                            ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
-                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                             });
+                        ->where('relatable_id', 0)
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('cash_image_bookings')
+                                ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
+                                ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
             });
         } elseif ($relatableType === 'App\Models\BookingItemGroup') {
             $query->where('relatable_type', 'App\Models\BookingItemGroup')
-                  ->whereExists(function ($existsQuery) use ($crmId) {
-                      $existsQuery->select(DB::raw(1))
-                                 ->from('booking_item_groups')
-                                 ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                                 ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                                 ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                  });
+                ->whereExists(function ($existsQuery) use ($crmId) {
+                    $existsQuery->select(DB::raw(1))
+                        ->from('booking_item_groups')
+                        ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                        ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                        ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                });
         } else {
             // General case - check all possible types
             $query->where(function ($q) use ($crmId) {
                 // Direct Booking polymorphic
                 $q->where(function ($bookingQuery) use ($crmId) {
                     $bookingQuery->where('relatable_type', 'App\Models\Booking')
-                                ->where('relatable_id', '>', 0)
-                                ->whereExists(function ($existsQuery) use ($crmId) {
-                                    $existsQuery->select(DB::raw(1))
-                                               ->from('bookings')
-                                               ->whereColumn('bookings.id', 'cash_images.relatable_id')
-                                               ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                                });
+                        ->where('relatable_id', '>', 0)
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('bookings')
+                                ->whereColumn('bookings.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
 
                 // Many-to-many Booking
                 $q->orWhere(function ($manyQuery) use ($crmId) {
                     $manyQuery->where('relatable_type', 'App\Models\Booking')
-                             ->where('relatable_id', 0)
-                             ->whereExists(function ($existsQuery) use ($crmId) {
-                                 $existsQuery->select(DB::raw(1))
-                                            ->from('cash_image_bookings')
-                                            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
-                                            ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
-                                            ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                             });
+                        ->where('relatable_id', 0)
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('cash_image_bookings')
+                                ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
+                                ->whereColumn('cash_image_bookings.cash_image_id', 'cash_images.id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
 
                 // BookingItemGroup
                 $q->orWhere(function ($itemGroupQuery) use ($crmId) {
                     $itemGroupQuery->where('relatable_type', 'App\Models\BookingItemGroup')
-                                  ->whereExists(function ($existsQuery) use ($crmId) {
-                                      $existsQuery->select(DB::raw(1))
-                                                 ->from('booking_item_groups')
-                                                 ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                                                 ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
-                                                 ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
-                                  });
+                        ->whereExists(function ($existsQuery) use ($crmId) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('booking_item_groups')
+                                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                                ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                                ->where('bookings.crm_id', 'like', '%' . $crmId . '%');
+                        });
                 });
             });
         }
@@ -438,7 +439,7 @@ class CashImageService
             $startDate = $dates[0];
             $endDate = $dates[1];
             $query->whereDate('date', '>=', $startDate)
-                  ->whereDate('date', '<=', $endDate);
+                ->whereDate('date', '<=', $endDate);
         } else {
             $singleDate = $dates[0];
             $query->whereDate('date', $singleDate);
@@ -457,10 +458,12 @@ class CashImageService
                 $query->whereHas('taxReceipts', function ($q) {
                     $q->whereNotNull('tax_receipts.id');
                 });
+
                 break;
 
             case 'missing':
                 $query->whereDoesntHave('taxReceipts');
+
                 break;
 
             case 'all':
@@ -797,12 +800,15 @@ class CashImageService
                     switch ($taxReceiptStatus) {
                         case 'have':
                             $groupedByProduct[$productName]['tax_receipt_summary']['have_tax_receipt']++;
+
                             break;
                         case 'missing':
                             $groupedByProduct[$productName]['tax_receipt_summary']['missing_tax_receipt']++;
+
                             break;
                         case 'not_applicable':
                             $groupedByProduct[$productName]['tax_receipt_summary']['not_applicable']++;
+
                             break;
                     }
 
@@ -820,7 +826,7 @@ class CashImageService
             }
 
             // Sort groups by total records (descending)
-            uasort($groupedByProduct, function($a, $b) {
+            uasort($groupedByProduct, function ($a, $b) {
                 return $b['total_records'] <=> $a['total_records'];
             });
 
@@ -889,10 +895,12 @@ class CashImageService
             $filters = $this->extractFilters($request);
 
             $query = $this->buildOptimizedQuery($filters);
+
             return $query->count();
 
         } catch (Exception $e) {
             Log::error('Error getting total records count: ' . $e->getMessage());
+
             return 0;
         }
     }
@@ -944,10 +952,10 @@ class CashImageService
             return [
                 'status' => 'have',
                 'count' => $taxReceipts->count(),
-                'receipts' => $taxReceipts->map(function($receipt) {
+                'receipts' => $taxReceipts->map(function ($receipt) {
                     return [
                         'id' => $receipt->id,
-                        'tax_receipt_number' => $receipt->tax_receipt_number,
+                        'tax_receipt_number' => $receipt->tax_receipt_number ?? '-',
                         'created_at' => $receipt->created_at
                     ];
                 })->toArray()
@@ -955,6 +963,7 @@ class CashImageService
 
         } catch (Exception $e) {
             Log::warning('Error getting tax receipt details: ' . $e->getMessage());
+
             return [
                 'status' => 'error',
                 'message' => 'Could not retrieve tax receipt details'
@@ -1139,8 +1148,8 @@ class CashImageService
 
             // Offset နဲ့ limit သုံးပြီး specific batch ယူမယ်
             $data = $query->offset($offset)
-                         ->limit($limit)
-                         ->get();
+                ->limit($limit)
+                ->get();
 
             $resourceCollection = CashParchaseDetailResource::collection($data);
 
@@ -1170,7 +1179,8 @@ class CashImageService
         }
     }
 
-    public function onlyImages(Request $request) {
+    public function onlyImages(Request $request)
+    {
         try {
             $this->validateRequest($request);
             $filters = $this->extractFilters($request);
@@ -1183,7 +1193,7 @@ class CashImageService
                 'relatable_id',
                 'relatable_type',
             ])->with([
-                'relatable' => function($query) {
+                'relatable' => function ($query) {
                     $query->select([
                         'id', 'crm_id', 'grand_total', 'customer_id', 'commission',
                         'created_at', 'start_date', 'end_date', 'booking_date',
@@ -1191,14 +1201,14 @@ class CashImageService
 
                     ]);
                 },
-                'relatable.customer' => function($query) {
+                'relatable.customer' => function ($query) {
                     $query->select(['id', 'name', 'phone_number']);
                 },
-                'relatable.items' => function($query) {
+                'relatable.items' => function ($query) {
                     $query->select([
                         'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
                         'total_cost_price', 'discount', 'product_type', 'amount',
-                        'comment', 'service_date', 'days','checkin_date','checkout_date',
+                        'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
                     ]);
                 },
                 'relatable.items.product'
@@ -1233,7 +1243,7 @@ class CashImageService
 
                     // Process items grouping
                     $booking = $this->processBookingItems($booking);
-                    $invoice_generate = "INV".date('m', strtotime($booking->booking_date))."000".$nextInvoiceIndex+1;
+                    $invoice_generate = "INV".date('m', strtotime($booking->booking_date))."000".$nextInvoiceIndex + 1;
                     $booking->invoice_generate = $invoice_generate;
                     $nextInvoiceIndex++;
                 }
@@ -1268,30 +1278,32 @@ class CashImageService
     /**
      * Process booking items and group by product type
      */
-    private function processBookingItems($booking) {
+    private function processBookingItems($booking)
+    {
         if (!$booking->items || $booking->items->count() === 0) {
             $booking->grouped_items = collect([]);
+
             return $booking;
         }
 
         $groupedItems = $booking->items->groupBy('product_type')->map(function ($items, $productType) {
             // Get all service dates and format them
             $serviceDates = $items->whereNotNull('service_date')
-                                ->pluck('service_date')
-                                ->unique()
-                                ->sort()
-                                ->map(function($date) {
-                                    return date('Y-m-d', strtotime($date));
-                                })
-                                ->values()
-                                ->toArray();
+                ->pluck('service_date')
+                ->unique()
+                ->sort()
+                ->map(function ($date) {
+                    return date('Y-m-d', strtotime($date));
+                })
+                ->values()
+                ->toArray();
 
             // Get all unique comments
             $comments = $items->whereNotNull('comment')
-                             ->pluck('comment')
-                             ->unique()
-                             ->filter()
-                             ->implode(', ');
+                ->pluck('comment')
+                ->unique()
+                ->filter()
+                ->implode(', ');
 
             return [
                 'product_type' => $productType,
@@ -1311,13 +1323,15 @@ class CashImageService
         })->values();
 
         $booking->grouped_items = $groupedItems;
+
         return $booking;
     }
 
     /**
      * Get human-readable product name based on product type
      */
-    private function getProductNameByType($productType) {
+    private function getProductNameByType($productType)
+    {
         $productTypeMap = [
             'App\\Models\\Hotel' => 'Hotel Service',
             'App\\Models\\EntranceTicket' => 'Ticket Service',
@@ -1372,7 +1386,7 @@ class CashImageService
         // For each CRM group, sort by date and assign deposit numbers
         foreach ($crmGroups as $crmId => $cashImageGroup) {
             // Sort by date (earliest first) - this is the CORRECT order for deposits
-            usort($cashImageGroup, function($a, $b) {
+            usort($cashImageGroup, function ($a, $b) {
                 return strtotime($a->date) - strtotime($b->date);
             });
 
@@ -1406,6 +1420,7 @@ class CashImageService
             } elseif ($cashImage->relatable_id == 0 && $cashImage->bookings && $cashImage->bookings->count() > 0) {
                 // Multiple bookings case (many-to-many) - use first booking's CRM ID
                 $firstBooking = $cashImage->bookings->first();
+
                 return $firstBooking->crm_id ?? null;
             }
         } elseif ($cashImage->relatable_type === 'App\Models\BookingItemGroup' && $cashImage->relatable) {
@@ -1458,7 +1473,8 @@ class CashImageService
         return $query;
     }
 
-    private function onlyImageForm($cashImage){
+    private function onlyImageForm($cashImage)
+    {
         $result = [
             'cash_image_id' => $cashImage->id,
             'crm_id' => null,
@@ -1550,8 +1566,14 @@ class CashImageService
         }
 
         // Calculate service totals
-        $hotelTotal = 0; $hotelCost = 0; $hotelVat = 0; $hotelCommission = 0;
-        $ticketTotal = 0; $ticketCost = 0; $ticketVat = 0; $ticketCommission = 0;
+        $hotelTotal = 0;
+        $hotelCost = 0;
+        $hotelVat = 0;
+        $hotelCommission = 0;
+        $ticketTotal = 0;
+        $ticketCost = 0;
+        $ticketVat = 0;
+        $ticketCommission = 0;
 
         if ($booking->items && $booking->items->count() > 0) {
             foreach ($booking->items as $item) {
@@ -1562,11 +1584,15 @@ class CashImageService
                 $commission = $item->commission ?? 0;
 
                 if ($productType === 'App\\Models\\Hotel') {
-                    $hotelTotal += $amount; $hotelCost += $cost;
-                    $hotelVat += $vat; $hotelCommission += $commission;
+                    $hotelTotal += $amount;
+                    $hotelCost += $cost;
+                    $hotelVat += $vat;
+                    $hotelCommission += $commission;
                 } elseif ($productType === 'App\\Models\\EntranceTicket') {
-                    $ticketTotal += $amount; $ticketCost += $cost;
-                    $ticketVat += $vat; $ticketCommission += $commission;
+                    $ticketTotal += $amount;
+                    $ticketCost += $cost;
+                    $ticketVat += $vat;
+                    $ticketCommission += $commission;
                 }
             }
         }
