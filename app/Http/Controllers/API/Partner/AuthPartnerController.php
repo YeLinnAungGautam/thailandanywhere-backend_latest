@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Hash;
 
 use function PHPUnit\Framework\isEmpty;
 
-class AuthController extends Controller
+class AuthPartnerController extends Controller
 {
     use HttpResponses;
 
-    public function login(Request $request)
+    public function loginPartner(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
@@ -35,6 +35,10 @@ class AuthController extends Controller
 
         $token = $partner->createToken('partner-token')->plainTextToken;
 
+        $partner->update([
+            'login_count' => $partner->login_count + 1
+        ]);
+
         return success([
             'partner' => $partner,
             'token' => $token
@@ -43,13 +47,33 @@ class AuthController extends Controller
 
     public function loginUser(Request $request)
     {
-        $query = Partner::query();
+        $query = Partner::query()->with(['hotels', 'entranceTickets']);
         $query->where('id', Auth::id());
         $data = $query->first();
 
         return $this->success([
             'partner' => new PartnerResource($data),
         ], 'Partner Account Detail');
+    }
+
+    public function changePassword(Request $request, $id)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|confirmed',
+        ]);
+
+        $partner = Partner::find($id);
+
+        if (!Hash::check($request->current_password, $partner->password)) {
+            return $this->error(null, 'Password is incorrect');
+        }
+
+        $partner->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return $this->success($partner, 'Successfully changed password');
     }
 
     public function logout(Request $request)

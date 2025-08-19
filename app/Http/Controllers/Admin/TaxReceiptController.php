@@ -220,11 +220,30 @@ class TaxReceiptController extends Controller
         }
     }
 
-    /**
-     * Get available booking item groups for attaching to tax receipt
-     */
+    public function addDeclaration(Request $request)
+    {
+        // Validate the request
+        $validated = $request->validate([
+            'tax_receipt_ids' => 'required|array',
+            'tax_receipt_ids.*' => 'integer|exists:tax_receipts,id'
+        ]);
 
-    /**
-     * Get currently attached groups for a tax receipt
-     */
+        try {
+            // Update all tax receipts with the provided IDs
+            $updatedCount = TaxReceipt::whereIn('id', $validated['tax_receipt_ids'])
+                ->update(['declaration' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated {$updatedCount} tax receipt(s) as declared.",
+                'updated_count' => $updatedCount
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update tax receipts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

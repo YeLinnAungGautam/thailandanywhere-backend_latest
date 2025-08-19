@@ -20,7 +20,7 @@ class PartnerController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Partner::query();
+        $query = Partner::query()->with('hotels','entranceTickets');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%")
@@ -53,6 +53,8 @@ class PartnerController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => $request->role ?? 'partner',
+            'parent_id' => null
         ]);
 
         return $this->success($partner, 'Successfully created', 200);
@@ -87,32 +89,30 @@ class PartnerController extends Controller
         return $this->success(null, 'Successfully deleted', 200);
     }
 
-    public function assignProduct(Partner $partner, Request $request)
+    public function assignProduct($id, Request $request)
     {
         try {
             $request->validate([
                 'product_type' => ['required', 'string', Rule::in([
                     'hotel',
-                    'private_van_tour',
                     'entrance_ticket',
-                    'group_tour',
-                    'inclusive'
                 ])],
                 'product_ids' => ['required', 'string'], // 1,2,3,4,5 like this
             ]);
 
-            $this->assignProductByType($partner, $request);
+            $this->assignProductByType($id, $request);
 
             return $this->success(null, 'Successfully assigned product', 200);
         } catch (Exception $e) {
             Log::error($e);
 
-            return $this->error('Failed to assign product', 500);
+            return $this->error(null, $e->getMessage(), 500);
         }
     }
 
-    private function assignProductByType(Partner $partner, Request $request)
+    private function assignProductByType($id, Request $request)
     {
+        $partner = Partner::find($id);
         $product_type = $request->product_type;
         $product_ids = explode(',', $request->product_ids);
 
@@ -121,20 +121,8 @@ class PartnerController extends Controller
                 $partner->hotels()->sync($product_ids);
 
                 break;
-            case 'private_van_tour':
-                $partner->privateVanTours()->sync($product_ids);
-
-                break;
             case 'entrance_ticket':
                 $partner->entranceTickets()->sync($product_ids);
-
-                break;
-            case 'group_tour':
-                $partner->groupTours()->sync($product_ids);
-
-                break;
-            case 'inclusive':
-                $partner->inclusiveProducts()->sync($product_ids);
 
                 break;
             default:

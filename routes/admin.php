@@ -445,6 +445,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Tax Receipt
     Route::apiResource('tax-receipts', TaxReceiptController::class);
     Route::post('tax-receipts/{tax_receipt}/async-reservations', [TaxReceiptController::class, 'syncReservations']);
+    Route::post('/tax-receipts/add-declaration', [TaxReceiptController::class, 'addDeclaration']);
 
     # Cash book
     Route::apiResource('cash-books', CashBookController::class);
@@ -461,6 +462,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);
     Route::get('/parchase/export-csv', [CashImageController::class, 'exportParchaseToCsv']);
     Route::get('/parchase_tax/export-csv', [CashImageController::class, 'exportParchaseTaxToCsv']);
+    Route::get('/invoice/export-csv',[CashImageController::class,'exportInvoiceToCsv']);
+    Route::get('/remain-tax-receipt',[CashImageController::class,'remindTaxReceipt']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
@@ -473,6 +476,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         // New methods for creating cash images without relatable_id
         Route::post('/create-and-attach', [CashImageBookingController::class, 'createAndAttach']);
     });
+
+
+
 
     # Storage File
     Route::prefix('admin/files')->group(function () {

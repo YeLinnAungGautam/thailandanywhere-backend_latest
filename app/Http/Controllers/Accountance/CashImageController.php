@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Accountance;
 
 use App\Exports\CashImageExport;
+use App\Exports\CashInvoiceExport;
 use App\Exports\CashParchaseExport;
 use App\Exports\CashParchaseTaxExport;
 use App\Http\Controllers\Controller;
@@ -63,6 +64,24 @@ class CashImageController extends Controller
 
         $result = $this->cashImageService->getAllSummary($request);
 
+        if ($result['status'] == 1) {
+            return response()->json([
+                'status' => 1,
+                'message' => $result['message'],
+                'result' => $result['result']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 0,
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+        }
+    }
+
+    public function remindTaxReceipt(Request $request)
+    {
+        $result = $this->cashImageService->getAllGroupedByProductForExport($request);
         if ($result['status'] == 1) {
             return response()->json([
                 'status' => 1,
@@ -359,6 +378,82 @@ class CashImageController extends Controller
         }
     }
 
+    public function exportInvoiceToCsv(Request $request)
+    {
+        try {
+            // Get total count first
+            $count = $this->cashImageService->getTotalRecordsCount($request);
+
+            // $result = $this->cashImageService->getAllParchaseLimitForExport($request);
+
+            // return response()->json([
+            //     'data' => $result
+            // ]);
+
+            // If no data, return error
+            if ($count == 0) {
+                return $this->error(null, 'No data available for export', 404);
+            }
+
+            $limit = 50; // Records per file
+            $totalChunks = ceil($count / $limit);
+            $downloadLinks = [];
+
+            // If total records are 50 or less, create single file
+            if ($count <= $limit) {
+                $file_name = "cash_invoice_export_" . date('Y-m-d-H-i-s') . ".csv";
+
+                $export = new CashInvoiceExport($request->all());
+
+                if (!$export->collection()->isEmpty()) {
+                    \Excel::store($export, "export/" . $file_name);
+
+                    return $this->success([
+                        'total_records' => $count,
+                        'download_link' => get_file_link('export', $file_name)
+                    ], 'CSV export is successful');
+                }
+            }
+
+            // Generate multiple CSV files in chunks
+            for ($chunk = 0; $chunk < $totalChunks; $chunk++) {
+                $offset = $chunk * $limit;
+
+                // Clone request and add pagination parameters
+                $chunkParams = $request->all();
+                $chunkParams['limit'] = $limit;
+                $chunkParams['offset'] = $offset;
+
+                $file_name = "cash_invoice_export_" . date('Y-m-d-H-i-s') . "_part_" . ($chunk + 1) . "_of_" . $totalChunks . ".csv";
+
+                $export = new CashInvoiceExport($chunkParams);
+
+                // Check if this chunk has data
+                if (!$export->collection()->isEmpty()) {
+                    \Excel::store($export, "export/" . $file_name);
+
+                    $downloadLinks[] = [
+                        'file_name' => $file_name,
+                        'download_link' => get_file_link('export', $file_name),
+                        'part' => $chunk + 1,
+                        'total_parts' => $totalChunks,
+                        'records_in_file' => min($limit, $count - $offset)
+                    ];
+                }
+            }
+
+            return $this->success([
+                'total_records' => $count,
+                'total_files' => count($downloadLinks),
+                'records_per_file' => $limit,
+                'files' => $downloadLinks
+            ], 'CSV export completed successfully - ' . count($downloadLinks) . ' files generated');
+
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function printCashImage(Request $request)
     {
         try {
@@ -411,7 +506,7 @@ class CashImageController extends Controller
             // Total records ရေ ရမယ်
             $totalRecords = $this->cashImageService->getTotalRecordsCount($request);
 
-            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 100, 100);
+            // $data = $this->cashImageService->getAllPurchaseForPrintBatch($request, 0, 100);
 
             // return response()->json([
             //     'data' => $data

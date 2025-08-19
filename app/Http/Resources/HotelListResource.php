@@ -38,6 +38,7 @@ class HotelListResource extends JsonResource
             'facilities' => FacilityResource::collection($this->facilities),
             'lowest_room_price' => $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0,
             'lowest_walk_in_price' => $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
+            'lowest_cost_price' => $this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0,
             // 'updated_at' => $this->updated_at,
             // 'created_at' => $this->created_at,
             // 'location_map_title' => $this->location_map_title,
