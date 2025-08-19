@@ -3,7 +3,6 @@
 namespace App\Http\Resources\Accountance;
 
 use App\Http\Resources\ChartOfAccountResource;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,6 +30,8 @@ class CashBookResource extends JsonResource
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
             'cash_book_images' => CashBookImageResource::collection($this->cashBookImages),
+
+            'cash_images' => CashImageResource::collection($this->bCashImages),
         ];
     }
 }

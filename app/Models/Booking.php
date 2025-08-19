@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasCashImages;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 class Booking extends Model
 {
-    use HasFactory;
+    use HasFactory, HasCashImages;
 
     protected $guarded = [];
 
@@ -149,12 +150,13 @@ class Booking extends Model
     // New: Many-to-many relationship
     public function cashImagesPivot()
     {
-        return $this->belongsToMany(CashImage::class,
+        return $this->belongsToMany(
+            CashImage::class,
             'cash_image_bookings', // pivot table name
             'booking_id',       // foreign key for cash_image
             'cash_image_id'           // foreign key for booking
         )->withPivot('deposit', 'notes', 'id')
-         ->withTimestamps();
+            ->withTimestamps();
     }
 
     // Helper method to get all cash images

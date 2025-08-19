@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasCashImages;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CashBook extends Model
 {
-    use HasFactory;
+    use HasFactory, HasCashImages;
 
     protected $fillable = [
         'reference_number',
@@ -51,7 +52,7 @@ class CashBook extends Model
             'cash_book_id',
             'chart_of_account_id'
         )->withPivot(['allocated_amount', 'note'])
-         ->withTimestamps();
+            ->withTimestamps();
     }
 
     // Generate reference number
@@ -76,5 +77,4 @@ class CashBook extends Model
 
         return sprintf('%s-%s/%s/%s-%03d', $prefix, $month, $year, $company, $sequence);
     }
-
 }
