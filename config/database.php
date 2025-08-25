@@ -93,6 +93,33 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'mysql_prod' => [
+            'driver' => 'mysql',
+            'host' => env('DB_PROD_HOST', '127.0.0.1'),
+            'port' => env('DB_PROD_PORT', '3306'),
+            'database' => env('DB_PROD_DATABASE', 'forge'),
+            'username' => env('DB_PROD_USERNAME', 'forge'),
+            'password' => env('DB_PROD_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
+        'mysql_uat' => [
+            'driver' => 'mysql',
+            'host' => env('DB_UAT_HOST', '127.0.0.1'),
+            'port' => env('DB_UAT_PORT', '3306'),
+            'database' => env('DB_UAT_DATABASE', 'forge'),
+            'username' => env('DB_UAT_USERNAME', 'forge'),
+            'password' => env('DB_UAT_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
     ],
 
     /*
