@@ -755,7 +755,7 @@ class CashImageService
             $page = $request->get('page', 1);
             $limit = $request->get('limit', 100);
 
-            // Build optimized query specifically for BookingItemGroup
+            // Build optimized query specifically for BookingItemGroup - GET ALL DATA FIRST
             $query = CashImage::select([
                 'cash_images.id',
                 'cash_images.date',
@@ -791,17 +791,17 @@ class CashImageService
                 }
             ]);
 
-            // Get paginated data
-            $data = $query->paginate($limit, ['*'], 'page', $page);
+            // GET ALL DATA (no pagination yet)
+            $allData = $query->get();
 
             // Batch get tax receipt counts for performance
-            $bookingItemGroupIds = $data->pluck('relatable_id')->filter()->toArray();
+            $bookingItemGroupIds = $allData->pluck('relatable_id')->filter()->toArray();
             $taxReceiptCounts = $this->getBatchTaxReceiptCounts($bookingItemGroupIds);
 
-            // Group by product
+            // Group by product FIRST
             $groupedByProduct = [];
 
-            foreach ($data as $cashImage) {
+            foreach ($allData as $cashImage) {
                 $products = $this->extractProductsFromBookingItemGroup($cashImage);
                 $taxReceiptStatus = $this->getSimpleTaxReceiptStatus($cashImage, $taxReceiptCounts);
 
@@ -861,17 +861,39 @@ class CashImageService
                 return $b['total_records'] <=> $a['total_records'];
             });
 
-            // Calculate overall summary
+            // Convert to indexed array for easier pagination
+            $groupedArray = array_values($groupedByProduct);
+
+            // Calculate total counts BEFORE pagination
+            $totalGroups = count($groupedArray);
+            $totalCashImages = $allData->count();
+
+            // Apply pagination to GROUPS (not individual cash images)
+            $offset = ($page - 1) * $limit;
+            $paginatedGroups = array_slice($groupedArray, $offset, $limit);
+
+            // Calculate pagination info for groups
+            $totalPages = ceil($totalGroups / $limit);
+            $hasNextPage = $page < $totalPages;
+            $hasPrevPage = $page > 1;
+
+            // Calculate overall summary from ALL data (not just current page)
             $overallTaxReceiptSummary = [
                 'total_have_tax_receipt' => 0,
                 'total_missing_tax_receipt' => 0,
                 'total_not_applicable' => 0
             ];
 
-            foreach ($groupedByProduct as $group) {
+            foreach ($groupedArray as $group) {
                 $overallTaxReceiptSummary['total_have_tax_receipt'] += $group['tax_receipt_summary']['have_tax_receipt'];
                 $overallTaxReceiptSummary['total_missing_tax_receipt'] += $group['tax_receipt_summary']['missing_tax_receipt'];
                 $overallTaxReceiptSummary['total_not_applicable'] += $group['tax_receipt_summary']['not_applicable'];
+            }
+
+            // Calculate current page cash images count
+            $currentPageCashImagesCount = 0;
+            foreach ($paginatedGroups as $group) {
+                $currentPageCashImagesCount += count($group['cash_images']);
             }
 
             return [
@@ -879,24 +901,27 @@ class CashImageService
                 'message' => 'BookingItemGroup cash images grouped by product retrieved successfully',
                 'result' => [
                     'summary' => [
-                        'total_cash_images' => $data->total(),
-                        'current_page_count' => $data->count(),
-                        'total_products' => count($groupedByProduct),
-                        'current_page' => $data->currentPage(),
-                        'last_page' => $data->lastPage(),
-                        'per_page' => $data->perPage(),
+                        'total_cash_images' => $totalCashImages,
+                        'current_page_cash_images_count' => $currentPageCashImagesCount,
+                        'total_products' => $totalGroups,
+                        'current_page_products_count' => count($paginatedGroups),
+                        'current_page' => $page,
+                        'last_page' => $totalPages,
+                        'per_page' => $limit,
                         'tax_receipt_summary' => $overallTaxReceiptSummary
                     ],
-                    'grouped_data' => array_values($groupedByProduct),
+                    'grouped_data' => $paginatedGroups,
                     'pagination' => [
-                        'current_page' => $data->currentPage(),
-                        'last_page' => $data->lastPage(),
-                        'per_page' => $data->perPage(),
-                        'total' => $data->total(),
-                        'from' => $data->firstItem(),
-                        'to' => $data->lastItem(),
-                        'next_page_url' => $data->nextPageUrl(),
-                        'prev_page_url' => $data->previousPageUrl()
+                        'current_page' => $page,
+                        'last_page' => $totalPages,
+                        'per_page' => $limit,
+                        'total_groups' => $totalGroups,
+                        'from_group' => $offset + 1,
+                        'to_group' => min($offset + $limit, $totalGroups),
+                        'has_next_page' => $hasNextPage,
+                        'has_prev_page' => $hasPrevPage,
+                        'next_page_url' => $hasNextPage ? request()->url() . '?' . http_build_query(array_merge(request()->all(), ['page' => $page + 1])) : null,
+                        'prev_page_url' => $hasPrevPage ? request()->url() . '?' . http_build_query(array_merge(request()->all(), ['page' => $page - 1])) : null
                     ]
                 ]
             ];

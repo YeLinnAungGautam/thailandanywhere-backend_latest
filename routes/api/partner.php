@@ -25,6 +25,7 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
 
     // reservation part
     Route::get('booking_item_groups',[ReservationController::class, 'index']);
+    Route::get('booking_item_groups/{id}',[ReservationController::class, 'detail']);
     Route::get('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'getCustomerDocuments']);
     Route::post('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'store']);
     Route::post('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'update']);
@@ -32,7 +33,4 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
 
     // Get monthly sales graph data
     Route::post('monthly-sales', [DashboardController::class, 'getMonthlySalesGraph']);
-
-    // Get most selling rooms data (for hotels)
-    Route::post('most-selling-rooms', [DashboardController::class, 'getMostSellingRooms']);
 });

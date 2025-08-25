@@ -246,4 +246,30 @@ class TaxReceiptController extends Controller
             ], 500);
         }
     }
+
+    public function removeDeclaration(Request $request)
+    {
+        // Validate the request
+        $validated = $request->validate([
+            'tax_receipt_id' => 'required',
+        ]);
+
+        try {
+            // Update all tax receipts with the provided IDs
+            $updatedCount = TaxReceipt::where('id', $validated['tax_receipt_id'])
+                ->update(['declaration' => false]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated {$updatedCount} tax receipt(s) as not declared.",
+                'updated_count' => $updatedCount
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update tax receipts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

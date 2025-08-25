@@ -10,6 +10,7 @@ use App\Models\CustomerDocument;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class ReservationController extends Controller
 {
@@ -18,6 +19,7 @@ class ReservationController extends Controller
     public function index(Request $request)
     {
         try {
+            // Build the base query
             $query = BookingItemGroup::query()
                 ->has('bookingItems')
                 ->with([
@@ -27,26 +29,29 @@ class ReservationController extends Controller
                     'bookingItems.product'
                 ]);
 
-            // Product ID filter
+            // Apply filters
+            $this->applyFilters($query, $request);
+
+            // Apply product filters
             $this->applyProductFilter($query, $request);
 
-            // CRM ID filter
-            $this->applyCrmFilter($query, $request);
+            // Apply sorting
+            $this->applySorting($query, $request);
 
-            // Date Range filter
-            $this->applyDateRangeFilter($query, $request);
+            // Calculate total cost price sum for filtered results
+            $totalCostPriceSum = $this->getTotalCostPriceSum($query);
 
-            $bookingItemGroups = $query->paginate($request->limit ?? 20);
+            // Paginate results
+            $groups = $query->paginate($request->get('limit', 20));
 
             return $this->success(
-                BookingItemGroupListResource::collection($bookingItemGroups)->additional([
+                BookingItemGroupListResource::collection($groups)->additional([
                     'meta' => [
-                        'total_page' => (int)ceil($bookingItemGroups->total() / $bookingItemGroups->perPage()),
+                        'total_page' => (int)ceil($groups->total() / $groups->perPage()),
+                        'total_cost_price_sum' => $totalCostPriceSum,
                     ],
-                ])
-                ->response()
-                ->getData(),
-                'Booking Item Groups'
+                ])->response()->getData(),
+                'Filtered Booking Groups'
             );
 
         } catch (Exception $e) {
@@ -88,29 +93,109 @@ class ReservationController extends Controller
         }
     }
 
-    private function applyCrmFilter($query, $request)
+    private function applyFilters($query, $request)
     {
+        // Date Range Filter
+        if ($request->date_range) {
+            $dates = array_map('trim', explode(',', $request->date_range));
+            if (count($dates) === 2) {
+                $query->whereHas('bookingItems', function ($q) use ($dates) {
+                    $q->whereBetween('service_date', $dates);
+                });
+            } elseif (count($dates) === 1) {
+                $query->whereHas('bookingItems', function ($q) use ($dates) {
+                    $q->whereDate('service_date', $dates[0]);
+                });
+            }
+        }
+
+        // Invoice Filter (based on booking confirm letter documents)
+        if ($request->invoice) {
+            if ($request->invoice === 'received') {
+                $query->whereHas('customerDocuments', function ($q) {
+                    $q->where('type', 'booking_confirm_letter');
+                });
+            } elseif ($request->invoice === 'not_received') {
+                $query->whereDoesntHave('customerDocuments', function ($q) {
+                    $q->where('type', 'booking_confirm_letter');
+                });
+            }
+        }
+
+        // CRM ID Filter
         if ($request->crm_id) {
             $query->whereHas('booking', function ($q) use ($request) {
                 $q->where('crm_id', $request->crm_id);
             });
         }
-    }
 
-    private function applyDateRangeFilter($query, $request)
-    {
-        if (!$request->dateRange) {
-            return;
+        // Customer Name Filter
+        if ($request->customer_name) {
+            $query->whereHas('booking.customer', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->customer_name . '%');
+            });
         }
 
-        $dates = array_map('trim', explode(',', $request->dateRange));
-
-        if (count($dates) === 2) {
-            $query->whereHas('bookingItems', function ($q) use ($dates) {
-                $q->whereBetween('service_date', $dates);
+        // Expense Item Status Filter
+        if ($request->expense_item_status) {
+            $query->whereHas('bookingItems', function ($q) use ($request) {
+                $q->where('payment_status', $request->expense_item_status);
             });
         }
     }
+
+    private function applySorting($query, $request)
+    {
+        if ($request->sorting_by_date) {
+            $direction = $request->sorting_direction === 'desc' ? 'desc' : 'asc';
+
+            // Sort by earliest service date
+            $query->joinSub(
+                DB::table('booking_items')
+                    ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                    ->groupBy('group_id'),
+                'earliest_service_dates',
+                function($join) {
+                    $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
+                }
+            )->orderBy('earliest_service_dates.earliest_service_date', $direction);
+        } else {
+            // Default sorting by created_at
+            $query->latest();
+        }
+    }
+
+    private function getTotalCostPriceSum($query)
+    {
+        // Clone the query to avoid affecting the main query
+        $clonedQuery = clone $query;
+
+        // Get the group IDs from the filtered query
+        $groupIds = $clonedQuery->pluck('booking_item_groups.id');
+
+        // Calculate sum of total_cost_price for booking items in these groups
+        return DB::table('booking_items')
+            ->whereIn('group_id', $groupIds)
+            ->sum('total_cost_price');
+    }
+
+    public function detail($id, Request $request)
+    {
+        try {
+            $booking_item_group = BookingItemGroup::with([
+                'booking',
+                'bookingItems',
+                'bookingItems.product',
+                'customerDocuments',
+                'cashImages',
+            ])->find($id);
+
+            return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
 
     protected $document_type_validation_rule = 'required|in:invoice,expense_receipt,passport,booking_request_proof,expense_mail_proof,assign_driver,booking_confirm_letter,confirmation_letter,tax_receipt,tax_slip';
 
