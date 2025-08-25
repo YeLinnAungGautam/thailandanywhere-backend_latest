@@ -81,33 +81,33 @@ class CashImageController extends Controller
 
     public function remindTaxReceipt(Request $request)
     {
-    try {
-        $result = $this->cashImageService->getAllGroupedByProductForExport($request);
+        try {
+            $result = $this->cashImageService->getAllGroupedByProductForExport($request);
 
-        if ($result['status'] == 1) {
+            if ($result['status'] == 1) {
+                return response()->json([
+                    'status' => 1,
+                    'message' => $result['message'],
+                    'result' => $result['result']
+                ]);
+            }
+
+            // Error case - use null coalescing operator for safe access
             return response()->json([
-                'status' => 1,
-                'message' => $result['message'],
-                'result' => $result['result']
-            ]);
+                'status' => 0,
+                'message' => $result['message'] ?? 'An error occurred',
+                'result' => null
+            ], ($result['error_type'] ?? 'system') === 'validation' ? 422 : 500);
+
+        } catch (\Exception $e) {
+            \Log::error('remindTaxReceipt error: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 0,
+                'message' => 'An unexpected error occurred',
+                'result' => null
+            ], 500);
         }
-
-        // Error case - use null coalescing operator for safe access
-        return response()->json([
-            'status' => 0,
-            'message' => $result['message'] ?? 'An error occurred',
-            'result' => null
-        ], ($result['error_type'] ?? 'system') === 'validation' ? 422 : 500);
-
-    } catch (\Exception $e) {
-        \Log::error('remindTaxReceipt error: ' . $e->getMessage());
-
-        return response()->json([
-            'status' => 0,
-            'message' => 'An unexpected error occurred',
-            'result' => null
-        ], 500);
-    }
     }
 
     public function store(Request $request)
@@ -145,7 +145,10 @@ class CashImageController extends Controller
 
     public function show(string $id)
     {
-        $find = CashImage::find($id)->load(['relatable', 'bookings']);
+        $find = CashImage::query()
+            ->with(['relatable', 'bookings'])
+            ->find($id);
+
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
@@ -442,6 +445,7 @@ class CashImageController extends Controller
 
         } catch (Exception $e) {
             Log::error('PDF Batch Job Dispatch Error: ' . $e->getMessage());
+
             return $this->error(null, $e->getMessage(), 500);
         }
     }
