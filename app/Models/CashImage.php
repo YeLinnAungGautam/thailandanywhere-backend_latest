@@ -9,19 +9,17 @@ class CashImage extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
-
-    // protected $fillable = [
-    //     'image',
-    //     'date',
-    //     'sender',
-    //     'receiver',
-    //     'amount',
-    //     'interact_bank',
-    //     'currency',
-    //     'relatable_type',
-    //     'relatable_id'
-    // ];
+    protected $fillable = [
+        'image',
+        'date',
+        'sender',
+        'receiver',
+        'amount',
+        'interact_bank',
+        'currency',
+        'relatable_type',
+        'relatable_id'
+    ];
 
     protected $casts = [
         'date' => 'datetime', // Changed to datetime for date and time

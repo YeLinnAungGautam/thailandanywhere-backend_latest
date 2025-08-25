@@ -135,8 +135,6 @@ class CashImageController extends Controller
         // Since image is required, no need to check if empty
         $fileData = $this->uploads($validated['image'], 'images/');
 
-        info($validated);
-
         $create = CashImage::create([
             'image' => $fileData['fileName'],
             'date' => $validated['date'],
