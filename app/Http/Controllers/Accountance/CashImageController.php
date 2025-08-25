@@ -81,20 +81,33 @@ class CashImageController extends Controller
 
     public function remindTaxReceipt(Request $request)
     {
+    try {
         $result = $this->cashImageService->getAllGroupedByProductForExport($request);
+
         if ($result['status'] == 1) {
             return response()->json([
                 'status' => 1,
                 'message' => $result['message'],
                 'result' => $result['result']
             ]);
-        } else {
-            return response()->json([
-                'status' => 0,
-                'message' => $result['message'],
-                'result' => null
-            ], $result['error_type'] === 'validation' ? 422 : 500);
         }
+
+        // Error case - use null coalescing operator for safe access
+        return response()->json([
+            'status' => 0,
+            'message' => $result['message'] ?? 'An error occurred',
+            'result' => null
+        ], ($result['error_type'] ?? 'system') === 'validation' ? 422 : 500);
+
+    } catch (\Exception $e) {
+        \Log::error('remindTaxReceipt error: ' . $e->getMessage());
+
+        return response()->json([
+            'status' => 0,
+            'message' => 'An unexpected error occurred',
+            'result' => null
+        ], 500);
+    }
     }
 
     public function store(Request $request)
