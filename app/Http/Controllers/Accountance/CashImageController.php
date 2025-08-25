@@ -120,8 +120,8 @@ class CashImageController extends Controller
             'amount' => 'required|numeric|min:0',
             'interact_bank' => 'nullable|string|max:255',
             'currency' => 'required|string|max:10',
-            // 'relatable_type' => 'required', // booking_item_group
-            // 'relatable_id' => 'required', // 123
+            'relatable_type' => 'required', // booking_item_group
+            'relatable_id' => 'required', // 123
 
             // targets is nullable, but if present, models are required
             'targets' => 'nullable|array',
@@ -134,6 +134,8 @@ class CashImageController extends Controller
 
         // Since image is required, no need to check if empty
         $fileData = $this->uploads($validated['image'], 'images/');
+
+        info($validated);
 
         $create = CashImage::create([
             'image' => $fileData['fileName'],
