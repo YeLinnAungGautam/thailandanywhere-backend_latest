@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\HotelListResource;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class HotelController extends Controller
 {
@@ -68,7 +70,7 @@ class HotelController extends Controller
                 // Search in hotel name
                 $searchQuery->where('name', 'LIKE', $searchTerm . '%')
                 // OR search in slug
-                ->orWhereRaw('JSON_SEARCH(slug, "one", ?) IS NOT NULL', ['%' . $searchTerm . '%']);
+                    ->orWhereRaw('JSON_SEARCH(slug, "one", ?) IS NOT NULL', ['%' . $searchTerm . '%']);
             });
         }
 
@@ -87,19 +89,26 @@ class HotelController extends Controller
 
     public function show(string|int $hotel_id)
     {
-        if (is_null($hotel = Hotel::find($hotel_id))) {
-            return notFoundMessage();
+        try {
+            if (is_null($hotel = Hotel::find($hotel_id))) {
+                return notFoundMessage();
+            }
+
+            $hotel->load(
+                'city',
+                'rooms',
+                'rooms.images',
+                'contracts',
+                'images',
+                'facilities',
+            );
+
+            return success(new HotelResource($hotel));
+        } catch (Exception $e) {
+            Log::error($e);
+            Log::error('Hotel ID: ' . $hotel_id);
+
+            throw new Exception($e->getMessage());
         }
-
-        $hotel->load(
-            'city',
-            'rooms',
-            'rooms.images',
-            'contracts',
-            'images',
-            'facilities',
-        );
-
-        return success(new HotelResource($hotel));
     }
 }
