@@ -17,6 +17,15 @@ class HotelResource extends JsonResource
     {
         // return parent::toArray($request);
 
+        $lowest_room_price = $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0;
+        $lowest_walk_in_price = $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0;
+        $lowest_cost_price = $this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0;
+
+        $discount_price = ($lowest_room_price - $lowest_cost_price) * 0.75;
+        $discount_percent = ($lowest_walk_in_price - $discount_price) / $lowest_walk_in_price * 100;
+
+        $selling_price = $lowest_room_price - $discount_price;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -38,8 +47,8 @@ class HotelResource extends JsonResource
             'contacts' => HotelContractResource::collection($this->contracts),
             'images' => HotelImageResource::collection($this->images),
             'facilities' => FacilityResource::collection($this->facilities),
-            'lowest_room_price' => $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0,
-            'lowest_walk_in_price' => $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0,
+            'lowest_room_price' => $lowest_room_price,
+            'lowest_walk_in_price' => $lowest_walk_in_price,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
             'location_map_title' => $this->location_map_title,
@@ -62,6 +71,12 @@ class HotelResource extends JsonResource
             'vat_id' => $this->vat_id,
             'vat_name' => $this->vat_name,
             'vat_address' => $this->vat_address,
+
+            'discount_price' => $discount_price,
+            'discount_percent' => round($discount_percent),
+            'selling_price' => $selling_price,
+
+            'available_room_count' => $this->rooms->where('is_extra', 0)->count(),
         ];
     }
 
