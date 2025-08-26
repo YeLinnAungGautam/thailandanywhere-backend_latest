@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-
+use PhpOffice\PhpSpreadsheet\Calculation\TextData\Format;
 
 class CashImageService
 {
@@ -840,7 +840,7 @@ class CashImageService
                     // Create simplified cash image data
                     $cashImageData = [
                         'id' => $cashImage->id,
-                        'date' => $cashImage->date,
+                        'date' => $cashImage->date ? $cashImage->date->format('d-m-Y H:i:s') : null,
                         'sender' => $cashImage->sender,
                         'receiver' => $cashImage->receiver,
                         'amount' => $cashImage->amount,
