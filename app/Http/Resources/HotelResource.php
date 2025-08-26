@@ -21,10 +21,10 @@ class HotelResource extends JsonResource
         $lowest_walk_in_price = $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0;
         $lowest_cost_price = $this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0;
 
-        $discount_price = ($lowest_room_price - $lowest_cost_price) * 0.75;
-        $discount_percent = ($lowest_walk_in_price - $discount_price) / $lowest_walk_in_price * 100;
+        $discount_price = ((float) $lowest_room_price - (float) $lowest_cost_price) * 0.75;
+        $discount_percent = ((float) $lowest_walk_in_price - (float) $discount_price) / (float) $lowest_walk_in_price * 100;
 
-        $selling_price = $lowest_room_price - $discount_price;
+        $selling_price = (float) $lowest_room_price - (float) $discount_price;
 
         return [
             'id' => $this->id,

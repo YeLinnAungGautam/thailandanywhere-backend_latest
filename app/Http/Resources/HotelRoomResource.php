@@ -14,9 +14,11 @@ class HotelRoomResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $discount_price = ($this->room_price - $this->cost) * 0.75;
-        $discount_percent = ($this->owner_price - $discount_price) / $this->owner_price * 100;
-        $selling_price = $this->room_price - $discount_price;
+        $discount_price = (float)$this->room_price - (float)$this->cost;
+        $discount_price = $discount_price * 0.75;
+        $owner_price = (float)$this->owner_price;
+        $discount_percent = ($owner_price - $discount_price) / $owner_price * 100;
+        $selling_price = (float)$this->room_price - $discount_price;
 
         $data = parent::toArray($request);
         $data['images'] = RoomImageResource::collection($this->images);
