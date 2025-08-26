@@ -134,7 +134,7 @@ class CashImageController extends Controller
             'receiver' => $validated['reciever'], // Fixed spelling
             'amount' => $validated['amount'],
             'currency' => $validated['currency'],
-            'interact_bank' => $validated['interact_bank'] ?? null,
+            'interact_bank' => $validated['interact_bank'],
             'relatable_type' => $validated['relatable_type'],
             'relatable_id' => $validated['relatable_id'],
             'image_path' => $fileData['filePath'],
