@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\API\Partner\AuthPartnerController;
+use App\Http\Controllers\API\Partner\CashImageController;
 use App\Http\Controllers\API\Partner\DashboardController;
 use App\Http\Controllers\API\Partner\ForgotPasswordController;
+use App\Http\Controllers\API\Partner\HotelPartnerController;
 use App\Http\Controllers\API\Partner\ReservationController;
 use App\Http\Controllers\API\Partner\ResetPasswordController;
+use App\Http\Controllers\API\Partner\RoomController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthPartnerController::class, 'loginPartner']);
@@ -33,4 +38,30 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
 
     // Get monthly sales graph data
     Route::post('monthly-sales', [DashboardController::class, 'getMonthlySalesGraph']);
+
+    // Cash Image
+    Route::get('cash-images', [CashImageController::class, 'index']);
+    Route::get('cash-images/{id}', [CashImageController::class, 'show']);
+
+    // hotel
+    Route::get('hotels/{hotel}', [HotelPartnerController::class, 'show']);
+    Route::put('hotels/{hotel}', [HotelPartnerController::class, 'update']);
+
+    // hotel images
+    Route::delete('hotel/{hotel}/image/{hotel_image}', [HotelPartnerController::class, 'deleteImage']);
+    Route::post('hotel/{hotel}/image', [HotelPartnerController::class, 'addImage']);
+    Route::post('hotel/{hotel}/image/{hotel_image}', [HotelPartnerController::class, 'editImage']);
+
+    // hotel contracts
+    Route::delete('hotel/{id}/contract/{cid}', [HotelPartnerController::class, 'deleteContract']);
+    Route::post('hotel/contract/{id}', [HotelPartnerController::class, 'addContract']);
+
+    // hotel slug
+    Route::post('hotels/{hotel}/slug', [HotelPartnerController::class, 'addSlug']);
+
+    Route::apiResource('facilities', FacilityController::class);
+
+    # Room
+    Route::apiResource('rooms', RoomController::class);
+    Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
 });
