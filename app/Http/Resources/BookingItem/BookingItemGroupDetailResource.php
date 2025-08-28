@@ -30,7 +30,7 @@ class BookingItemGroupDetailResource extends JsonResource
             'expense_method' => $this->expense_method,
             'expense_bank_name' => $this->expense_bank_name,
             'expense_bank_account' => $this->expense_bank_account,
-            'expense_status' => $this->expense_status,
+            'expense_status' => $this->calculateGroupExpenseStatus(),
             'expense_total_amount' => $this->expense_total_amount,
             'confirmation_status' => $this->confirmation_status,
             'confirmation_code' => $this->confirmation_code,
@@ -48,6 +48,22 @@ class BookingItemGroupDetailResource extends JsonResource
     private function hasBookingConfirmLetter()
     {
         return $this->customerDocuments->contains('type', 'booking_confirm_letter');
+    }
+
+    protected function calculateGroupExpenseStatus()
+    {
+        $hasFullyPaid = $this->bookingItems->contains('payment_status', 'fully_paid');
+
+        $hasNotPaid = $this->bookingItems->contains('payment_status', 'not_paid');
+
+        if ($hasFullyPaid && $hasNotPaid) {
+            return 'partially_paid';
+        }
+        if ($hasNotPaid && !$hasFullyPaid) {
+            return 'not_paid';
+        }
+
+        return 'fully_paid';
     }
 
     private function hasPassport()
