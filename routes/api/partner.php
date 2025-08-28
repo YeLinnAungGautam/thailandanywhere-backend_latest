@@ -33,7 +33,7 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::get('booking_item_groups/{id}',[ReservationController::class, 'detail']);
     Route::get('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'getCustomerDocuments']);
     Route::post('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'store']);
-    Route::post('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'update']);
+    Route::put('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'update']);
     Route::delete('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'delete']);
 
     // Get monthly sales graph data

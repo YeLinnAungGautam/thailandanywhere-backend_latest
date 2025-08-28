@@ -29,7 +29,7 @@ class DashboardController extends Controller
         $productType = $request->product_type;
 
         try {
-            // Get monthly sales data with total income
+            // Get monthly sales data with total income (only fully_paid bookings)
             $monthlySales = BookingItem::select(
                 DB::raw('MONTH(service_date) as month'),
                 DB::raw('SUM(
@@ -44,6 +44,7 @@ class DashboardController extends Controller
             )
             ->where('product_id', $productId)
             ->where('product_type', $productType)
+            ->where('payment_status', 'fully_paid')
             ->whereYear('service_date', $year)
             ->whereNull('deleted_at')
             ->groupBy(DB::raw('MONTH(service_date)'))
@@ -70,17 +71,19 @@ class DashboardController extends Controller
                 $monthlyData[$monthIndex]['total_income'] = (float) $sale->total_income;
             }
 
-            // Get total unique bookings count (distinct group_id) for the year
+            // Get total unique bookings count (distinct group_id) for the year (only fully_paid)
             $totalUniqueBookings = BookingItem::where('product_id', $productId)
                 ->where('product_type', $productType)
+                ->where('payment_status', 'fully_paid')
                 ->whereYear('service_date', $year)
                 ->whereNull('deleted_at')
                 ->distinct('group_id')
                 ->count();
 
-            // Get today's booking count (distinct group_id for today)
+            // Get today's booking count (distinct group_id for today) (only fully_paid)
             $todayBookingCount = BookingItem::where('product_id', $productId)
                 ->where('product_type', $productType)
+                ->where('payment_status', 'fully_paid')
                 ->whereDate('service_date', Carbon::today())
                 ->whereNull('deleted_at')
                 ->distinct('group_id')

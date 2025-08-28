@@ -213,7 +213,7 @@ class ReservationController extends Controller
         return $this->success(CustomerDocumentResource::collection($documents), 'Document List');
     }
 
-    public function store(BookingItemGroup $booking_item_group, Request $request)
+    public function store($id, Request $request)
     {
         $request->validate([
             'document_type' => $this->document_type_validation_rule,
@@ -221,6 +221,8 @@ class ReservationController extends Controller
             'documents.*.file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'documents.*.meta' => 'nullable|array',
         ]);
+
+        $booking_item_group = BookingItemGroup::find($id);
 
         try {
             foreach ($request->documents as $document) {
@@ -256,7 +258,7 @@ class ReservationController extends Controller
         }
     }
 
-    public function update(BookingItemGroup $booking_item_group, CustomerDocument $customer_document, Request $request)
+    public function update($id, $customer_document_id, Request $request)
     {
         $request->validate([
             'document_type' => $this->document_type_validation_rule,
@@ -265,7 +267,7 @@ class ReservationController extends Controller
         ]);
 
         try {
-            $document = $booking_item_group->customerDocuments()->find($customer_document->id);
+            $document = BookingItemGroup::find($id)->customerDocuments()->find($customer_document_id);
 
             if (!$document) {
                 return $this->error(null, 'Customer document not found', 404);
@@ -290,19 +292,16 @@ class ReservationController extends Controller
 
             return $this->success(null, 'Passport updated successfully');
         } catch (Exception $e) {
-            Log::error('Error updating customer document: ' . $e->getMessage(), [
-                'booking_item_group_id' => $booking_item_group->id,
-                'request' => $request->all(),
-            ]);
+            Log::error('Error updating customer document: ' . $e->getMessage());
 
             return $this->error($document->file_name, $e->getMessage(), 500);
         }
     }
 
-    public function delete(BookingItemGroup $booking_item_group, CustomerDocument $customer_document)
+    public function delete($id, $customer_document_id, Request $request)
     {
         try {
-            $document = $booking_item_group->customerDocuments()->find($customer_document->id);
+            $document = BookingItemGroup::find($id)->customerDocuments()->find($customer_document_id);
 
             if (!$document) {
                 return $this->error(null, 'Customer document not found', 404);
@@ -314,10 +313,7 @@ class ReservationController extends Controller
 
             return $this->success(null, 'Customer document deleted successfully');
         } catch (Exception $e) {
-            Log::error('Error updating customer document: ' . $e->getMessage(), [
-                'booking_item_group_id' => $booking_item_group->id,
-                'customer_document_id' => $customer_document->id,
-            ]);
+            Log::error('Error updating customer document: ' . $e->getMessage());
 
             return $this->error(null, $e->getMessage(), 500);
         }
