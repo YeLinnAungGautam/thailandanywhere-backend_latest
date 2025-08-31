@@ -165,6 +165,7 @@ class HotelPartnerController extends Controller
     {
         $request->validate([
             'image' => 'required|file|mimes:jpg,jpeg,png|max:2048', // max 2MB
+            'title' => 'nullable|string',
         ]);
 
         if (!$request->hasFile('image')) {
@@ -175,6 +176,7 @@ class HotelPartnerController extends Controller
         HotelImage::create([
             'hotel_id' => $hotel->id,
             'image' => $imageData['fileName'],
+            'title' => $request->title,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -182,21 +184,44 @@ class HotelPartnerController extends Controller
         return $this->success(null, 'Images uploaded successfully', 201);
     }
 
-    public function editImage(Hotel $hotel, HotelImage $hotel_image, Request $request)
+    public function editImage($id, $hotel_image, Request $request)
     {
+        // if ($hotel->id !== $hotel_image->hotel_id) {
+        //     return $this->error(null, 'This image is not belongs to the hotel', 404);
+        // }
+
+        // if ($request->hasFile('image')) {
+        //     // Delete the old image
+        //     Storage::delete('images/' . $hotel_image->image);
+
+        //     // Upload the new image
+        //     $imageData = $this->uploads($request->file('image'), 'images/');
+        //     $hotel_image->image = $imageData['fileName'];
+        //     $hotel_image->title = $request->title ?? $hotel_image->title;
+        //     $hotel_image->update();
+        // }
+
+        // return $this->success($hotel_image, 'Hotel Image Detail', 200);
+        $hotel = Hotel::find($id);
+        $hotel_image = HotelImage::find($hotel_image);
         if ($hotel->id !== $hotel_image->hotel_id) {
-            return $this->error(null, 'This image is not belongs to the hotel', 404);
+            return $this->error(null, 'This image is not belongs to the hotel', 403);
         }
 
-        if ($request->hasFile('image')) {
+        $request->validate([
+            'image' => 'nullable|file|mimes:jpg,jpeg,png|max:2048', // max 2MB
+            'title' => 'nullable|string',
+        ]);
+
+        if($request->hasFile('image')) {
             // Delete the old image
             Storage::delete('images/' . $hotel_image->image);
 
-            // Upload the new image
             $imageData = $this->uploads($request->file('image'), 'images/');
             $hotel_image->image = $imageData['fileName'];
-            $hotel_image->update();
         }
+        $hotel_image->title = $request->title ?? $hotel_image->title;
+        $hotel_image->update();
 
         return $this->success($hotel_image, 'Hotel Image Detail', 200);
     }
