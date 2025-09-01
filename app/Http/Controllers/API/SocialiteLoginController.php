@@ -32,26 +32,20 @@ class SocialiteLoginController extends Controller
             info('User Info: ', (array) $user);
 
             $user = $this->findOrCreateUser($provider, $user);
+
+            info('Search User: ', (array) $user);
+
             $token = $user->createToken('UserToken')->plainTextToken;
+
+            info('Generated Token: ', ['token' => $token]);
 
             return view('oauth/callback', [
                 'token' => $token,
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
-        } catch (\Laravel\Socialite\Two\InvalidStateException $e) {
-            Log::error('Invalid state: '.$e->getMessage());
-
-            return failedMessage('Invalid state: '.$e->getMessage());
         } catch (\Exception $e) {
-            if ($e instanceof \GuzzleHttp\Exception\ClientException) {
-                $response = $e->getResponse()->getBody()->getContents();
-                Log::error('Google OAuth error: '.$response);
-
-                return failedMessage($response);
-            }
-
-            Log::error('General error: '.$e->getMessage());
+            Log::error($e);
 
             return failedMessage($e->getMessage());
         }
