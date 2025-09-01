@@ -94,20 +94,29 @@ class DashboardController extends Controller
                 ->count();
 
             // Get today's booking count through CashImage
-            $todayBookingCount = CashImage::join('booking_item_groups', function($join) {
-                    $join->on('cash_images.relatable_id', '=', 'booking_item_groups.id')
-                         ->where('cash_images.relatable_type', '=', 'App\Models\BookingItemGroup');
-                })
-                ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
-                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                ->where('booking_items.product_id', $productId)
-                ->where('booking_items.product_type', $productType)
-                ->where('bookings.payment_status', 'fully_paid')
-                ->whereDate('cash_images.date', Carbon::today())
-
-                ->whereNull('booking_items.deleted_at')
-                ->distinct('bookings.id')
-                ->count();
+            // Get today's BookingItemGroup count through CashImage
+            $todayBookingItemGroupCount = CashImage::join('booking_item_groups', function($join) {
+                $join->on('cash_images.relatable_id', '=', 'booking_item_groups.id')
+                     ->where('cash_images.relatable_type', '=', 'App\Models\BookingItemGroup');
+            })
+            ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
+            ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+            ->where('booking_items.product_id', $productId)
+            ->where('booking_items.product_type', $productType)
+            ->where('bookings.payment_status', 'fully_paid')
+            ->whereYear('cash_images.date', $year)
+            ->whereNull('booking_items.deleted_at')
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('booking_items as bi')
+                      ->whereColumn('bi.group_id', 'booking_item_groups.id')
+                      ->whereNull('bi.deleted_at')
+                      ->whereDate('bi.service_date', Carbon::today())
+                      ->having(DB::raw('MIN(bi.service_date)'), '=', Carbon::today())
+                      ->groupBy('bi.group_id');
+            })
+            ->distinct('booking_item_groups.id')
+            ->count();
 
             return response()->json([
                 'status' => 1,
@@ -121,7 +130,7 @@ class DashboardController extends Controller
                     'total_year_items' => array_sum(array_column($monthlyData, 'total_items')),
                     'total_year_income' => array_sum(array_column($monthlyData, 'total_income')),
                     'total_unique_bookings' => $totalUniqueBookings,
-                    'today_booking_count' => $todayBookingCount
+                    'today_booking_count' => $todayBookingItemGroupCount
                 ]
             ]);
 

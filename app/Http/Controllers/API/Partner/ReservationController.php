@@ -137,10 +137,8 @@ class ReservationController extends Controller
         }
 
         // Expense Item Status Filter
-        if ($request->expense_item_status) {
-            $query->whereHas('bookingItems', function ($q) use ($request) {
-                $q->where('payment_status', $request->expense_item_status);
-            });
+        if ($request->expense_item_status == 'fully_paid') {
+            $query->has('cashImages');
         }
     }
 
