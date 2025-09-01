@@ -16,8 +16,12 @@ class SocialiteLoginController extends Controller
 {
     public function redirect(string $provider)
     {
+        $url = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
+
+        info($url);
+
         return success([
-            'url' => Socialite::driver($provider)->stateless()->redirect()->getTargetUrl(),
+            'url' => $url,
         ]);
     }
 
