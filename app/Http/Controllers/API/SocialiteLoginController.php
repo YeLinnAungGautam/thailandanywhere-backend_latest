@@ -29,6 +29,8 @@ class SocialiteLoginController extends Controller
         try {
             $user = Socialite::driver('google')->stateless()->user();
 
+            info('User Info: ', (array) $user);
+
             $user = $this->findOrCreateUser($provider, $user);
             $token = $user->createToken('UserToken')->plainTextToken;
 
