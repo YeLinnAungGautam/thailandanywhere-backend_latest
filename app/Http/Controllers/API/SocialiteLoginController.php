@@ -37,7 +37,7 @@ class SocialiteLoginController extends Controller
 
             $token = $user->createToken('UserToken')->plainTextToken;
 
-            // info('Generated Token: ', ['token' => $token]);
+            info('Generated Token: ', ['token' => $token]);
 
             return view('oauth/callback', [
                 'token' => $token,
