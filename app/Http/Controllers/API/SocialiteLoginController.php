@@ -6,7 +6,6 @@ use App\Exceptions\EmailTakenException;
 use App\Http\Controllers\Controller;
 use App\Models\OAuthProvider;
 use App\Models\User;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -18,7 +17,7 @@ class SocialiteLoginController extends Controller
     {
         $url = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
 
-        info($url);
+        // info($url);
 
         return success([
             'url' => $url,
@@ -38,8 +37,19 @@ class SocialiteLoginController extends Controller
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
-        } catch (Exception $e) {
-            Log::error($e);
+        } catch (\Laravel\Socialite\Two\InvalidStateException $e) {
+            Log::error('Invalid state: '.$e->getMessage());
+
+            return failedMessage('Invalid state: '.$e->getMessage());
+        } catch (\Exception $e) {
+            if ($e instanceof \GuzzleHttp\Exception\ClientException) {
+                $response = $e->getResponse()->getBody()->getContents();
+                Log::error('Google OAuth error: '.$response);
+
+                return failedMessage($response);
+            }
+
+            Log::error('General error: '.$e->getMessage());
 
             return failedMessage($e->getMessage());
         }
