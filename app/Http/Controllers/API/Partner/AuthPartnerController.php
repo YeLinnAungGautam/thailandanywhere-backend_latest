@@ -56,6 +56,25 @@ class AuthPartnerController extends Controller
         ], 'Partner Account Detail');
     }
 
+    public function updateProfile(Request $request, $id){
+        $partner = Partner::find($id);
+
+        if (!$partner) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email',]);
+
+        $partner->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        return $this->success($partner, 'Successfully updated');
+    }
+
     public function changePassword(Request $request, $id)
     {
         $request->validate([
