@@ -53,7 +53,8 @@ class CashImagePartnerService
             return [
                 'success' => true,
                 'data' => $resourceCollection->response()->getData(true),
-                'message' => 'Cash images retrieved successfully'
+                'message' => 'Cash images retrieved successfully',
+
             ];
 
         } catch (InvalidArgumentException $e) {

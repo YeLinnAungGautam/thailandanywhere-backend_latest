@@ -8,6 +8,7 @@ use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
 use App\Models\BookingItemGroup;
 use App\Models\CustomerDocument;
 use App\Traits\HttpResponses;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -38,9 +39,6 @@ class ReservationController extends Controller
             // Apply sorting
             $this->applySorting($query, $request);
 
-            // Calculate total cost price sum for filtered results
-            $totalCostPriceSum = $this->getTotalCostPriceSum($query);
-
             // Paginate results
             $groups = $query->paginate($request->get('limit', 20));
 
@@ -48,7 +46,8 @@ class ReservationController extends Controller
                 BookingItemGroupListResource::collection($groups)->additional([
                     'meta' => [
                         'total_page' => (int)ceil($groups->total() / $groups->perPage()),
-                        'total_cost_price_sum' => $totalCostPriceSum,
+                        'total_count' => $groups->total(),
+                        'total_nights' => $this->getTotalNights($groups),
                     ],
                 ])->response()->getData(),
                 'Filtered Booking Groups'
@@ -163,18 +162,23 @@ class ReservationController extends Controller
         }
     }
 
-    private function getTotalCostPriceSum($query)
+    // ညီစေရန် - Extra room filter ကို ReservationController မှာ ထည့်မယ်
+    private function getTotalNights($groups)
     {
-        // Clone the query to avoid affecting the main query
-        $clonedQuery = clone $query;
-
-        // Get the group IDs from the filtered query
-        $groupIds = $clonedQuery->pluck('booking_item_groups.id');
-
-        // Calculate sum of total_cost_price for booking items in these groups
-        return DB::table('booking_items')
-            ->whereIn('group_id', $groupIds)
-            ->sum('total_cost_price');
+        return $groups->sum(function ($group) {
+            return $group->bookingItems
+                ->filter(function($item) {
+                    // Extra room မဟုတ်တဲ့ items တွေပဲ တွက်မယ်
+                    return !($item->room && $item->room->is_extra == 1);
+                })
+                ->sum(function ($item) {
+                    if ($item->checkin_date && $item->checkout_date) {
+                        return $item->quantity * Carbon::parse($item->checkout_date)
+                            ->diffInDays(Carbon::parse($item->checkin_date));
+                    }
+                    return $item->quantity; // Date မရှိရင် quantity ပဲ return
+                });
+        });
     }
 
     public function detail($id, Request $request)
