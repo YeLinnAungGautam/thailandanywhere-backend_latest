@@ -6,7 +6,6 @@ use App\Exceptions\EmailTakenException;
 use App\Http\Controllers\Controller;
 use App\Models\OAuthProvider;
 use App\Models\User;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -16,8 +15,12 @@ class SocialiteLoginController extends Controller
 {
     public function redirect(string $provider)
     {
+        $url = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
+
+        // info($url);
+
         return success([
-            'url' => Socialite::driver($provider)->stateless()->redirect()->getTargetUrl(),
+            'url' => $url,
         ]);
     }
 
@@ -26,15 +29,22 @@ class SocialiteLoginController extends Controller
         try {
             $user = Socialite::driver('google')->stateless()->user();
 
+            // info('User Info: ', (array) $user);
+
             $user = $this->findOrCreateUser($provider, $user);
+
+            // info('Search User: ', (array) $user);
+
             $token = $user->createToken('UserToken')->plainTextToken;
+
+            // info('Generated Token: ', ['token' => $token]);
 
             return view('oauth/callback', [
                 'token' => $token,
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error($e);
 
             return failedMessage($e->getMessage());

@@ -6,16 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Mail\VerifyEmail;
 use App\Models\User;
+use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 
+use Illuminate\Support\Facades\Mail;
 use function Laravel\Prompts\error;
 
 class RegisterController extends Controller
 {
+    use HttpResponses;
+
     public function register(RegisterRequest $request)
     {
         try {
@@ -120,7 +123,7 @@ class RegisterController extends Controller
                 ->first();
 
             if (!$user) {
-                return error('Invalid verification code or email!');
+                throw new Exception('Invalid verification code or email.');
             }
 
             $user->email_verification_token = null;
@@ -135,7 +138,8 @@ class RegisterController extends Controller
                 'token' => $token
             ], 'Your email has been verified successfully. You can now login.');
         } catch (Exception $e) {
-            return error('An error occurred while verifying your email: ' . $e->getMessage());
+
+            return $this->error(null, $e->getMessage());
         }
     }
 }

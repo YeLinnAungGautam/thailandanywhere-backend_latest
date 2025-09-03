@@ -374,48 +374,50 @@ class InclusiveController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
-        foreach ($request->details as $detail) {
-            $inclusive_detail = InclusiveDetail::updateOrCreate(
-                [
-                    'inclusive_id' => $id,
-                    'day_name' => $detail['day_name'],
-                ],
-                [
-                    'title' => $detail['title'],
-                    'summary' => $detail['summary'],
-                    'summary_mm' => $detail['summary_mm'] ?? null,
-                    'meals' => $detail['meals'],
-                ]
-            );
+        if ($request->details) {
+            foreach ($request->details as $detail) {
+                $inclusive_detail = InclusiveDetail::updateOrCreate(
+                    [
+                        'inclusive_id' => $id,
+                        'day_name' => $detail['day_name'],
+                    ],
+                    [
+                        'title' => $detail['title'],
+                        'summary' => $detail['summary'],
+                        'summary_mm' => $detail['summary_mm'] ?? null,
+                        'meals' => $detail['meals'],
+                    ]
+                );
 
-            if (array_key_exists('image', $detail) && $detail['image']) {
-                $fileData = $this->uploads($detail['image'], 'images/');
+                if (array_key_exists('image', $detail) && $detail['image']) {
+                    $fileData = $this->uploads($detail['image'], 'images/');
 
-                $inclusive_detail->update(['image' => $fileData['fileName']]);
-            }
-
-            if ($detail['cities']) {
-                $inclusive_cities = explode(',', $detail['cities']);
-
-                $inclusive_detail->cities()->sync($inclusive_cities);
-            }
-
-            if ($detail['destinations'] && $detail['destinations'] != '') {
-                $inclusive_destinations = explode(',', $detail['destinations']);
-
-                if (!$inclusive_destinations) {
-                    $inclusive_detail->destinations()->detach();
-                } else {
-                    $inclusive_detail->destinations()->sync($inclusive_destinations);
+                    $inclusive_detail->update(['image' => $fileData['fileName']]);
                 }
-            } else {
-                $inclusive_detail->destinations()->detach();
-            }
 
-            if ($detail['restaurants']) {
-                $inclusive_restaurants = explode(',', $detail['restaurants']);
+                if ($detail['cities']) {
+                    $inclusive_cities = explode(',', $detail['cities']);
 
-                $inclusive_detail->restaurants()->sync($inclusive_restaurants);
+                    $inclusive_detail->cities()->sync($inclusive_cities);
+                }
+
+                if ($detail['destinations'] && $detail['destinations'] != '') {
+                    $inclusive_destinations = explode(',', $detail['destinations']);
+
+                    if (!$inclusive_destinations) {
+                        $inclusive_detail->destinations()->detach();
+                    } else {
+                        $inclusive_detail->destinations()->sync($inclusive_destinations);
+                    }
+                } else {
+                    $inclusive_detail->destinations()->detach();
+                }
+
+                if ($detail['restaurants']) {
+                    $inclusive_restaurants = explode(',', $detail['restaurants']);
+
+                    $inclusive_detail->restaurants()->sync($inclusive_restaurants);
+                }
             }
         }
 

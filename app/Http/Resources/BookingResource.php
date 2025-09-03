@@ -3,10 +3,10 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
-use App\Models\Airline;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class BookingResource extends JsonResource
 {
@@ -18,6 +18,8 @@ class BookingResource extends JsonResource
     public function toArray(Request $request): array
     {
         $sourceOrder = Order::where('booking_id', $this->id)->first();
+
+        // dd($this->bCashImages);
 
         return [
             'id' => $this->id,
@@ -88,6 +90,28 @@ class BookingResource extends JsonResource
             // timestamps
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
+
+            'cash_images' => $this->whenLoaded('bCashImages', function () {
+                return $this->bCashImages->map(function ($cashImage) {
+                    return [
+                        'id' => $cashImage->id,
+                        'image' => $cashImage->image ? Storage::url('images/' . $cashImage->image) : null,
+                        'date' => $cashImage->date ? $cashImage->date->format('d-m-Y H:i:s') : null,
+                        'created_at' => $cashImage->created_at->format('d-m-Y H:i:s'),
+                        'updated_at' => $cashImage->updated_at->format('d-m-Y H:i:s'),
+                        'sender' => $cashImage->sender,
+                        'receiver' => $cashImage->receiver,
+                        'amount' => $cashImage->amount,
+                        'currency' => $cashImage->currency,
+                        'interact_bank' => $cashImage->interact_bank,
+                        'pivot' => [
+                            'type' => $cashImage->pivot->type,
+                            'deposit' => $cashImage->pivot->deposit,
+                            'notes' => $cashImage->pivot->notes,
+                        ]
+                    ];
+                });
+            }, CashImageResource::collection($this->bCashImages)),
         ];
     }
 }

@@ -21,6 +21,7 @@ use App\Http\Controllers\API\V2\HotelController;
 use App\Http\Controllers\API\V2\InclusiveController;
 use App\Http\Controllers\API\V2\MealController;
 use App\Http\Controllers\API\V2\PrivateVanTourController;
+use App\Http\Controllers\API\V2\ProfileController;
 use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
@@ -107,6 +108,10 @@ Route::group([], function () {
 
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('logout', [LoginController::class, 'logout']);
+
+        Route::get('profile', [ProfileController::class, 'show']);
+        Route::put('profile', [ProfileController::class, 'update']);
+        Route::post('change-password', [ProfileController::class, 'changePassword']);
 
         # Bookings
         Route::get('bookings', [BookingController::class, 'index']);

@@ -120,8 +120,16 @@ class CashImageController extends Controller
             'amount' => 'required|numeric|min:0',
             'interact_bank' => 'nullable|string|max:255',
             'currency' => 'required|string|max:10',
-            'relatable_type' => 'required',
-            'relatable_id' => 'required'
+            'relatable_type' => 'required', // booking_item_group
+            'relatable_id' => 'required', // 123
+
+            // targets is nullable, but if present, models are required
+            'targets' => 'nullable|array',
+            'targets.*.model_type' => 'required_with:targets|string|in:booking,cash_book,booking_item_group',
+            'targets.*.model_id' => 'required_with:targets|integer',
+            'type' => 'nullable|string|max:255',
+            'deposit' => 'nullable|numeric',
+            'notes' => 'nullable|string',
         ]);
 
         // Since image is required, no need to check if empty
@@ -140,13 +148,50 @@ class CashImageController extends Controller
             'image_path' => $fileData['filePath'],
         ]);
 
+        // Attach to targets if provided
+        if (!empty($validated['targets'])) {
+            foreach ($validated['targets'] as $target) {
+                $modelType = $target['model_type'];
+                $modelId = $target['model_id'];
+
+                // Create the attachment data
+                $attachmentData = [
+                    'type' => $validated['type'] ?? null,
+                    'deposit' => $validated['deposit'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                ];
+
+                // Attach to the appropriate relationship based on model type
+                switch ($modelType) {
+                    case 'booking':
+                        $create->cashBookings()->attach($modelId, $attachmentData);
+
+                        break;
+                    case 'cash_book':
+                        $create->cashBooks()->attach($modelId, $attachmentData);
+
+                        break;
+                    case 'booking_item_group':
+                        $create->cashBookingItemGroups()->attach($modelId, $attachmentData);
+
+                        break;
+                }
+            }
+        }
+
         return $this->success(new CashImageResource($create), 'Successfully created');
     }
 
     public function show(string $id)
     {
         $find = CashImage::query()
-            ->with(['relatable', 'bookings'])
+            ->with([
+                'relatable',
+                'bookings',
+                'cashBookings.customer',
+                'cashBooks',
+                'cashBookingItemGroups'
+            ])
             ->find($id);
 
         if (!$find) {
@@ -164,18 +209,86 @@ class CashImageController extends Controller
             return $this->error(null, 'Data not found', 404);
         }
 
+        $validated = $request->validate([
+            'date' => 'nullable|date_format:Y-m-d H:i:s',
+            'sender' => 'nullable|string|max:255',
+            'reciever' => 'nullable|string|max:255',
+            'amount' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:10',
+            'interact_bank' => 'nullable|string|max:255',
+            'relatable_type' => 'nullable|string',
+            'relatable_id' => 'nullable|integer',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:10240',
+
+            // targets management
+            'targets' => 'nullable|array',
+            'targets.*.model_type' => 'required_with:targets|string|in:booking,cash_book,booking_item_group',
+            'targets.*.model_id' => 'required_with:targets|integer',
+            'type' => 'nullable|string|max:255',
+            'deposit' => 'nullable|numeric',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Update basic cash image data
         $data = [
-            'date' => $request->date ?? $find->date,
-            'sender' => $request->sender ?? $find->sender,
-            'receiver' => $request->reciever ?? $find->reciever,
-            'amount' => $request->amount ?? $find->amount,
-            'currency' => $request->currency ?? $find->currency,
-            'interact_bank' => $request->interact_bank ?? $find->interact_bank,
-            'relatable_type' => $request->relatable_type ?? $find->relatable_type,
-            'relatable_id' => $request->relatable_id ?? $find->relatable_id,
+            'date' => $validated['date'] ?? $find->date,
+            'sender' => $validated['sender'] ?? $find->sender,
+            'receiver' => $validated['reciever'] ?? $find->receiver,
+            'amount' => $validated['amount'] ?? $find->amount,
+            'currency' => $validated['currency'] ?? $find->currency,
+            'interact_bank' => $validated['interact_bank'] ?? $find->interact_bank,
+            'relatable_type' => $validated['relatable_type'] ?? $find->relatable_type,
+            'relatable_id' => $validated['relatable_id'] ?? $find->relatable_id,
         ];
 
+        // Handle image upload if provided
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($find->image) {
+                Storage::delete('images/' . $find->image);
+            }
+
+            $fileData = $this->uploads($request->file('image'), 'images/');
+            $data['image'] = $fileData['fileName'];
+            $data['image_path'] = $fileData['filePath'];
+        }
+
         $find->update($data);
+
+        // Handle targets if provided
+        if (isset($validated['targets'])) {
+            // Detach all current relationships
+            $find->cashBookings()->detach();
+            $find->cashBooks()->detach();
+            $find->cashBookingItemGroups()->detach();
+
+            // Attach new targets
+            foreach ($validated['targets'] as $target) {
+                $modelType = $target['model_type'];
+                $modelId = $target['model_id'];
+
+                $attachmentData = [
+                    'type' => $validated['type'] ?? null,
+                    'deposit' => $validated['deposit'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                ];
+
+                switch ($modelType) {
+                    case 'booking':
+                        $find->cashBookings()->attach($modelId, $attachmentData);
+
+                        break;
+                    case 'cash_book':
+                        $find->cashBooks()->attach($modelId, $attachmentData);
+
+                        break;
+                    case 'booking_item_group':
+                        $find->cashBookingItemGroups()->attach($modelId, $attachmentData);
+
+                        break;
+                }
+            }
+        }
 
         return $this->success(new CashImageResource($find), 'Successfully updated');
     }
@@ -186,7 +299,17 @@ class CashImageController extends Controller
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
-        Storage::delete('images/' . $find->image);
+
+        // Detach all pivot relationships before deletion
+        $find->cashBookings()->detach();
+        $find->cashBooks()->detach();
+        $find->cashBookingItemGroups()->detach();
+
+        // Delete associated image file if exists
+        if ($find->image) {
+            Storage::delete('images/' . $find->image);
+        }
+
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
