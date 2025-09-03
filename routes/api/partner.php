@@ -38,6 +38,9 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::put('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'update']);
     Route::delete('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'delete']);
 
+    // booking items
+    Route::get('booking_items', [ReservationController::class, 'getBookingItems']);
+
     // Get monthly sales graph data
     Route::post('monthly-sales', [DashboardController::class, 'getMonthlySalesGraph']);
 

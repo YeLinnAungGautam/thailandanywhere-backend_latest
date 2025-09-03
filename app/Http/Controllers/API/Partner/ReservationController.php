@@ -5,6 +5,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingItem\BookingItemGroupDetailResource;
 use App\Http\Resources\BookingItem\BookingItemGroupListResource;
 use App\Http\Resources\BookingItemGroup\CustomerDocumentResource;
+use App\Http\Resources\BookingItemPartnerListResource;
+use App\Models\BookingItem;
 use App\Models\BookingItemGroup;
 use App\Models\CustomerDocument;
 use App\Traits\HttpResponses;
@@ -51,6 +53,65 @@ class ReservationController extends Controller
                     ],
                 ])->response()->getData(),
                 'Filtered Booking Groups'
+            );
+
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getBookingItems(Request $request)
+    {
+        try {
+            $productId = $request->product_id;
+            $productType = $request->product_type;
+            $crm_id = $request->crm_id;
+            $date_range = $request->date_range;
+
+            $query = BookingItem::query()->with([
+                'product','group.cashImages','room','booking','booking.customer'
+            ]);
+            $limit = $request->limit ?? 10;
+
+            if ($productId) {
+                $query->where('product_id', $productId);
+            }
+
+            if ($productType) {
+                $query->where('product_type', $productType);
+            }
+
+            if ($crm_id) {
+                $query->where('crm_id', $crm_id);
+            }
+
+            $query->where('payment_status', 'fully_paid');
+
+            $query->whereHas('room', function ($q) {
+                $q->where('is_extra', 0);
+            });
+
+            if ($date_range) {
+                $dates = array_map('trim', explode(',', $date_range));
+                if (count($dates) === 2) {
+                    $query->whereBetween('service_date', $dates);
+                } elseif (count($dates) === 1) {
+                    $query->whereDate('service_date', $dates[0]);
+                }
+            }
+
+            $query->whereNull('deleted_at');
+
+            $bookingItems = $query->paginate($limit);
+
+            return $this->success(
+                BookingItemPartnerListResource::collection($bookingItems)->additional([
+                    'meta' => [
+                        'total_page' => (int)ceil($bookingItems->total() / $bookingItems->perPage()),
+
+                    ],
+                ])->response()->getData(),
+                'Filtered Booking Items'
             );
 
         } catch (Exception $e) {

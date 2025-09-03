@@ -91,6 +91,9 @@ class DashboardController extends Controller
     /**
      * Get monthly booking data - Match ReservationController approach exactly
      */
+    /**
+     * Get monthly booking data - Match ReservationController approach exactly
+     */
     private function getMonthlyBookingData($year, $productId, $productType)
     {
         // Get BookingItemGroups that match our criteria - same approach as ReservationController
@@ -119,21 +122,19 @@ class DashboardController extends Controller
             ->keyBy('month');
 
         // Get monthly quantity - Match ReservationController calculation exactly
+        // FIXED: Added the same cash images filtering here
         $monthlyQuantity = DB::table('booking_items')
             ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
+            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
+            ->where('rooms.is_extra', 0)
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
             ->whereYear('booking_items.service_date', $year)
             ->whereNull('booking_items.deleted_at')
-            ->whereExists(function($query) {
-                $query->select(DB::raw(1))
-                      ->from('cash_images')
-                      ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
-                      ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
-            })
+            ->where('booking_items.payment_status', 'fully_paid')
             ->select(
                 DB::raw('MONTH(service_date) as month'),
-                DB::raw('SUM(booking_items.quantity) as total_quantity')
+                DB::raw('SUM(booking_items.quantity * DATEDIFF(booking_items.checkout_date, booking_items.checkin_date)) as total_quantity')
             )
             ->groupBy(DB::raw('MONTH(service_date)'))
             ->get()
@@ -310,12 +311,10 @@ class DashboardController extends Controller
     {
         $query = DB::table('booking_items')
             ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
-            ->whereExists(function($q) {
-                $q->select(DB::raw(1))
-                  ->from('cash_images')
-                  ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
-                  ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
-            })
+            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
+            ->where('rooms.is_extra', 0)
+            ->where('booking_items.payment_status','fully_paid')
+
             ->whereNull('booking_items.deleted_at');
 
         $this->applyFilters($query, $filters);
