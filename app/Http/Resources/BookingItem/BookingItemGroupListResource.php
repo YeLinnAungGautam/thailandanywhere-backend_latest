@@ -66,6 +66,8 @@ class BookingItemGroupListResource extends JsonResource
 
             if ($item->product_type === 'App\Models\Hotel') {
                 $data['days'] = $item->checkin_date ? Carbon::parse($item->checkout_date)->diffInDays(Carbon::parse($item->checkin_date)) : 'N/A';
+                $data['checkin_date'] = $item->checkin_date;
+                $data['checkout_date'] = $item->checkout_date;
             }
 
             if ($item->product_type === 'App\Models\EntranceTicket') {

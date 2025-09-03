@@ -89,82 +89,61 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get monthly booking data - Improved consistency
+     * Get monthly booking data - Match ReservationController approach exactly
      */
     private function getMonthlyBookingData($year, $productId, $productType)
     {
-        // Get quantity from BookingItems (consistent with ReservationController filtering)
-        $quantityData = DB::table('booking_items')
-            ->select(
-                DB::raw('MONTH(service_date) as month'),
-                DB::raw('SUM(
-                    CASE
-                        WHEN checkin_date IS NOT NULL AND checkout_date IS NOT NULL
-                        THEN DATEDIFF(checkout_date, checkin_date)
-                        ELSE quantity
-                    END
-                ) as total_quantity')
-            )
-            ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
+        // Get BookingItemGroups that match our criteria - same approach as ReservationController
+        $query = DB::table('booking_item_groups')
+            ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
             ->whereYear('booking_items.service_date', $year)
             ->whereNull('booking_items.deleted_at')
-            // Apply extra room filter consistently with ReservationController
-            ->where(function($query) {
-                $query->whereNull('rooms.id') // For items without rooms
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            })
-            // Only include booking groups that have cash images (consistent with CashImagePartnerService)
+            // Only include booking groups that have cash images
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('cash_images')
                       ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
                       ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
-            })
-            ->groupBy(DB::raw('MONTH(service_date)'))
-            ->get()
-            ->keyBy('month');
+            });
 
-        // Get count from BookingItemGroups (consistent filtering)
-        $countData = DB::table('booking_item_groups')
+        // Get monthly group counts - Count unique groups by service_date month
+        $monthlyGroups = $query
             ->select(
                 DB::raw('MONTH(booking_items.service_date) as month'),
                 DB::raw('COUNT(DISTINCT booking_item_groups.id) as total_items')
             )
-            ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
+            ->groupBy(DB::raw('MONTH(booking_items.service_date)'))
+            ->get()
+            ->keyBy('month');
+
+        // Get monthly quantity - Match ReservationController calculation exactly
+        $monthlyQuantity = DB::table('booking_items')
+            ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
             ->whereYear('booking_items.service_date', $year)
             ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            })
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('cash_images')
                       ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
                       ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
             })
-            ->groupBy(DB::raw('MONTH(booking_items.service_date)'))
+            ->select(
+                DB::raw('MONTH(service_date) as month'),
+                DB::raw('SUM(booking_items.quantity) as total_quantity')
+            )
+            ->groupBy(DB::raw('MONTH(service_date)'))
             ->get()
             ->keyBy('month');
 
-        // Combine results
+        // Build result collection
         $result = collect();
         for ($month = 1; $month <= 12; $month++) {
-            $quantity = isset($quantityData[$month]) ? (int) $quantityData[$month]->total_quantity : 0;
-            $items = isset($countData[$month]) ? (int) $countData[$month]->total_items : 0;
+            $quantity = isset($monthlyQuantity[$month]) ? (int) $monthlyQuantity[$month]->total_quantity : 0;
+            $items = isset($monthlyGroups[$month]) ? (int) $monthlyGroups[$month]->total_items : 0;
 
             if ($quantity > 0 || $items > 0) {
                 $result->push((object) [
@@ -179,7 +158,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get monthly income data from CashImage - Consistent with CashImagePartnerService
+     * Get monthly income data from CashImage - Match CashImagePartnerService exactly
      */
     private function getMonthlyIncomeData($year, $productId, $productType)
     {
@@ -188,21 +167,25 @@ class DashboardController extends Controller
                 DB::raw('MONTH(cash_images.date) as month'),
                 DB::raw('SUM(cash_images.amount) as total_income')
             )
-            ->join('booking_item_groups', 'cash_images.relatable_id', '=', 'booking_item_groups.id')
-            ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup')
-            ->where('booking_items.product_id', $productId)
-            ->where('booking_items.product_type', $productType)
+            ->where('cash_images.relatable_id', '>', 0)
             ->whereYear('cash_images.date', $year)
-            ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
+            // Apply product filters through BookingItemGroup relationships - same as CashImagePartnerService
+            ->whereExists(function ($existsQuery) use ($productId) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('booking_item_groups')
+                           ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
+                           ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                           ->where('booking_items.product_id', $productId)
+                           ->whereNull('booking_items.deleted_at');
+            })
+            ->whereExists(function ($existsQuery) use ($productType) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('booking_item_groups')
+                           ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
+                           ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                           ->where('booking_items.product_type', $productType)
+                           ->whereNull('booking_items.deleted_at');
             })
             ->groupBy(DB::raw('MONTH(cash_images.date)'))
             ->orderBy('month')
@@ -210,26 +193,17 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get total unique bookings for the year - Consistent filtering
+     * Get total unique bookings for the year - Match filtering approach
      */
     private function getTotalUniqueBookings($year, $productId, $productType)
     {
         return DB::table('booking_item_groups')
             ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
             ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
             ->whereYear('booking_items.service_date', $year)
             ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            })
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('cash_images')
@@ -241,26 +215,17 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get today's booking item group count - Consistent filtering
+     * Get today's booking item group count - Match filtering approach
      */
     private function getTodayBookingItemGroupCount($year, $productId, $productType)
     {
         return DB::table('booking_item_groups')
             ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
             ->whereYear('booking_items.service_date', $year)
             ->whereDate('booking_items.service_date', Carbon::today())
             ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            })
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('cash_images')
@@ -272,7 +237,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get dashboard summary with filters - Improved consistency
+     * Get dashboard summary with filters - Match CashImagePartnerService approach
      */
     public function getDashboardSummary(Request $request)
     {
@@ -312,29 +277,20 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get booking group statistics (consistent with other controllers)
+     * Get booking group statistics - Match CashImagePartnerService approach
      */
     private function getBookingGroupStatistics($filters)
     {
         $query = DB::table('booking_item_groups')
             ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
             ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->whereExists(function($q) {
                 $q->select(DB::raw(1))
                   ->from('cash_images')
                   ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
                   ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
             })
-            ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            });
+            ->whereNull('booking_items.deleted_at');
 
         $this->applyFilters($query, $filters);
 
@@ -348,26 +304,17 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get quantity statistics (consistent filtering, exclude extra rooms)
+     * Get quantity statistics - Calculate nights properly for hotels
      */
     private function getQuantityStatistics($filters)
     {
         $query = DB::table('booking_items')
             ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->whereExists(function($q) {
                 $q->select(DB::raw(1))
                   ->from('cash_images')
                   ->whereColumn('cash_images.relatable_id', 'booking_item_groups.id')
                   ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup');
-            })
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
             })
             ->whereNull('booking_items.deleted_at');
 
@@ -392,26 +339,51 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get income statistics (consistent with CashImagePartnerService approach)
+     * Get income statistics - Match CashImagePartnerService exactly
      */
     private function getIncomeStatistics($filters)
     {
         $query = DB::table('cash_images')
-            ->join('booking_item_groups', 'cash_images.relatable_id', '=', 'booking_item_groups.id')
-            ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
-            ->leftJoin('rooms', 'booking_items.room_id', '=', 'rooms.id')
             ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup')
-            ->whereNull('booking_items.deleted_at')
-            // Apply consistent extra room filter
-            ->where(function($query) {
-                $query->whereNull('rooms.id')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->whereNull('rooms.is_extra')
-                                   ->orWhere('rooms.is_extra', '!=', 1);
-                      });
-            });
+            ->where('cash_images.relatable_id', '>', 0);
 
-        $this->applyFilters($query, $filters, 'cash_images.date');
+        // Apply product filters through BookingItemGroup relationships - same as CashImagePartnerService
+        if ($filters['product_id']) {
+            $query->whereExists(function ($existsQuery) use ($filters) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('booking_item_groups')
+                           ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
+                           ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                           ->where('booking_items.product_id', $filters['product_id'])
+                           ->whereNull('booking_items.deleted_at');
+            });
+        }
+
+        if ($filters['product_type']) {
+            $query->whereExists(function ($existsQuery) use ($filters) {
+                $existsQuery->select(DB::raw(1))
+                           ->from('booking_item_groups')
+                           ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
+                           ->whereColumn('booking_item_groups.id', 'cash_images.relatable_id')
+                           ->where('booking_items.product_type', $filters['product_type'])
+                           ->whereNull('booking_items.deleted_at');
+            });
+        }
+
+        // Apply date filters
+        if ($filters['date_range']) {
+            $dates = array_map('trim', explode(',', $filters['date_range']));
+            if (count($dates) === 2) {
+                $query->whereDate('cash_images.date', '>=', $dates[0])
+                      ->whereDate('cash_images.date', '<=', $dates[1]);
+            } elseif (count($dates) === 1) {
+                $query->whereDate('cash_images.date', $dates[0]);
+            }
+        }
+
+        if ($filters['year']) {
+            $query->whereYear('cash_images.date', $filters['year']);
+        }
 
         $totalIncome = $query->sum('cash_images.amount');
         $totalCashImages = $query->count();
@@ -425,7 +397,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Apply filters to query - Enhanced for consistency
+     * Apply filters to query - Match CashImagePartnerService approach
      */
     private function applyFilters($query, $filters, $dateColumn = 'booking_items.service_date')
     {
@@ -438,7 +410,7 @@ class DashboardController extends Controller
             $query->where('booking_items.product_type', $filters['product_type']);
         }
 
-        // Date range filter - Consistent with CashImagePartnerService
+        // Date range filter - same as CashImagePartnerService
         if ($filters['date_range']) {
             $dates = array_map('trim', explode(',', $filters['date_range']));
             if (count($dates) === 2) {
