@@ -94,7 +94,7 @@ class CartController extends Controller
     // Clear entire cart
     public function clear()
     {
-        Cart::where('user_id', Auth::id())->delete();
+        Cart::where('owner_id', Auth::id())->delete();
 
         return $this->success(null, 'Cart cleared successfully');
     }

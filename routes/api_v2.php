@@ -125,7 +125,7 @@ Route::group([], function () {
         Route::get('carts/{id}', [CartController::class, 'show']);
         Route::put('carts/{cart}', [CartController::class, 'update']);
         Route::delete('carts/{cart}', [CartController::class, 'destroy']);
-        Route::delete('carts/clear', [CartController::class, 'clear']);
+        Route::delete('carts/clear/all', [CartController::class, 'clear']);
 
         # Order
         Route::get('orders', [OrderController::class, 'index']);
