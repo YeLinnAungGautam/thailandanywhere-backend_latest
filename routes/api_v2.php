@@ -110,7 +110,7 @@ Route::group([], function () {
         Route::post('logout', [LoginController::class, 'logout']);
 
         Route::get('profile', [ProfileController::class, 'show']);
-        Route::put('profile', [ProfileController::class, 'update']);
+        Route::put('profile', [ProfileController::class, 'updateProfile']);
         Route::post('change-password', [ProfileController::class, 'changePassword']);
 
         # Bookings
