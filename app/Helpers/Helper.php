@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -88,5 +89,16 @@ if (!function_exists('delete_file')) {
     function delete_file($path, $file_name)
     {
         Storage::delete("/$path/$file_name");
+    }
+}
+
+if (!function_exists('hotel_discount')) {
+    function hotel_discount($convert_to_int = true)
+    {
+        $setting = Setting::where('meta_key', 'hotel_discount')->first();
+
+        $value = $setting ? (int) $setting->meta_value : 0;
+
+        return $convert_to_int ? $value / 100 : $value;
     }
 }

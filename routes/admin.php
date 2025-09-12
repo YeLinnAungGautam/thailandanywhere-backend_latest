@@ -58,6 +58,7 @@ use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\SaleManagerController;
+use App\Http\Controllers\Admin\Setting\HotelDiscountController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\TaxReceiptController;
 use App\Http\Controllers\Admin\UserController;
@@ -463,8 +464,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);
     Route::get('/parchase/export-csv', [CashImageController::class, 'exportParchaseToCsv']);
     Route::get('/parchase_tax/export-csv', [CashImageController::class, 'exportParchaseTaxToCsv']);
-    Route::get('/invoice/export-csv',[CashImageController::class,'exportInvoiceToCsv']);
-    Route::get('/remain-tax-receipt',[CashImageController::class,'remindTaxReceipt']);
+    Route::get('/invoice/export-csv', [CashImageController::class, 'exportInvoiceToCsv']);
+    Route::get('/remain-tax-receipt', [CashImageController::class, 'remindTaxReceipt']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
@@ -522,4 +523,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
         Route::post('bulk', [CashImageableController::class, 'store']);
     });
+
+    Route::apiResource('settings/hotels/discount', HotelDiscountController::class);
 });

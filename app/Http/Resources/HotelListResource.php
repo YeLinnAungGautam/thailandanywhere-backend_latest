@@ -15,11 +15,12 @@ class HotelListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $discount = hotel_discount();
         $lowest_room_price = $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0;
         $lowest_walk_in_price = $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0;
         $lowest_cost_price = $this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0;
 
-        $discount_price = ((float)$lowest_room_price - (float)$lowest_cost_price) * 0.75;
+        $discount_price = ((float)$lowest_room_price - (float)$lowest_cost_price) * $discount;
         if ((float)$lowest_walk_in_price != 0) {
             $discount_percent = ((float)$lowest_walk_in_price - (float)$discount_price) / (float)$lowest_walk_in_price * 100;
         } else {
@@ -35,6 +36,10 @@ class HotelListResource extends JsonResource
             'description' => $this->description,
             'full_description' => $this->full_description,
             'full_description_en' => $this->full_description_en,
+
+            'mobile_full_description' => strip_tags($this->full_description),
+            'mobile_full_description_en' => strip_tags($this->full_description_en),
+
             'type' => $this->type,
             'legal_name' => $this->legal_name,
             // 'account_name' => $this->account_name,

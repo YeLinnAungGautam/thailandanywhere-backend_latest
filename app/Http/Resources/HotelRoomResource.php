@@ -14,8 +14,10 @@ class HotelRoomResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $discount = hotel_discount();
+
         $discount_price = (float)$this->room_price - (float)$this->cost;
-        $discount_price = $discount_price * 0.75;
+        $discount_price = $discount_price * $discount;
         $owner_price = (float)$this->owner_price;
         if ($owner_price != 0) {
             $discount_percent = ($owner_price - $discount_price) / $owner_price * 100;
