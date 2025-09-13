@@ -10,10 +10,10 @@ trait ImageManager
     public function uploads($file, $path)
     {
         if ($file) {
-            $fileName = time() . '_' . rand(00000, 99999) . '_' . uniqid();
+            $file_type = $file->getClientOriginalExtension();
+            $fileName = time() . '_' . rand(00000, 99999) . '_' . uniqid() . '.' . $file_type;
 
             Storage::put($path . $fileName, File::get($file));
-            $file_type = $file->getClientOriginalExtension();
             $filePath = $path . $fileName;
 
             return $file = [

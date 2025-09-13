@@ -30,6 +30,8 @@ class ProfileController extends Controller
         try {
             $user = User::find(Auth::id());
             $user->name = $request->name ?? $user->name;
+            $user->first_name = $request->first_name ?? $user->first_name;
+            $user->last_name = $request->last_name ?? $user->last_name;
             $user->email = $request->email ?? $user->email;
             $user->phone = $request->phone ?? $user->phone;
             $user->address = $request->address ?? $user->address;

@@ -20,15 +20,13 @@ class UserResource extends JsonResource
             'unique_key' => $this->unique_key,
             'name' => $this->name,
             'email' => $this->email,
-            'profile' => Storage::url('images/' . $this->profile),
+            'profile' => $this->profile ? Storage::url('images/' . $this->profile) : null,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'phone' => $this->phone,
             'address' => $this->address,
             'gender' => $this->gender,
             'dob' => $this->dob,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
         ];
     }
 }
