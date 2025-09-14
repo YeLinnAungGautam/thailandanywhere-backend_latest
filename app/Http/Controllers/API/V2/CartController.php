@@ -15,7 +15,7 @@ class CartController extends Controller
     use HttpResponses;
 
     // List all cart items
-    public function index()
+    public function index(Request $request)
     {
         if (!Auth::check()) {
             return response()->json(['message' => 'Unauthenticated'], 401);
@@ -24,6 +24,9 @@ class CartController extends Controller
         $cartItems = Cart::with('product')
             ->where('owner_id', Auth::id())
             ->where('owner_type', get_class(Auth::user()))
+            ->when($request->selected_ids, function ($query) use ($request) {
+                $query->whereIn('id', explode(',', $request->selected_ids));
+            })
             ->get();
 
         return CartResource::collection($cartItems);
