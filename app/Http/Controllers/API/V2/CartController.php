@@ -5,7 +5,9 @@ namespace App\Http\Controllers\API\V2;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CartResource;
 use App\Models\Cart;
+use App\Models\Hotel;
 use App\Traits\HttpResponses;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -47,7 +49,8 @@ class CartController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $this->validateCartRequest($request);
+            $input = $this->validateCartRequest($request);
+            $validated = $this->calculateOptions($input);
 
             $owner = Auth::user();
 
@@ -71,7 +74,8 @@ class CartController extends Controller
                 return $this->error(null, 'Unauthorized', 403);
             }
 
-            $validated = $this->validateCartRequest($request);
+            $input = $this->validateCartRequest($request);
+            $validated = $this->calculateOptions($input);
 
             $cart->update($validated);
 
@@ -142,7 +146,22 @@ class CartController extends Controller
                 'date',
                 'after:service_date'
             ],
-            'options' => 'nullable|array'
+            'options' => 'nullable|array',
+            'is_calculated' => 'nullable|boolean',
         ]);
+    }
+
+    private function calculateOptions(array $validated)
+    {
+        if (isset($validated['is_calculated']) && $validated['is_calculated'] == false && $validated['product_type'] === Hotel::class) {
+            $stay_nights = Carbon::parse($validated['service_date'])->diffInDays(Carbon::parse($validated['checkout_date']));
+
+            $validated['options']['selling_price'] = ($validated['options']['selling_price'] ?? 0) * $stay_nights * $validated['quantity'];
+            $validated['options']['total_selling_price'] = ($validated['options']['total_selling_price'] ?? 0) * $stay_nights * $validated['quantity'];
+            $validated['options']['cost_price'] = ($validated['options']['cost_price'] ?? 0) * $stay_nights * $validated['quantity'];
+            $validated['options']['total_cost_price'] = ($validated['options']['total_cost_price'] ?? 0) * $stay_nights * $validated['quantity'];
+        }
+
+        return $validated;
     }
 }
