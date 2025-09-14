@@ -36,7 +36,7 @@ class LoginController extends Controller
             return failedMessage('Please verify your email before logging in.');
         }
 
-        $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
+        $token = $user->createToken($user->name . '-AuthToken-' . now())->plainTextToken;
 
         return success([
             'user' => $user,
