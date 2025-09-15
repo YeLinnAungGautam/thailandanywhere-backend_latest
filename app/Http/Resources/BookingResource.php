@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
 use App\Models\Order;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +58,7 @@ class BookingResource extends JsonResource
             'receipts' => isset($this->cashImages) ? CashImageResource::collection($this->cashImages) : '',
             'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
             'item_count' => $this->items ? $this->items->count() : 0,
-            'service_start_date' => $this->start_date ? $this->start_date->format('d M Y') : null,
+            'service_start_date' => $this->start_date ? Carbon::parse($this->start_date)->format('d M Y') : null,
 
             // Inclusive
             'is_inclusive' => $this->is_inclusive,
