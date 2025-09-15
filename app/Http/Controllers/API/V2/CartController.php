@@ -31,7 +31,32 @@ class CartController extends Controller
             })
             ->get();
 
-        return CartResource::collection($cartItems);
+        $cartCollection = CartResource::collection($cartItems);
+
+        $balance_due_items = [];
+        foreach ($cartCollection as $item) {
+            $cart_data = $item->resolve();
+
+            $balance_due_items[] = [
+                'name' => $item->product->name,
+                'variation_name' => $item->variation->name ?? null,
+                'service_days' => $cart_data['service_days'] ?? null,
+                'quantity' => $item->quantity,
+                'price' => $item->variation->room_price ?? 0,
+                'selling_price' => $cart_data['options']['total_selling_price'] ?? 0,
+                'discount' => $cart_data['options']['discount'] ?? 0,
+                'cost_price' => $cart_data['options']['total_selling_price'] - ($cart_data['options']['discount'] ?? 0),
+            ];
+        }
+
+        return $cartCollection->additional([
+            'meta' => [
+                'balance_due_items' => $balance_due_items,
+                'sub_total' => array_sum(array_column($balance_due_items, 'selling_price')),
+                'online_discount' => array_sum(array_column($balance_due_items, 'discount')),
+                'grand_total' => array_sum(array_column($balance_due_items, 'cost_price')),
+            ],
+        ]);
     }
 
     // Show single cart item

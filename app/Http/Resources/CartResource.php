@@ -6,6 +6,8 @@ use App\Http\Resources\Cart\EntranceTicketCartResource;
 use App\Http\Resources\Cart\HotelCartResource;
 use App\Http\Resources\Cart\InclusiveCartResource;
 use App\Http\Resources\Cart\PrivateVanTourCartResource;
+use App\Models\Hotel;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,8 +43,14 @@ class CartResource extends JsonResource
             }
         });
 
-        return [
+        $stay_nights = 'testing';
+        if ($this->product_type == Hotel::class) {
+            $stay_nights = Carbon::parse($this->service_date)->diffInDays(Carbon::parse($this->checkout_date));
+        }
+
+        $result = [
             'id' => $this->id,
+            'service_days' => $stay_nights,
             // 'user_id' => $this->user_id,
             'owner_id' => $this->owner_id,
             'owner' => $ownerResource,
@@ -60,5 +68,7 @@ class CartResource extends JsonResource
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
+
+        return $result;
     }
 }
