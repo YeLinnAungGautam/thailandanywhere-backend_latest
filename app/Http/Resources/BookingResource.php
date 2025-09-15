@@ -56,6 +56,8 @@ class BookingResource extends JsonResource
             'receipts_orignal' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
             'receipts' => isset($this->cashImages) ? CashImageResource::collection($this->cashImages) : '',
             'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
+            'item_count' => $this->items ? $this->items->count() : 0,
+            'service_start_date' => $this->start_date ? $this->start_date->format('d M Y') : null,
 
             // Inclusive
             'is_inclusive' => $this->is_inclusive,

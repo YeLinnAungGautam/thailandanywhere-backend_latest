@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,7 @@ class BookingItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         $product = null;
+        $stay_nights = null;
         switch ($this->product_type) {
             case 'App\Models\PrivateVanTour':
                 $product = new PrivateVanTourResource($this->product);
@@ -36,6 +38,7 @@ class BookingItemResource extends JsonResource
                 break;
             case 'App\Models\Hotel':
                 $product = new HotelResource($this->product);
+                $stay_nights = Carbon::parse($this->checkin_date)->diffInDays(Carbon::parse($this->checkout_date));
 
                 break;
             case 'App\Models\Airline':
@@ -77,6 +80,7 @@ class BookingItemResource extends JsonResource
             'ticket' => $this->ticket,
             'variation' => $this->variation,
             'service_date' => $this->service_date ? $this->service_date->format('Y-m-d') : null,
+            'formatted_service_date' => $this->service_date ? $this->service_date->format('d M Y') : null,
             'quantity' => $this->quantity,
             'total_guest' => $this->total_guest,
             'room_number' => $this->room_number,
@@ -135,6 +139,11 @@ class BookingItemResource extends JsonResource
 
             'checkin_date' => $this->checkin_date,
             'checkout_date' => $this->checkout_date,
+
+            'formatted_checkin_date' => $this->checkin_date ? $this->checkin_date->format('d M Y') : null,
+            'formatted_checkout_date' => $this->checkout_date ? $this->checkout_date->format('d M Y') : null,
+
+            'stay_nights' => $stay_nights,
             'reservation_car_info' => new ReservationCarInfoResource($this->reservationCarInfo),
             'amend_info' => BookingItemAmendmentResource::collection($this->amendments),
             'reservation_supplier_info' => new ReservationCarInfoResource($this->reservationSupplierInfo),

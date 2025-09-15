@@ -16,7 +16,7 @@ class OrderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user'=> $this->user,
+            'user' => $this->user,
             'customer' => new CustomerResource($this->customer),
             'admin' => $this->admin,
             'order_number' => $this->order_number,
@@ -24,7 +24,9 @@ class OrderResource extends JsonResource
             'phone_number' => $this->phone_number,
             'email' => $this->email,
             'order_datetime' => $this->order_datetime,
+            'formatted_order_datetime' => $this->order_datetime ? $this->order_datetime->format('d M Y, H:i A') : null,
             'expire_datetime' => $this->expire_datetime,
+            'formatted_expire_datetime' => $this->expire_datetime ? $this->expire_datetime->format('d M Y, H:i A') : null,
             'balance_due_date' => $this->balance_due_date,
             'order_status' => $this->order_status,
             'booking_id' => $this->booking_id,
@@ -36,8 +38,8 @@ class OrderResource extends JsonResource
             'comment' => $this->comment,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'items'=> $this->items,
-            'items'=> OrderItemResource::collection($this->items) ?? [],
+            'items' => $this->items,
+            'items' => OrderItemResource::collection($this->items) ?? [],
             'payments' => OrderPaymentResource::collection($this->payments) ?? [],
             // 'payments' => OrderPaymentResource::collection($this->payments) ?? [],
         ];
