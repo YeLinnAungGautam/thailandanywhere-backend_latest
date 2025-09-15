@@ -79,8 +79,8 @@ class BookingItemResource extends JsonResource
             'room' => $this->room,
             'ticket' => $this->ticket,
             'variation' => $this->variation,
-            'service_date' => $this->service_date ? $this->service_date->format('Y-m-d') : null,
-            'formatted_service_date' => $this->service_date ? $this->service_date->format('d M Y') : null,
+            'service_date' => $this->service_date ? Carbon::parse($this->service_date)->format('Y-m-d') : null,
+            'formatted_service_date' => $this->service_date ? Carbon::parse($this->service_date)->format('d M Y') : null,
             'quantity' => $this->quantity,
             'total_guest' => $this->total_guest,
             'room_number' => $this->room_number,
@@ -140,8 +140,8 @@ class BookingItemResource extends JsonResource
             'checkin_date' => $this->checkin_date,
             'checkout_date' => $this->checkout_date,
 
-            'formatted_checkin_date' => $this->checkin_date ? $this->checkin_date->format('d M Y') : null,
-            'formatted_checkout_date' => $this->checkout_date ? $this->checkout_date->format('d M Y') : null,
+            'formatted_checkin_date' => $this->checkin_date ? Carbon::parse($this->checkin_date)->format('d M Y') : null,
+            'formatted_checkout_date' => $this->checkout_date ? Carbon::parse($this->checkout_date)->format('d M Y') : null,
 
             'stay_nights' => $stay_nights,
             'reservation_car_info' => new ReservationCarInfoResource($this->reservationCarInfo),

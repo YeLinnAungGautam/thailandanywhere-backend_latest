@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,9 +25,9 @@ class OrderResource extends JsonResource
             'phone_number' => $this->phone_number,
             'email' => $this->email,
             'order_datetime' => $this->order_datetime,
-            'formatted_order_datetime' => $this->order_datetime ? $this->order_datetime->format('d M Y, H:i A') : null,
+            'formatted_order_datetime' => $this->order_datetime ? Carbon::parse($this->order_datetime)->format('d M Y, H:i A') : null,
             'expire_datetime' => $this->expire_datetime,
-            'formatted_expire_datetime' => $this->expire_datetime ? $this->expire_datetime->format('d M Y, H:i A') : null,
+            'formatted_expire_datetime' => $this->expire_datetime ? Carbon::parse($this->expire_datetime)->format('d M Y, H:i A') : null,
             'balance_due_date' => $this->balance_due_date,
             'order_status' => $this->order_status,
             'booking_id' => $this->booking_id,
