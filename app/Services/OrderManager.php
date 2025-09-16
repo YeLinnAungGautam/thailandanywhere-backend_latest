@@ -8,8 +8,10 @@ class OrderManager
 {
     public static function formatMobileOrderData(array $orderData)
     {
+        $order_items = explode(',', $orderData['items'] ?? '');
+
         $carts = Cart::query()
-            ->whereIn('id', $orderData['items'])
+            ->whereIn('id', $order_items)
             ->get();
 
         $items = $carts->map(function ($cart) {
@@ -46,7 +48,7 @@ class OrderManager
             "email" => $orderData['email'],
             "customer_name" => $orderData['customer_name'],
             "type" => $orderData['type'] ?? 'user',
-            'admin_id' => $orderData['admin_id'] ?? 10, // FIXME:Default admin_id for mobile orders
+            'admin_id' => $orderData['admin_id'],
             "sold_from" => $orderData['sold_from'] ?? 'mobile',
             "phone_number" => $orderData['phone_number'] ?? null,
             "discount" => $total_discount,

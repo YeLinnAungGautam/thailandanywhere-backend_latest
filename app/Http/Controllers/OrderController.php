@@ -116,7 +116,7 @@ class OrderController extends Controller
             $order = Order::create($orderData);
 
             // ပစ္စည်းများထည့်သွင်းခြင်း
-            if ($request->has('items') && is_array($request->items)) {
+            if ($request->has('items') && is_array($payload['items'])) {
                 $this->assignOrderItems($order, $payload['items'], $userType);
             }
 
