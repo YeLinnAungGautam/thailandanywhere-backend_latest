@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 class OrderAdminController extends Controller
 {
     use HttpResponses, ImageManager;
+
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
@@ -89,22 +90,23 @@ class OrderAdminController extends Controller
         // Return formatted response
         return $this->success(
             OrderResource::collection($orders)
-            ->additional([
-                'meta' => [
-                    'total_page' => (int)ceil($orders->total() / $orders->perPage()),
-                ],
-            ])
-            ->response()
-            ->getData(),
+                ->additional([
+                    'meta' => [
+                        'total_page' => (int)ceil($orders->total() / $orders->perPage()),
+                    ],
+                ])
+                ->response()
+                ->getData(),
             'Booking List'
         );
     }
 
-    public function addPayment (Request $request, $id){
+    public function addPayment(Request $request, $id)
+    {
         // return response()->json(['messge' => $request->all()]);
         $order = Order::find($id);
 
-        if(!$order){
+        if (!$order) {
             return $this->error('ဤအော်ဒါကို မရှိပါ', 404);
         }
 
@@ -118,7 +120,7 @@ class OrderAdminController extends Controller
                 'approved_by' => Auth()->user()->id,
             ];
 
-            if($request->hasFile('payment_slip')) {
+            if ($request->hasFile('payment_slip')) {
                 $file = $this->uploads($request->file('payment_slip'), 'order_payments/');
                 $order_payment['payment_slip'] = $file['fileName'];
             }
@@ -139,23 +141,23 @@ class OrderAdminController extends Controller
         }
     }
 
-    public function changeOrderToBooking (Request $request, $id)
-        {
-            DB::beginTransaction();
+    public function changeOrderToBooking(Request $request, $id)
+    {
+        DB::beginTransaction();
 
-            try {
-                // Find the order
-                $order = Order::with(['items', 'customer'])->findOrFail($id);
+        try {
+            // Find the order
+            $order = Order::with(['items', 'customer'])->findOrFail($id);
 
-                // Check if order is already approved
-                if ($order->order_status === 'sale_convert') {
-                    return $this->error(null, 'Order is already approved');
-                }
+            // Check if order is already approved
+            if ($order->order_status === 'sale_convert') {
+                return $this->error(null, 'Order is already approved');
+            }
 
-                // Convert order to booking
-                $booking = $this->convertOrderToBooking($order, $request);
+            // Convert order to booking
+            $booking = $this->convertOrderToBooking($order, $request);
 
-                DB::table('orders')
+            DB::table('orders')
                 ->where('id', $order->id)
                 ->update([
                     'order_status' => 'sale_convert',
@@ -163,29 +165,30 @@ class OrderAdminController extends Controller
                     'updated_at' => now()
                 ]);
 
-                DB::commit();
+            DB::commit();
 
-                // Dispatch archive job
-                ArchiveSaleJob::dispatch($booking);
+            // Dispatch archive job
+            ArchiveSaleJob::dispatch($booking);
 
-                UpdateBookingDatesJob::dispatch($booking->id);
+            UpdateBookingDatesJob::dispatch($booking->id);
 
-                PersistBookingItemGroupJob::dispatch($booking);
+            PersistBookingItemGroupJob::dispatch($booking);
 
-                return $this->success(
-                    new BookingResource($booking),
-                    'Order successfully approved and converted to booking'
-                );
+            return $this->success(
+                new BookingResource($booking),
+                'Order successfully approved and converted to booking'
+            );
 
-            } catch (Exception $e) {
-                DB::rollBack();
-                // Log::error('Order approval error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            DB::rollBack();
+            // Log::error('Order approval error: ' . $e->getMessage());
 
-                return $this->error(null, $e->getMessage());
-            }
+            return $this->error(null, $e->getMessage());
         }
+    }
 
-    private function convertOrderToBooking (Order $order, Request $request){
+    private function convertOrderToBooking(Order $order, Request $request)
+    {
         $bookingData = [
             'customer_id' => $order->customer_id,
             'user_id' => $order->user_id, // Current admin user
@@ -233,7 +236,8 @@ class OrderAdminController extends Controller
         return $booking;
     }
 
-    private function convertOrderItemsToBookingItems (Order $order, $booking){
+    private function convertOrderItemsToBookingItems(Order $order, $booking)
+    {
         foreach ($order->items as $key => $item) {
             $individualPricing = null;
             if ($item->individual_pricing) {
@@ -280,61 +284,66 @@ class OrderAdminController extends Controller
 
 
 
-    public function changeStatus(Request $request, $id){
+    public function changeStatus(Request $request, $id)
+    {
         $order = Order::findOrFail($id);
         $order->update([
             'order_status' => $request->status
         ]);
+
         return $this->success(new OrderResource($order), 'Order status changed successfully');
     }
 
-    public function deleteOrder($id){
+    public function deleteOrder($id)
+    {
         $order = Order::findOrFail($id);
         $order->delete();
+
         return $this->success(null, 'Order deleted successfully');
     }
 
-    public function reportOrderCompact(){
+    public function reportOrderCompact()
+    {
         $today = now()->toDateString();
 
         // Get both today and month stats in one go
         $stats = [
             'today' => Order::whereDate('created_at', $today)
-                            ->selectRaw('
+                ->selectRaw('
                                 COUNT(*) as total,
                                 SUM(is_customer_create = 1) as customer_yes,
                                 SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
                             ')
-                            ->first(),
+                ->first(),
 
             'month' => Order::whereYear('created_at', now()->year)
-                            ->whereMonth('created_at', now()->month)
-                            ->selectRaw('
+                ->whereMonth('created_at', now()->month)
+                ->selectRaw('
                                 COUNT(*) as total,
                                 SUM(is_customer_create = 1) as customer_yes,
                                 SUM(is_customer_create = 1 AND order_status = "sale_convert") as converted
                             ')
-                            ->first()
+                ->first()
         ];
 
         // Get detailed orders with booking info for today
         $todayOrders = Order::whereDate('created_at', $today)
-                            ->select('id', 'booking_id', 'is_customer_create', 'order_status','admin_id')
-                            ->with([
-                                'booking:id,crm_id,created_by','admin',
-                                'booking.createdBy:id,name' // Assuming User model relationship
-                            ])
-                            ->get();
+            ->select('id', 'booking_id', 'is_customer_create', 'order_status', 'admin_id')
+            ->with([
+                'booking:id,crm_id,created_by', 'admin',
+                'booking.createdBy:id,name' // Assuming User model relationship
+            ])
+            ->get();
 
         // Get detailed orders with booking info for this month
         $monthOrders = Order::whereYear('created_at', now()->year)
-                            ->whereMonth('created_at', now()->month)
-                            ->select('id', 'booking_id', 'is_customer_create', 'order_status','admin_id')
-                            ->with([
-                                'booking:id,crm_id,created_by','admin',
-                                'booking.createdBy:id,name' // Assuming User model relationship
-                            ])
-                            ->get();
+            ->whereMonth('created_at', now()->month)
+            ->select('id', 'booking_id', 'is_customer_create', 'order_status', 'admin_id')
+            ->with([
+                'booking:id,crm_id,created_by', 'admin',
+                'booking.createdBy:id,name' // Assuming User model relationship
+            ])
+            ->get();
 
         return $this->success([
             'today' => [
@@ -344,7 +353,7 @@ class OrderAdminController extends Controller
                 'conversion_rate' => $stats['today']->customer_yes > 0
                     ? round(($stats['today']->converted / $stats['today']->customer_yes) * 100, 2)
                     : 0,
-                'orders_detail' => $todayOrders->map(function($order) {
+                'orders_detail' => $todayOrders->map(function ($order) {
                     return [
                         'order_id' => $order->id,
                         'admin_id' => $order->admin_id,
@@ -365,7 +374,7 @@ class OrderAdminController extends Controller
                 'conversion_rate' => $stats['month']->customer_yes > 0
                     ? round(($stats['month']->converted / $stats['month']->customer_yes) * 100, 2)
                     : 0,
-                'orders_detail' => $monthOrders->map(function($order) {
+                'orders_detail' => $monthOrders->map(function ($order) {
                     return [
                         'order_id' => $order->id,
                         'admin_id' => $order->admin_id,

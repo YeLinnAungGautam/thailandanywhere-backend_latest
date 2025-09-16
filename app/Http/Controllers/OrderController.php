@@ -7,12 +7,11 @@ use App\Models\Cart;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\OrderManager;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -27,34 +26,35 @@ class OrderController extends Controller
         $app_show = $request->query('app_show_status');
         $userType = $request->query('type', 'user');
 
-        $query = Order::with(['items', 'customer', 'admin', 'payments','user'])
-        ->when($userType === 'user', function($q) {
-            $q->where('user_id', Auth::id());
-        })
-        ->when($userType === 'admin', function($q) {
-            $q->where('admin_id', Auth::id());
-        });
+        $query = Order::with(['items', 'customer', 'admin', 'payments', 'user'])
+            ->when($userType === 'user', function ($q) {
+                $q->where('user_id', Auth::id());
+            })
+            ->when($userType === 'admin', function ($q) {
+                $q->where('admin_id', Auth::id());
+            });
 
         if ($app_show == 'upcoming') {
             // $query->whereIn('app_show_status', [$app_show,null]);
-            $query->where(function($q) use ($app_show) {
+            $query->where(function ($q) use ($app_show) {
                 $q->where('order_status', 'pending')
-                  ->orWhere('order_status', 'confirmed')
-                  ->orWhere('order_status', 'processing');
+                    ->orWhere('order_status', 'confirmed')
+                    ->orWhere('order_status', 'processing');
             });
-        }else if ($app_show != 'upcoming' && $app_show != '') {
+        } elseif ($app_show != 'upcoming' && $app_show != '') {
             $query->where('order_status', $app_show);
         }
 
         $data = $query->orderBy('balance_due_date', 'desc')->paginate($limit);
+
         return $this->success(OrderResource::collection($data)
-        ->additional([
-            'meta' => [
-                'total_page' => (int)ceil($data->total() / $data->perPage()),
-            ],
-        ])
-        ->response()
-        ->getData(), 'Booking List');
+            ->additional([
+                'meta' => [
+                    'total_page' => (int)ceil($data->total() / $data->perPage()),
+                ],
+            ])
+            ->response()
+            ->getData(), 'Booking List');
     }
 
     /**
@@ -75,30 +75,35 @@ class OrderController extends Controller
                 ]);
 
                 $request->merge(['customer_id' => $customer->id]);
-            }else{
+            } else {
                 $request->merge(['customer_id' => $customer->id]);
             }
 
+            $payload = $request->all();
+            if ($request->sold_from == 'mobile') {
+                $payload = OrderManager::formatMobileOrderData($request->all());
+            }
+
             $orderData = [
-                'phone_number' => $request->phone_number,
-                'email' => $request->email,
-                'sold_from' => $request->sold_from,
+                'phone_number' => $payload['phone_number'] ?? null,
+                'email' => $payload['email'] ?? null,
+                'sold_from' => $payload['sold_from'] ?? null,
                 'order_datetime' => Carbon::now(),
                 'expire_datetime' => Carbon::now()->addHours(24),
                 'order_number' => 'ORD-'.Carbon::now()->format('Ymd-His').'-'.Auth::id(),
-                'balance_due_date' => $request->balance_due_date,
-                'customer_id' => $request->customer_id,
-                'discount' => $request->discount ?? 0,
-                'sub_total' => $request->total_amount,
-                'grand_total' => $request->grand_total,
-                'deposit_amount' => $request->deposit_amount ?? 0,
-                'comment' => $request->comment ?? null,
+                'balance_due_date' => $payload['balance_due_date'] ?? null,
+                'customer_id' => $customer->id ?? null,
+                'discount' => $payload['discount'] ?? 0,
+                'sub_total' => $payload['total_amount'] ?? 0,
+                'grand_total' => $payload['grand_total'] ?? 0,
+                'deposit_amount' => $payload['deposit_amount'] ?? 0,
+                'comment' => $payload['comment'] ?? null,
             ];
 
             // Set user_id or admin_id based on type
             if ($userType === 'user') {
                 $orderData['user_id'] = Auth::id();
-                $orderData['admin_id'] = $request->admin_id;
+                $orderData['admin_id'] = $payload['admin_id'] ?? null;
                 $orderData['order_status'] = 'pending';
                 $orderData['is_customer_create'] = '1';
             } else {
@@ -112,7 +117,7 @@ class OrderController extends Controller
 
             // ပစ္စည်းများထည့်သွင်းခြင်း
             if ($request->has('items') && is_array($request->items)) {
-                $this->assignOrderItems($order, $request->items, $userType);
+                $this->assignOrderItems($order, $payload['items'], $userType);
             }
 
             // ပြန်လည်ဆွဲယူခြင်း (refresh) ဖြင့် အချက်အလက်အားလုံးပါဝင်မှုကိုသေချာစေခြင်း
@@ -135,10 +140,10 @@ class OrderController extends Controller
             $userType = Auth::user()->role ? 'admin' : 'user'; // Default to 'admin'
 
             // Find the order with authorization check
-            $order = Order::when($userType === 'user', function($q) {
-                    $q->where('user_id', Auth::user()->id);
-                })
-                ->when($userType === 'admin', function($q) {
+            $order = Order::when($userType === 'user', function ($q) {
+                $q->where('user_id', Auth::user()->id);
+            })
+                ->when($userType === 'admin', function ($q) {
                     $q->where('admin_id', Auth::user()->id);
                 })
                 ->with(['items']) // Eager load items for calculation
@@ -239,52 +244,52 @@ class OrderController extends Controller
 
 
     public function show(Request $request, $id)
-        {
-            $userType = $request->query('type', 'user'); // Default to 'user'
+    {
+        $userType = $request->query('type', 'user'); // Default to 'user'
 
-            $order = Order::with(['items', 'customer', 'admin', 'payments', 'booking', 'user'])
-                ->when($userType === 'user', function($q) {
-                    $q->where('user_id', Auth::id());
-                })
-                ->when($userType === 'admin', function($q) {
-                    $q->where('admin_id', Auth::id());
-                })
-                ->findOrFail($id);
+        $order = Order::with(['items', 'customer', 'admin', 'payments', 'booking', 'user'])
+            ->when($userType === 'user', function ($q) {
+                $q->where('user_id', Auth::id());
+            })
+            ->when($userType === 'admin', function ($q) {
+                $q->where('admin_id', Auth::id());
+            })
+            ->findOrFail($id);
 
-            return $this->success([
-                'order' => new OrderResource($order),
-                'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
-            ], 'Order details');
+        return $this->success([
+            'order' => new OrderResource($order),
+            'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
+        ], 'Order details');
+    }
+
+    /**
+     * Cancel order with proper authorization
+     */
+    public function cancelOrder(Request $request, $id)
+    {
+        $userType = $request->query('type', 'user'); // Default to 'user'
+
+        $order = Order::when($userType === 'user', function ($q) {
+            $q->where('user_id', Auth::id());
+        })
+            ->when($userType === 'admin', function ($q) {
+                $q->where('admin_id', Auth::id());
+            })
+            ->findOrFail($id);
+
+        if ($order->order_status != 'pending') {
+            return $this->error('This order cannot be cancelled at this time', 400);
         }
 
-        /**
-         * Cancel order with proper authorization
-         */
-        public function cancelOrder(Request $request, $id)
-        {
-            $userType = $request->query('type', 'user'); // Default to 'user'
-
-            $order = Order::when($userType === 'user', function($q) {
-                    $q->where('user_id', Auth::id());
-                })
-                ->when($userType === 'admin', function($q) {
-                    $q->where('admin_id', Auth::id());
-                })
-                ->findOrFail($id);
-
-            if ($order->order_status != 'pending') {
-                return $this->error('This order cannot be cancelled at this time', 400);
-            }
-
-            if ($order->booking_id) {
-                return $this->error('Cannot cancel order that has been converted to booking', 400);
-            }
-
-            $order->update([
-                'order_status' => 'cancelled',
-                'comment' => $request->comment ?? $order->comment,
-            ]);
-
-            return $this->success(new OrderResource($order), 'Order cancelled successfully');
+        if ($order->booking_id) {
+            return $this->error('Cannot cancel order that has been converted to booking', 400);
         }
+
+        $order->update([
+            'order_status' => 'cancelled',
+            'comment' => $request->comment ?? $order->comment,
+        ]);
+
+        return $this->success(new OrderResource($order), 'Order cancelled successfully');
+    }
 }
