@@ -43,7 +43,7 @@ class CartResource extends JsonResource
             }
         });
 
-        $stay_nights = 'testing';
+        $stay_nights = null;
         if ($this->product_type == Hotel::class) {
             $stay_nights = Carbon::parse($this->service_date)->diffInDays(Carbon::parse($this->checkout_date));
         }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Hotel;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,6 +36,11 @@ class OrderItemResource extends JsonResource
                 break;
         }
 
+        $stay_nights = null;
+        if ($this->product_type == Hotel::class) {
+            $stay_nights = Carbon::parse($this->checkin_date)->diffInDays(Carbon::parse($this->checkout_date));
+        }
+
         return [
             'id' => $this->id,
             'order_id' => $this->order_id,
@@ -43,6 +50,7 @@ class OrderItemResource extends JsonResource
             'car_id' => $this->car_id,
             'room_id' => $this->room_id,
             'service_date' => $this->service_date,
+            'formatted_service_date' => $this->service_date ? Carbon::parse($this->service_date)->format('d M Y') : null,
             'checkin_date' => $this->checkin_date,
             'checkout_date' => $this->checkout_date,
             'quantity' => $this->quantity,
@@ -60,6 +68,7 @@ class OrderItemResource extends JsonResource
             'room' => new RoomResource($this->room),
             'variation' => new EntranceTicketVariationResource($this->variation),
             'product' => $product,
+            'service_days' => $stay_nights,
         ];
     }
 }
