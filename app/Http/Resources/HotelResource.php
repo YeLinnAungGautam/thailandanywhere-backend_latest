@@ -93,7 +93,7 @@ class HotelResource extends JsonResource
     {
         $url = $this->getShareLink();
 
-        $message = "Check out this awesome content!\n{$url}\nHere is some interesting content you might like.";
+        $message = "Check out this awesome content! Here is some interesting content you might like.";
 
         return $message;
     }
