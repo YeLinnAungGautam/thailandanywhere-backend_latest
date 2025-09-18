@@ -83,7 +83,27 @@ class HotelResource extends JsonResource
             'selling_price' => $selling_price,
 
             'available_room_count' => $this->rooms->where('is_extra', 0)->count(),
+
+            'share_message' => $this->getShareMessage(),
+            'share_link' => $this->getShareLink(),
         ];
+    }
+
+    public function getShareMessage()
+    {
+        $url = $this->getShareLink();
+
+        $message = "Check out this awesome content!\n{$url}\nHere is some interesting content you might like.";
+
+        return $message;
+    }
+
+    public function getShareLink()
+    {
+        $id = $this->id;
+        $language = 'english';
+
+        return "https://thanywhere.com/home/detail/{$id}?language={$language}";
     }
 
     public function getNearbyPlaces()
