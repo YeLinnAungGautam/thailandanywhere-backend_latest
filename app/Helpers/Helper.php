@@ -95,7 +95,18 @@ if (!function_exists('delete_file')) {
 if (!function_exists('hotel_discount')) {
     function hotel_discount($convert_to_int = true)
     {
-        $setting = Setting::where('meta_key', 'hotel_discount')->first();
+        $setting = Setting::where('meta_key', Setting::HOTEL_DISCOUNT)->first();
+
+        $value = $setting ? (int) $setting->meta_value : 0;
+
+        return $convert_to_int ? $value / 100 : $value;
+    }
+}
+
+if (!function_exists('ticket_discount')) {
+    function ticket_discount($convert_to_int = true)
+    {
+        $setting = Setting::where('meta_key', Setting::ENTRANCE_TICKET_DISCOUNT)->first();
 
         $value = $setting ? (int) $setting->meta_value : 0;
 
