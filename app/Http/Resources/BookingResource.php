@@ -53,6 +53,7 @@ class BookingResource extends JsonResource
             'balance_due' => $this->balance_due,
             'balance_due_date' => $this->balance_due_date->format('Y-m-d'),
             'created_by' => $this->createdBy,
+            'admin' => $this->createdBy,
             'bill_to' => $this->customer ? $this->customer->name : "-",
             'receipts_orignal' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
             'receipts' => isset($this->cashImages) ? CashImageResource::collection($this->cashImages) : '',
