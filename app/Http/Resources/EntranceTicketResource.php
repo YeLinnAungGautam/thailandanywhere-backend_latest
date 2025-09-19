@@ -25,7 +25,7 @@ class EntranceTicketResource extends JsonResource
             'payment_method' => $this->payment_method,
             'account_name' => $this->account_name,
             'name' => $this->name,
-
+            'hello' => 'this is test',
             'description' => $this->description,
             'full_description' => $this->full_description,
             'full_description_en' => $this->full_description_en,
@@ -61,12 +61,37 @@ class EntranceTicketResource extends JsonResource
 
     public function getVariations()
     {
-        return $this->variations->map(function ($variation) {
+        $discount = ticket_discount(); // Use ticket_discount instead of hotel_discount
+
+        return $this->variations->map(function ($variation) use ($discount) {
+            // Calculate discount values for each variation
+            $price = (float) ($variation->price ?? 0);
+            $cost_price = (float) ($variation->cost_price ?? 0);
+            $owner_price = (float) ($variation->owner_price ?? 0);
+
+            // Calculate discount_price: (price - cost_price) * discount_rate
+            $discount_price = ($price - $cost_price) * $discount;
+
+            // Calculate discount_percent
+            if ($owner_price != 0 && $owner_price) {
+                $discount_percent = (($owner_price - ($price - $discount_price)) / $owner_price) * 100;
+            } else {
+                $discount_percent = 0;
+            }
+
+            // Calculate selling_price: price - discount_price
+            $selling_price = $price - $discount_price;
+
+            // Add image links and discount calculations to variation
             $variation->image_links = ProductImageResource::collection($variation->images);
+            $variation->discount_price = round($discount_price, 2);
+            $variation->discount_percent = round($discount_percent, 2);
+            $variation->selling_price = round($selling_price, 2);
 
             return $variation;
         });
     }
+
 
     protected function getLowestVariationPrice()
     {

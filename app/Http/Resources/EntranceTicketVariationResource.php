@@ -18,7 +18,6 @@ class EntranceTicketVariationResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'price_name' => $this->price_name,
-
             'price' => $this->price,
             'cost_price' => $this->cost_price,
             'agent_price' => $this->agent_price ?? 0,

@@ -22,7 +22,7 @@ class HotelListResource extends JsonResource
 
         $discount_price = ((float)$lowest_room_price - (float)$lowest_cost_price) * $discount;
         if ((float)$lowest_walk_in_price != 0) {
-            $discount_percent = ((float)$lowest_walk_in_price - (float)$discount_price) / (float)$lowest_walk_in_price * 100;
+            $discount_percent = ((float)$lowest_walk_in_price - ((float) $lowest_room_price -(float)$discount_price)) / (float)$lowest_walk_in_price * 100;
         } else {
             $discount_percent = 0;
         }

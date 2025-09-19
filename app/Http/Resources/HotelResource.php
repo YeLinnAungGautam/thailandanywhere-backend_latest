@@ -17,13 +17,13 @@ class HotelResource extends JsonResource
     {
         $discount = hotel_discount();
 
-        $lowest_room_price = $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0;
-        $lowest_walk_in_price = $this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0;
-        $lowest_cost_price = $this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0;
+        $lowest_room_price = (float) ($this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0);
+           $lowest_walk_in_price = (float) ($this->rooms->where('is_extra', 0)->whereNotNull('owner_price')->sortBy('owner_price')->first()->owner_price ?? 0);
+           $lowest_cost_price = (float) ($this->rooms->where('is_extra', 0)->sortBy('cost')->first()->cost ?? 0);
 
         $discount_price = ((float) $lowest_room_price - (float) $lowest_cost_price) * $discount;
         $discount_percent = ($lowest_walk_in_price > 0 && (float) $lowest_walk_in_price != 0)
-            ? ((float) $lowest_walk_in_price - (float) $discount_price) / (float) $lowest_walk_in_price * 100
+            ? ((float) $lowest_walk_in_price - ((float) $lowest_room_price - (float) $discount_price)) / (float) $lowest_walk_in_price * 100
             : 0;
 
         $selling_price = (float) $lowest_room_price - (float) $discount_price;
@@ -35,6 +35,7 @@ class HotelResource extends JsonResource
             'description' => $this->description,
             'full_description' => $this->full_description,
             'full_description_en' => $this->full_description_en,
+            'discount_rate' => hotel_discount(),
 
             'mobile_full_description' => strip_tags($this->full_description),
             'mobile_full_description_en' => strip_tags($this->full_description_en),
