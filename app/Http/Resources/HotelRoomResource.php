@@ -20,7 +20,7 @@ class HotelRoomResource extends JsonResource
         $discount_price = $discount_price * $discount;
         $owner_price = (float)$this->owner_price;
         if ($owner_price != 0) {
-            $discount_percent = ($owner_price - $discount_price) / $owner_price * 100;
+            $discount_percent = ($owner_price - ( $this->room_price - $discount_price)) / $owner_price * 100;
         } else {
             $discount_percent = 0;
         }

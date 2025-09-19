@@ -15,15 +15,23 @@ class EntranceTicketListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $discount = ticket_discount();
+
+        $lowest_variation_price = $this->getLowestVariationPrice();
+        $lowest_walk_in_price = $this->getLowestWalkInPrice();
+        $lowest_cost_price = $this->getLowestCostPrice();
+
+        $discount_price = ((float) $lowest_variation_price - (float) $lowest_cost_price) * $discount;
+        $discount_percent = ($lowest_walk_in_price > 0 && (float) $lowest_walk_in_price != 0)
+            ? ((float) $lowest_walk_in_price - ((float) $lowest_variation_price - (float) $discount_price)) / (float) $lowest_walk_in_price * 100
+            : 0;
+
+        $selling_price = (float) $lowest_variation_price - (float) $discount_price;
+
         return [
             'id' => $this->id,
-            // 'provider' => $this->provider,
-            // 'place' => $this->place,
-            // 'bank_account_number' => $this->bank_account_number,
             'legal_name' => $this->legal_name,
             'bank_name' => $this->bank_name,
-            // 'payment_method' => $this->payment_method,
-            // 'account_name' => $this->account_name,
             'name' => $this->name,
 
             'description' => $this->description,
@@ -39,11 +47,11 @@ class EntranceTicketListResource extends JsonResource
             'categories' => ProductCategoryResource::collection($this->categories),
             // 'variations' => $this->getVariations(),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
-            // 'contacts' => HotelContractResource::collection($this->contracts),
-            // 'created_at' => $this->created_at->format('d-m-Y H:i:s'),
-            // 'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
 
             'lowest_variation_price' => $this->getLowestVariationPrice(),
+            'selling_price' => $selling_price,
+            'discount_price' => $discount_price,
+            'discount_percent' => round($discount_percent),
             'lowest_cost_price' => $this->getLowestCostPrice(),
             'lowest_walk_in_price' => $this->getLowestWalkInPrice(),
 
@@ -51,10 +59,6 @@ class EntranceTicketListResource extends JsonResource
             'youtube_link' => is_null($this->youtube_link) ? null : json_decode($this->youtube_link),
             'email' => is_null($this->email) ? null : json_decode($this->email),
             'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
-            // 'contract_name' => $this->contract_name,
-
-            // 'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
-            // 'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
         ];
     }
 
