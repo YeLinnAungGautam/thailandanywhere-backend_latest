@@ -17,8 +17,8 @@ class HotelImageResource extends JsonResource
     {
         // return parent::toArray($request);
 
-        // $image = $this->image ? Storage::url('images/' . $this->image) : null;
-        $image = $this->image ? asset('storage/images/' . $this->image) : null;
+        $image = $this->image ? Storage::url('images/' . $this->image) : null;
+        // $image = $this->image ? asset('storage/images/' . $this->image) : null;
 
         return [
             'id' => $this->id,
