@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\OrderAdminController;
+use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\API\LoginController;
 use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\V2\AirlineController;
@@ -57,6 +58,7 @@ Route::group([], function () {
     # Room
     Route::get('rooms', [RoomController::class, 'index']);
     Route::get('rooms/{room_id}', [RoomController::class, 'show']);
+    Route::get('rooms/{room}/price', [RoomPeriodController::class, 'index']);
 
     # Entrance Ticket
     Route::get('entrance-tickets', [EntranceTicketController::class, 'index']);
@@ -97,7 +99,6 @@ Route::group([], function () {
     Route::post('register', [RegisterController::class, 'register']);
     Route::post('/verify-email', [RegisterController::class, 'verifyEmail']);
     Route::post('/resend-verification-email', [RegisterController::class, 'resendVerificationEmail']);
-
 
     # Login
     Route::post('login', [LoginController::class, 'login']);

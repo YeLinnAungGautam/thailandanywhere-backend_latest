@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Room;
@@ -82,5 +83,99 @@ class RoomService
             ->map(fn ($date) => $date->format('Y-m-d'));
 
         return iterator_to_array($dates);
+    }
+
+    public function getDailyPricing($checkin_date, $checkout_date)
+    {
+        $dates = $this->getDatesBetween($checkin_date, $checkout_date);
+        $discount = hotel_discount(); // Assuming this helper function exists
+
+        $daily_pricing = [];
+        $total_sale = 0;
+        $total_cost = 0;
+        $total_discount = 0;
+        $total_selling_price = 0;
+
+        foreach ($dates as $date) {
+            $pricing = $this->getPriceForDate($date);
+
+            // Calculate discount
+            $room_price = (float)$pricing['sale_price'];
+            $cost_price = (float)$pricing['cost_price'];
+            $owner_price = (float)$this->room->owner_price;
+            $room_name = $pricing['period_name'];
+
+            $discount_price = ($room_price - $cost_price) * $discount;
+
+            if ($owner_price != 0) {
+                $discount_percent = ($owner_price - ($room_price - $discount_price)) / $owner_price * 100;
+            } else {
+                $discount_percent = 0;
+            }
+
+            $selling_price = $room_price - $discount_price;
+
+            $daily_pricing[] = [
+                'date' => $date,
+                'period_name' => $room_name ?? '',
+                'sale_price' => $room_price,
+                'cost_price' => $cost_price,
+                'discount_price' => $discount_price,
+                'discount_percent' => round($discount_percent),
+                'selling_price' => $selling_price
+            ];
+
+            $total_sale += $room_price;
+            $total_cost += $cost_price;
+            $total_discount += $discount_price;
+            $total_selling_price += $selling_price;
+        }
+
+        return [
+            'daily' => $daily_pricing,
+            'total_sale' => $total_sale,
+            'total_cost' => $total_cost,
+            'total_discount' => $total_discount,
+            'total_selling_price' => $total_selling_price,
+            'overall_discount_percent' => $total_sale > 0 ? round(($total_discount / $total_sale) * 100) : 0
+        ];
+    }
+
+    private function getPriceForDate($date)
+    {
+        // Check if date falls within any special period
+        $period = $this->room->periods()
+            ->where('start_date', '<=', $date)
+            ->where('end_date', '>=', $date)
+            ->first();
+
+        if ($period) {
+            return [
+                'sale_price' => $period->sale_price,
+                'cost_price' => $period->cost_price ?? $this->room->cost_price,
+                'period_name' => $period->period_name
+            ];
+        }
+
+        // Return default room prices
+        return [
+            'sale_price' => $this->room->room_price,
+            'cost_price' => $this->room->cost,
+            'period_name' => 'default',
+        ];
+    }
+
+    private function getDatesBetween($start_date, $end_date)
+    {
+        $dates = [];
+        $current = Carbon::parse($start_date);
+        $end = Carbon::parse($end_date);
+
+        while ($current->lt($end)) {
+            $dates[] = $current->format('Y-m-d');
+            $current->addDay();
+        }
+
+        return $dates;
     }
 }
