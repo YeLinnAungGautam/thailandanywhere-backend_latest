@@ -15,12 +15,18 @@ class RoomPeriodController extends Controller
             'checkout_date' => 'required|date',
         ]);
 
-        $period = $request->checkin_date . ' , ' . $request->checkout_date;
+        $roomService = new RoomService($room);
+        $pricing = $roomService->getDailyPricing($request->checkin_date, $request->checkout_date);
 
         $data = [
             'room' => $room,
+            'daily_pricing' => $pricing['daily'],
+            'total_sale_price' => $pricing['total_sale'],
+            'total_cost_price' => $pricing['total_cost'],
+            'total_discount_price' => $pricing['total_discount'],
+            'total_selling_price' => $pricing['total_selling_price'],
+            'overall_discount_percent' => $pricing['overall_discount_percent'],
             'service_date' => $request->service_date,
-            'room_price' => (new RoomService($room))->getRoomPrice($period),
         ];
 
         return success($data);
