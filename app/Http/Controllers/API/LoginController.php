@@ -12,7 +12,7 @@ class LoginController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|min:8'
+            'password' => 'required'
         ]);
 
         if (!Auth::guard('user')->attempt($request->only('email', 'password'))) {
