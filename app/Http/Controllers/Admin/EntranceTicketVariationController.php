@@ -23,6 +23,8 @@ class EntranceTicketVariationController extends Controller
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
+        $order_by_price = $request->query('order_by_price');
+        $order_by_score = $request->query('order_by_score');
 
         $query = EntranceTicketVariation::query()
             ->when($request->query('search'), function ($query) use ($request) {
@@ -36,6 +38,41 @@ class EntranceTicketVariationController extends Controller
                 $q->where('price', '<=', $max_price);
             });
 
+        // Add score calculation using raw SQL
+        $query->selectRaw('entrance_ticket_variations.*,
+            CASE
+                WHEN price > 0 AND cost_price > 0 THEN (price - cost_price) / price
+                WHEN price > 0 AND cost_price IS NULL THEN 1.0
+                ELSE 0
+            END as score');
+
+        // Handle sorting
+        if ($order_by_score) {
+            if ($order_by_score == 'low_to_high') {
+                $query->orderByRaw('
+                    CASE
+                        WHEN price > 0 AND cost_price > 0 THEN (price - cost_price) / price
+                        WHEN price > 0 AND cost_price IS NULL THEN 1.0
+                        ELSE 0
+                    END ASC'
+                );
+            } elseif ($order_by_score == 'high_to_low') {
+                $query->orderByRaw('
+                    CASE
+                        WHEN price > 0 AND cost_price > 0 THEN (price - cost_price) / price
+                        WHEN price > 0 AND cost_price IS NULL THEN 1.0
+                        ELSE 0
+                    END DESC'
+                );
+            }
+        } elseif ($order_by_price) {
+            if ($order_by_price == 'low_to_high') {
+                $query->orderBy('price');
+            } elseif ($order_by_price == 'high_to_low') {
+                $query->orderByDesc('price');
+            }
+        }
+
         $data = $query->paginate($limit);
 
         return $this->success(EntranceTicketVariationResource::collection($data)
@@ -47,7 +84,6 @@ class EntranceTicketVariationController extends Controller
             ->response()
             ->getData(), 'Variation List');
     }
-
     /**
      * Store a newly created resource in storage.
      */

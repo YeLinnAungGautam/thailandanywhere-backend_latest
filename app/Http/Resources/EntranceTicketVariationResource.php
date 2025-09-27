@@ -34,6 +34,15 @@ class EntranceTicketVariationResource extends JsonResource
             'including_services' => $this->including_services ? json_decode($this->including_services) : $this->including_services,
             'meta_data' => $this->meta_data ? json_decode($this->meta_data) : null,
             'child_info' => $this->child_info ? json_decode($this->child_info) : null,
+            'score' => $this->calculateScore(),
         ];
+    }
+
+    private function calculateScore()
+    {
+        if ($this->price > 0) {
+            return round(($this->price - $this->cost_price) / $this->price, 3);
+        }
+        return 0;
     }
 }

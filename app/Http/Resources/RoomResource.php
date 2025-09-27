@@ -43,6 +43,7 @@ class RoomResource extends JsonResource
                     return $this->roitemsGrouped();
                 }
             ),
+            'score' => $this->calculateScore(),
         ];
     }
 
@@ -96,5 +97,13 @@ class RoomResource extends JsonResource
             ->map(fn ($date) => $date->format('Y-m-d'));
 
         return iterator_to_array($dates);
+    }
+
+    private function calculateScore()
+    {
+        if ($this->room_price > 0) {
+            return round(($this->room_price - $this->cost) / $this->room_price, 3);
+        }
+        return 0;
     }
 }
