@@ -36,6 +36,9 @@ class UnpaidResource extends JsonResource
             'include_vantour' => $this->whenLoaded('items', function(){
                 return $this->items->where('product_type', 'App\Models\PrivateVanTour')->first() ? true : false;
             }),
+            'include_flight' => $this->whenLoaded('items', function(){
+                return $this->items->where('product_type', 'App\Models\Airline')->first() ? true : false;
+            }),
         ];
     }
 

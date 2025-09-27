@@ -27,16 +27,42 @@ class RoomController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
         $order_by_price = $request->query('order_by_price');
+        $order_by_score = $request->query('order_by_score');
 
         $query = Room::query()->with('periods', 'images', 'hotel','roitems', 'roitems.rofacility');
 
-        if ($order_by_price) {
+        // Add score calculation using raw SQL
+        $query->selectRaw('rooms.*,
+            CASE
+                WHEN room_price > 0 THEN (room_price - cost) / room_price
+                ELSE 0
+            END as score');
+
+        // Handle sorting
+        if ($order_by_score) {
+            if ($order_by_score == 'low_to_high') {
+                $query->orderByRaw('
+                    CASE
+                        WHEN room_price > 0 THEN (room_price - cost) / room_price
+                        ELSE 0
+                    END ASC'
+                );
+            } elseif ($order_by_score == 'high_to_low') {
+                $query->orderByRaw('
+                    CASE
+                        WHEN room_price > 0 THEN (room_price - cost) / room_price
+                        ELSE 0
+                    END DESC'
+                );
+            }
+        } elseif ($order_by_price) {
             if ($order_by_price == 'low_to_high') {
                 $query->orderBy('room_price');
             } elseif ($order_by_price == 'high_to_low') {
                 $query->orderByDesc('room_price');
             }
         }
+
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
