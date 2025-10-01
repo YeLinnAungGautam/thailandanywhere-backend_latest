@@ -147,6 +147,28 @@ class DashboardController extends Controller
         }
     }
 
+    public function productTypeSalesReport(Request $request)
+    {
+        try {
+            if(!$request->daterange) {
+                throw new Exception('Product Type Sales: Invalid daterange to filter');
+            }
+
+            return $this->success(ReportService::getProductTypeSales($request->daterange), 'Report product type sales');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function productTypeDetail(Request $request)
+    {
+        try {
+            return $this->success(ReportService::getProductTypeDetail($request->date, $request->product_type, $request->type), 'Report product type sales');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function getSaleCounts(Request $request)
     {
         try {
