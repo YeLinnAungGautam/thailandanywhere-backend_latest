@@ -43,6 +43,132 @@ class ReportService
         return $bookings;
     }
 
+    public static function getProductTypeSales(string $daterange)
+    {
+        $dates = explode(',', $daterange);
+
+        $start_date = Carbon::parse($dates[0])->format('Y-m-d');
+        $end_date = Carbon::parse($dates[1])->format('Y-m-d');
+
+        $results = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->where('bookings.payment_status', 'fully_paid')
+            ->where('booking_items.payment_status', '!=', 'fully_paid')
+            ->whereDate('booking_items.service_date', '>=', $start_date)
+            ->whereDate('booking_items.service_date', '<=', $end_date)
+            ->whereNull('booking_items.deleted_at')
+            ->groupBy('service_date', 'booking_items.product_type')
+            ->select(
+                DB::raw('DATE(booking_items.service_date) as date'),
+                'booking_items.product_type',
+                DB::raw('COUNT(booking_items.id) as booking_item_count'),
+                DB::raw('SUM(CAST(booking_items.total_cost_price AS DECIMAL(10,2))) as total_expense'),
+                DB::raw('COUNT(DISTINCT booking_items.booking_id) as booking_count'),
+                DB::raw('SUM(booking_items.quantity) as total_quantity'),
+                DB::raw('SUM(booking_items.amount - booking_items.total_cost_price) as total_profit')
+            )
+            ->orderBy('service_date')
+            ->orderBy('booking_items.product_type')
+            ->get();
+
+        // Get remaining expense for non-fully-paid bookings with groups that have cash images
+        $remainingExpense = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+
+            ->where('bookings.payment_status', 'fully_paid')
+            ->where('booking_items.payment_status', '!=', 'fully_paid')
+            ->whereDate('booking_items.service_date', '>=', $start_date)
+            ->whereDate('booking_items.service_date', '<=', $end_date)
+            ->whereNull('booking_items.deleted_at')
+            ->groupBy('service_date', 'booking_items.product_type')
+            ->select(
+                DB::raw('DATE(booking_items.service_date) as date'),
+                'booking_items.product_type',
+                DB::raw('SUM(CAST(booking_items.total_cost_price AS DECIMAL(10,2))) as remain_expense_total')
+            )
+            ->get()
+            ->groupBy('date')
+            ->map(function($items) {
+                return $items->keyBy('product_type');
+            });
+
+        // Group by date and merge with remaining expense
+        $grouped = $results->groupBy('date')->map(function ($items, $date) use ($remainingExpense) {
+            return [
+                'date' => $date,
+                'product_types' => $items->map(function ($item) use ($remainingExpense, $date) {
+                    $remainExpense = $remainingExpense->get($date)?->get($item->product_type)?->remain_expense_total ?? 0;
+
+                    return [
+                        'product_type' => $item->product_type,
+                        'booking_count' => $item->booking_count,
+                        'booking_item_count' => $item->booking_item_count,
+                        'total_quantity' => $item->total_quantity,
+                        'total_expense' => $item->total_expense,
+                        'remain_expense_total' => $remainExpense,
+                        'total_profit' => $item->total_profit,
+                    ];
+                })->values()
+            ];
+        })->values();
+
+        return $grouped;
+    }
+
+    public static function getProductTypeDetail(string $date, string $product_type, string $type)
+    {
+        $query = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->whereDate('booking_items.service_date', '=', $date)
+            ->where('booking_items.product_type', '=', $product_type)
+            ->whereNull('booking_items.deleted_at');
+
+        // Apply filters based on type
+        switch ($type) {
+            case 'remain_expense':
+                // Items where booking is fully paid but item is not
+                $query->where('bookings.payment_status', 'fully_paid')
+                      ->where('booking_items.payment_status', '!=', 'fully_paid');
+                break;
+
+            case 'total_expense':
+            case 'all':
+            default:
+                // All items matching the date and product type
+                $query->where('bookings.payment_status', 'fully_paid')
+                      ->where('booking_items.payment_status', '!=', 'fully_paid');
+                break;
+        }
+
+        $results = $query->select(
+                'booking_items.id',
+                'booking_items.booking_id',
+                'bookings.booking_number',
+                'booking_items.service_date',
+                'booking_items.product_type',
+                'booking_items.product_name',
+                'booking_items.quantity',
+                'booking_items.amount',
+                'booking_items.total_cost_price',
+                DB::raw('(booking_items.amount - booking_items.total_cost_price) as profit'),
+                'booking_items.payment_status as item_payment_status',
+                'bookings.payment_status as booking_payment_status'
+            )
+            ->orderBy('booking_items.id')
+            ->get();
+
+        return [
+            'date' => $date,
+            'product_type' => $product_type,
+            'type' => $type,
+            'total_items' => $results->count(),
+            'total_expense' => $results->sum('total_cost_price'),
+            'total_profit' => $results->sum('profit'),
+            'total_quantity' => $results->sum('quantity'),
+            'items' => $results
+        ];
+    }
+
     public static function getUnpaidBooking(string $daterange, string|null $agent_id, string|null $service_daterange)
     {
         $dates = explode(',', $daterange);
