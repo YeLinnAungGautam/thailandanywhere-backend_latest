@@ -67,7 +67,7 @@ class ProfileController extends Controller
 
             $user->password = Hash::make($request->password);
             $user->update();
-            $user->tokens()->delete();
+            // $user->tokens()->delete();
 
             return $this->success($user, 'Successfully changed password');
         } catch (Exception $e) {
