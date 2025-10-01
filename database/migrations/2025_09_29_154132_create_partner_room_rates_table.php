@@ -20,6 +20,7 @@ return new class extends Migration {
 
             $table->date('date');
             $table->unsignedInteger('stock')->default(0);
+            $table->enum('discount_type', ['fixed', 'percentage'])->default('fixed');
             $table->decimal('discount', 10, 2)->default(0)->nullable();
 
             $table->timestamps();

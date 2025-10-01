@@ -67,6 +67,8 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::apiResource('rooms', RoomController::class);
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
 
+    # Default Room Rates
+
     # Room Rates
     Route::apiResource('hotels/{hotel}/rooms/{room}/rates', RoomRateController::class);
 });

@@ -2,11 +2,13 @@
 namespace App\Http\Controllers\API\Partner;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PartnerRoomRateRequest;
 use App\Http\Resources\PartnerRoomRateResource;
 use App\Models\BookingItem;
 use App\Models\Hotel;
 use App\Models\PartnerRoomRate;
 use App\Models\Room;
+use App\Services\PartnerRoomRateService;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 
@@ -14,45 +16,24 @@ class RoomRateController extends Controller
 {
     use HttpResponses;
 
-    public function index(Hotel $hotel, Room $room, Request $request)
+    public function index(Hotel $hotel, Room $room, PartnerRoomRateRequest $request)
     {
-        $request->validate([
-            'month' => 'required|digits:2',
-            'year' => 'required|digits:4',
-        ]);
+        $input = $request->validated();
 
-        $room_rates = PartnerRoomRate::query()
-            ->with('room')
-            ->where('partner_id', $request->user()->id)
-            ->where('room_id', $room->id)
-            ->whereYear('date', $request->input('year'))
-            ->whereMonth('date', $request->input('month'))
-            ->when($request->input('date'), fn ($q, $date) => $q->where('date', $date))
-            ->withSum([
-                'bookingItems as booked_count' => function ($query) {
-                    $query->whereColumn('service_date', 'date');
-                }
-            ], 'quantity')
-            ->paginate($request->limit ?? 31);
-
-        return $this->success(PartnerRoomRateResource::collection($room_rates)
-            ->additional([
-                'meta' => [
-                    'total_page' => (int) ceil($room_rates->total() / $room_rates->perPage()),
-                ],
-            ])
-            ->response()
-            ->getData(), 'Room Rate List');
-    }
-
-    public function show($id)
-    {
-        $rate = PartnerRoomRate::with(['room', 'partner'])->findOrFail($id);
-
-        return $this->success(
-            $rate,
-            'Room rate retrieved'
+        $service = new PartnerRoomRateService(
+            partner_id: request()->user()->id,
+            room_id: $room->id
         );
+
+        $room_rates = $service->getRates(
+            year: (int) $input['year'],
+            month: (int) $input['month'],
+            date: $input['date'] ?? null
+        );
+
+        ray($room_rates);
+
+        return $this->success(PartnerRoomRateResource::collection($room_rates));
     }
 
     public function store(Hotel $hotel, Room $room, Request $request)
