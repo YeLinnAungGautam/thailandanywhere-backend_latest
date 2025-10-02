@@ -4,12 +4,13 @@ use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\API\Partner\AuthPartnerController;
 use App\Http\Controllers\API\Partner\CashImageController;
 use App\Http\Controllers\API\Partner\DashboardController;
+use App\Http\Controllers\API\Partner\DefaultRoomRateController;
 use App\Http\Controllers\API\Partner\ForgotPasswordController;
 use App\Http\Controllers\API\Partner\HotelPartnerController;
 use App\Http\Controllers\API\Partner\ReservationController;
 use App\Http\Controllers\API\Partner\ResetPasswordController;
-use App\Http\Controllers\API\Partner\RoomController;
 
+use App\Http\Controllers\API\Partner\RoomController;
 use App\Http\Controllers\API\Partner\RoomRateController;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +69,7 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
 
     # Default Room Rates
+    Route::apiResource('hotels/{hotel}/rooms/{room}/default-rates', DefaultRoomRateController::class)->only(['store', 'destroy']);
 
     # Room Rates
     Route::apiResource('hotels/{hotel}/rooms/{room}/rates', RoomRateController::class);

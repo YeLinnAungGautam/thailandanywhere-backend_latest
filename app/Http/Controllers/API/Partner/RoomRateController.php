@@ -2,39 +2,17 @@
 namespace App\Http\Controllers\API\Partner;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PartnerRoomRateRequest;
-use App\Http\Resources\PartnerRoomRateResource;
+use App\Http\Resources\RoomResource;
 use App\Models\BookingItem;
 use App\Models\Hotel;
 use App\Models\PartnerRoomRate;
 use App\Models\Room;
-use App\Services\PartnerRoomRateService;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 
 class RoomRateController extends Controller
 {
     use HttpResponses;
-
-    public function index(Hotel $hotel, Room $room, PartnerRoomRateRequest $request)
-    {
-        $input = $request->validated();
-
-        $service = new PartnerRoomRateService(
-            partner_id: request()->user()->id,
-            room_id: $room->id
-        );
-
-        $room_rates = $service->getRates(
-            year: (int) $input['year'],
-            month: (int) $input['month'],
-            date: $input['date'] ?? null
-        );
-
-        ray($room_rates);
-
-        return $this->success(PartnerRoomRateResource::collection($room_rates));
-    }
 
     public function store(Hotel $hotel, Room $room, Request $request)
     {
@@ -80,9 +58,6 @@ class RoomRateController extends Controller
                 ],
                 [
                     'stock' => $validated['stock'],
-                    'cost_price' => $validated['cost_price'] ?? null,
-                    'cost_price_discount' => $validated['cost_price_discount'] ?? null,
-                    'selling_price' => $validated['selling_price'] ?? null,
                     'discount' => $validated['discount'] ?? 0,
                 ]
             );
@@ -93,45 +68,27 @@ class RoomRateController extends Controller
             ];
         }
 
-        return $this->success(
-            $results,
-            'Batch room rates processed',
-            200
-        );
+        $room->refresh();
+        $request->merge(['year' => now()->year, 'month' => now()->month, 'include_rates' => true]);
+
+        return $this->success(new RoomResource($room), 'Room Detail', 200);
     }
 
-    public function update(Request $request, $id)
+    public function destroy(Hotel $hotel, Room $room, Request $request)
     {
-        $rate = PartnerRoomRate::findOrFail($id);
+        $partner = $request->user();
+
         $validated = $request->validate([
-            'stock' => 'sometimes|integer|min:0',
-            'price' => 'sometimes|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
+            'date' => 'required|date|date_format:Y-m-d',
         ]);
 
-        // If stock is being updated, check for booking conflicts
-        if (isset($validated['stock'])) {
-            $booked = BookingItem::where('room_id', $rate->room_id)
-                ->where('service_date', $rate->date)
-                ->sum('quantity');
+        $rate = PartnerRoomRate::where('partner_id', $partner->id)
+            ->where('room_id', $room->id)
+            ->where('date', $validated['date'])
+            ->firstOrFail();
 
-            if ($booked > $validated['stock']) {
-                return response()->json([
-                    'error' => 'Cannot set stock below already booked quantity (' . $booked . ') for this room and date.'
-                ], 422);
-            }
-        }
-
-        $rate->update($validated);
-
-        return response()->json(['data' => $rate, 'message' => 'Room rate updated']);
-    }
-
-    public function destroy($id)
-    {
-        $rate = PartnerRoomRate::findOrFail($id);
         $rate->delete();
 
-        return response()->json(['message' => 'Room rate deleted']);
+        return $this->success(null, 'Room rate deleted successfully', 200);
     }
 }
