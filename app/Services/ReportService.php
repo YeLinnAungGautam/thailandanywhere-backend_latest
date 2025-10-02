@@ -71,6 +71,26 @@ class ReportService
             ->orderBy('booking_items.product_type')
             ->get();
 
+        // Get sales metrics based on booking_date
+        $salesByBookingDate = Booking::query()
+            ->join('booking_items', 'bookings.id', '=', 'booking_items.booking_id')
+            ->where('bookings.payment_status', 'fully_paid')
+            ->whereDate('bookings.booking_date', '>=', $start_date)
+            ->whereDate('bookings.booking_date', '<=', $end_date)
+            ->whereNull('booking_items.deleted_at')
+            ->groupBy(DB::raw('DATE(bookings.booking_date)'), 'booking_items.product_type')
+            ->select(
+                DB::raw('DATE(bookings.booking_date) as date'),
+                'booking_items.product_type',
+                DB::raw('COUNT(booking_items.id) as booking_item_count_sale'),
+                DB::raw('COUNT(DISTINCT bookings.id) as booking_count_sale')
+            )
+            ->get()
+            ->groupBy('date')
+            ->map(function($items) {
+                return $items->keyBy('product_type');
+            });
+
         // Get remaining expense for non-fully-paid bookings with groups that have cash images
         $remainingExpense = BookingItem::query()
             ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
@@ -92,12 +112,13 @@ class ReportService
                 return $items->keyBy('product_type');
             });
 
-        // Group by date and merge with remaining expense
-        $grouped = $results->groupBy('date')->map(function ($items, $date) use ($remainingExpense) {
+        // Group by date and merge all metrics
+        $grouped = $results->groupBy('date')->map(function ($items, $date) use ($remainingExpense, $salesByBookingDate) {
             return [
                 'date' => $date,
-                'product_types' => $items->map(function ($item) use ($remainingExpense, $date) {
+                'product_types' => $items->map(function ($item) use ($remainingExpense, $salesByBookingDate, $date) {
                     $remainExpense = $remainingExpense->get($date)?->get($item->product_type)?->remain_expense_total ?? 0;
+                    $salesData = $salesByBookingDate->get($date)?->get($item->product_type);
 
                     return [
                         'product_type' => $item->product_type,
@@ -107,66 +128,14 @@ class ReportService
                         'total_expense' => $item->total_expense,
                         'remain_expense_total' => $remainExpense,
                         'total_profit' => $item->total_profit,
+                        'booking_count_sale' => $salesData->booking_count_sale ?? 0,
+                        'booking_item_count_sale' => $salesData->booking_item_count_sale ?? 0,
                     ];
                 })->values()
             ];
         })->values();
 
         return $grouped;
-    }
-
-    public static function getProductTypeDetail(string $date, string $product_type, string $type)
-    {
-        $query = BookingItem::query()
-            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
-            ->whereDate('booking_items.service_date', '=', $date)
-            ->where('booking_items.product_type', '=', $product_type)
-            ->whereNull('booking_items.deleted_at');
-
-        // Apply filters based on type
-        switch ($type) {
-            case 'remain_expense':
-                // Items where booking is fully paid but item is not
-                $query->where('bookings.payment_status', 'fully_paid')
-                      ->where('booking_items.payment_status', '!=', 'fully_paid');
-                break;
-
-            case 'total_expense':
-            case 'all':
-            default:
-                // All items matching the date and product type
-                $query->where('bookings.payment_status', 'fully_paid')
-                      ->where('booking_items.payment_status', '!=', 'fully_paid');
-                break;
-        }
-
-        $results = $query->select(
-                'booking_items.id',
-                'booking_items.booking_id',
-                'bookings.booking_number',
-                'booking_items.service_date',
-                'booking_items.product_type',
-                'booking_items.product_name',
-                'booking_items.quantity',
-                'booking_items.amount',
-                'booking_items.total_cost_price',
-                DB::raw('(booking_items.amount - booking_items.total_cost_price) as profit'),
-                'booking_items.payment_status as item_payment_status',
-                'bookings.payment_status as booking_payment_status'
-            )
-            ->orderBy('booking_items.id')
-            ->get();
-
-        return [
-            'date' => $date,
-            'product_type' => $product_type,
-            'type' => $type,
-            'total_items' => $results->count(),
-            'total_expense' => $results->sum('total_cost_price'),
-            'total_profit' => $results->sum('profit'),
-            'total_quantity' => $results->sum('quantity'),
-            'items' => $results
-        ];
     }
 
     public static function getUnpaidBooking(string $daterange, string|null $agent_id, string|null $service_daterange)

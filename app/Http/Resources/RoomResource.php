@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\PartnerRoomRateService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -44,6 +45,12 @@ class RoomResource extends JsonResource
                 }
             ),
             'score' => $this->calculateScore(),
+            'room_rates' => $this->when(
+                $request->user() && $request->include_rates,
+                function () use ($request) {
+                    return $this->getRoomRates($request);
+                }
+            ),
         ];
     }
 
@@ -51,7 +58,7 @@ class RoomResource extends JsonResource
     {
         $dates = [];
 
-        if(!is_null($period)) {
+        if (!is_null($period)) {
             $periods = explode(' , ', $period);
             $dates = $this->getDaysOfMonth($periods[0], $periods[1]);
 
@@ -65,7 +72,7 @@ class RoomResource extends JsonResource
 
     private function getRoomPrice($period = null)
     {
-        if(is_null($period)) {
+        if (is_null($period)) {
             return $this->room_price;
         }
 
@@ -75,12 +82,12 @@ class RoomResource extends JsonResource
         $dates = $this->getTotalDates($period);
 
         $room_prices = [];
-        foreach($dates as $date) {
+        foreach ($dates as $date) {
             $query = $this->periods()
                 ->where('start_date', '<=', $date)
                 ->where('end_date', '>=', $date);
 
-            if($query->exists()) {
+            if ($query->exists()) {
                 $room_prices[] = $query->sum('sale_price');
             } else {
                 $room_prices[] = $this->room_price;
@@ -104,6 +111,30 @@ class RoomResource extends JsonResource
         if ($this->room_price > 0) {
             return round(($this->room_price - $this->cost) / $this->room_price, 3);
         }
+
         return 0;
+    }
+
+    private function getRoomRates($request)
+    {
+        $partner = $request->user();
+        $year = $request->year ?? now()->year;
+        $month = $request->month ?? now()->month;
+
+        if (!$partner) {
+            return null;
+        }
+
+        $service = new PartnerRoomRateService(
+            partner_id: $partner->id,
+            room_id: $this->id
+        );
+
+        $room_rates = $service->getCalendarDetail(
+            year: (int) $year,
+            month: (int) $month
+        );
+
+        return $room_rates;
     }
 }
