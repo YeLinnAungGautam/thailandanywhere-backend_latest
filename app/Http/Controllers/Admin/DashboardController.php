@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItemResource;
 use App\Http\Resources\TopSellingProductResource;
 use App\Http\Resources\UnpaidBookingResource;
 use App\Models\Booking;
@@ -160,14 +161,66 @@ class DashboardController extends Controller
         }
     }
 
-    public function productTypeDetail(Request $request)
+    public function productTypeBooking(Request $request)
     {
         try {
-            return $this->success(ReportService::getProductTypeDetail($request->date, $request->product_type, $request->type), 'Report product type sales');
+            $data = BookingItem::query()
+                ->join('bookings', 'booking_items.booking_id', 'bookings.id')
+                ->where('booking_items.product_type', $request->product_type)
+                ->where('bookings.booking_date', $request->date)
+                ->where('bookings.payment_status','fully_paid')
+                ->whereNull('deleted_at')
+                ->get();
+
+            return $this->success(
+                BookingItemResource::collection($data), 'Product type sales');
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    public function productTypeRemainExpense(Request $request)
+    {
+        try {
+            $data = BookingItem::query()
+                ->join('bookings', 'booking_items.booking_id', 'bookings.id')
+                ->where('booking_items.product_type', $request->product_type)
+                ->where('booking_items.service_date', $request->date)
+                ->whereNull('booking_items.deleted_at')
+                // Keep both conditions if this is intentional
+                ->where('bookings.payment_status', 'fully_paid')
+                ->whereIn('booking_items.payment_status', ['not_paid', 'partially_paid'])
+                ->select('booking_items.*')
+                ->get();
+
+            return $this->success(
+                BookingItemResource::collection($data),
+                'Product type remain expense'
+            );
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function productTypeBookingCount(Request $request)
+    {
+        try {
+            $data = BookingItem::query()
+                ->join('bookings', 'booking_items.booking_id', 'bookings.id')
+                ->where('booking_items.product_type', $request->product_type)
+                ->where('booking_items.service_date', $request->date)
+                ->whereNull('booking_items.deleted_at')
+                ->where('bookings.payment_status','fully_paid')
+                ->get();
+
+            return $this->success(
+                BookingItemResource::collection($data), 'Product type sales');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+
 
     public function getSaleCounts(Request $request)
     {
