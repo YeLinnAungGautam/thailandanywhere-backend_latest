@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Room extends Model
 {
@@ -33,6 +33,11 @@ class Room extends Model
         return $this->hasMany(RoomPeriod::class, 'room_id', 'id');
     }
 
+    public function roomRates()
+    {
+        return $this->hasMany(PartnerRoomRate::class, 'room_id', 'id');
+    }
+
     public function roitems()
     {
         return $this->belongsToMany(Roitem::class, 'room_roitems');
@@ -42,8 +47,8 @@ class Room extends Model
     public function roitemsGrouped()
     {
         return $this->roitems()
-                    ->with('rofacility')
-                    ->get()
-                    ->groupBy('rofacility.name'); // သို့မဟုတ် 'rofacility.title'
+            ->with('rofacility')
+            ->get()
+            ->groupBy('rofacility.name'); // သို့မဟုတ် 'rofacility.title'
     }
 }

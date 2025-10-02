@@ -10,13 +10,10 @@ use App\Http\Controllers\API\Partner\ReservationController;
 use App\Http\Controllers\API\Partner\ResetPasswordController;
 use App\Http\Controllers\API\Partner\RoomController;
 
+use App\Http\Controllers\API\Partner\RoomRateController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthPartnerController::class, 'loginPartner']);
-
-Route::get('/test', function() {
-    return response()->json(['message' => 'test']);
-});
 
 Route::post('forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 Route::post('reset-password', [ResetPasswordController::class, 'reset']);
@@ -31,12 +28,12 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::post('logout', [AuthPartnerController::class, 'logout']);
 
     // reservation part
-    Route::get('booking_item_groups',[ReservationController::class, 'index']);
-    Route::get('booking_item_groups/{id}',[ReservationController::class, 'detail']);
-    Route::get('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'getCustomerDocuments']);
-    Route::post('booking_item_groups/{id}/customer_documents',[ReservationController::class, 'store']);
-    Route::put('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'update']);
-    Route::delete('booking_item_groups/{id}/customer_documents/{customer_document_id}',[ReservationController::class, 'delete']);
+    Route::get('booking_item_groups', [ReservationController::class, 'index']);
+    Route::get('booking_item_groups/{id}', [ReservationController::class, 'detail']);
+    Route::get('booking_item_groups/{id}/customer_documents', [ReservationController::class, 'getCustomerDocuments']);
+    Route::post('booking_item_groups/{id}/customer_documents', [ReservationController::class, 'store']);
+    Route::put('booking_item_groups/{id}/customer_documents/{customer_document_id}', [ReservationController::class, 'update']);
+    Route::delete('booking_item_groups/{id}/customer_documents/{customer_document_id}', [ReservationController::class, 'delete']);
 
     // booking items
     Route::get('booking_items', [ReservationController::class, 'getBookingItems']);
@@ -69,4 +66,7 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     # Room
     Route::apiResource('rooms', RoomController::class);
     Route::delete('rooms/{room}/images/{room_image}', [RoomController::class, 'deleteImage']);
+
+    # Room Rates
+    Route::apiResource('hotels/{hotel}/rooms/{room}/rates', RoomRateController::class);
 });
