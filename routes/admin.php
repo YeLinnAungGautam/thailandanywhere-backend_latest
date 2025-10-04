@@ -60,6 +60,7 @@ use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\Admin\SaleManagerController;
 use App\Http\Controllers\Admin\Setting\EntranceTicketDiscountController;
 use App\Http\Controllers\Admin\Setting\HotelDiscountController;
+use App\Http\Controllers\Admin\Setting\PrivateVanTourController as SettingPrivateVanTourController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\TaxReceiptController;
 use App\Http\Controllers\Admin\UserController;
@@ -531,4 +532,5 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::apiResource('settings/hotels/discount', HotelDiscountController::class);
     Route::apiResource('settings/entrance-tickets/discount', EntranceTicketDiscountController::class);
+    Route::apiResource('settings/private-van-tours/discount',SettingPrivateVanTourController::class);
 });

@@ -16,7 +16,7 @@ class Car extends Model
     public function privateVanTours()
     {
         return $this->belongsToMany(PrivateVanTour::class, 'private_van_tour_cars')
-            ->withPivot('price', 'agent_price')
+            ->withPivot('price', 'agent_price', 'cost')
             ->withTimestamps();
     }
 }
