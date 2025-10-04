@@ -14,6 +14,7 @@ class PrivateVanTourController extends Controller
     {
         $query = PrivateVanTour::query()
             ->withCount('bookingItems')
+            ->withCount('destinations') // Add this line to get destination count
             ->vanTour()
             ->with('cars', 'cities', 'destinations', 'images')
             ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "{$request->search}%"))
@@ -51,12 +52,24 @@ class PrivateVanTourController extends Controller
                 });
             });
 
+        // Ordering logic
         if ($request->order_by) {
-            if ($request->order_by == 'top_selling_products') {
-                $query = $query->orderBy('booking_items_count', 'desc');
+            switch ($request->order_by) {
+                case 'top_selling_products':
+                    $query = $query->orderBy('booking_items_count', 'desc');
+                    break;
+                case 'most_destinations':
+                    $query = $query->orderBy('destinations_count', 'desc');
+                    break;
+                case 'least_destinations':
+                    $query = $query->orderBy('destinations_count', 'asc');
+                    break;
+                default:
+                    $query = $query->orderBy('destinations_count', 'desc');
+                    break;
             }
         } else {
-            $query = $query->orderBy('created_at', 'desc');
+            $query = $query->orderBy('destinations_count', 'desc');
         }
 
         $items = $query->paginate($limit ?? 10);

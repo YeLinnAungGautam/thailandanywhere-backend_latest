@@ -113,3 +113,14 @@ if (!function_exists('ticket_discount')) {
         return $convert_to_int ? $value / 100 : $value;
     }
 }
+
+if (!function_exists('vantour_discount')) {
+    function vantour_discount($convert_to_int = true)
+    {
+        $setting = Setting::where('meta_key', Setting::PRIVATE_VAN_TOUR_DISCOUNT)->first();
+
+        $value = $setting ? (int) $setting->meta_value : 0;
+
+        return $convert_to_int ? $value / 100 : $value;
+    }
+}

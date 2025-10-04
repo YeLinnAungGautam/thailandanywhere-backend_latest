@@ -128,9 +128,10 @@ class PrivateVanTourController extends Controller
 
         $prices = $request->prices;
         $agent_prices = $request->agent_prices;
-        $data = array_combine($request->car_ids, array_map(function ($price, $agent_price) {
-            return ['price' => $price, 'agent_price' => $agent_price];
-        }, $prices, $agent_prices));
+        $costs = $request->costs;
+        $data = array_combine($request->car_ids, array_map(function ($price, $agent_price, $cost) {
+            return ['price' => $price, 'agent_price' => $agent_price, 'cost' => $cost];
+        }, $prices, $agent_prices, $costs));
 
         $save->cars()->sync($data);
 
@@ -223,9 +224,10 @@ class PrivateVanTourController extends Controller
 
         $prices = $request->prices;
         $agent_prices = $request->agent_prices;
-        $data = array_combine($request->car_ids, array_map(function ($price, $agent_price) {
-            return ['price' => $price, 'agent_price' => $agent_price];
-        }, $prices, $agent_prices));
+        $costs = $request->costs;
+        $data = array_combine($request->car_ids, array_map(function ($price, $agent_price, $cost) {
+            return ['price' => $price, 'agent_price' => $agent_price, 'cost' => $cost];
+        }, $prices, $agent_prices, $costs));
 
 
         $find->cars()->sync($data);

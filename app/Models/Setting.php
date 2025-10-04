@@ -10,4 +10,5 @@ class Setting extends Model
 
     const HOTEL_DISCOUNT = 'hotel_discount';
     const ENTRANCE_TICKET_DISCOUNT = 'entrance_ticket_discount';
+    const PRIVATE_VAN_TOUR_DISCOUNT = 'private_van_tour_discount';
 }

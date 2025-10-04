@@ -118,6 +118,9 @@ class BookingController extends Controller
         ]);
 
         // Check if the booking already has a user_id assigned
+        if($booking->user_id == Auth::user()->id) {
+            return failedMessage('This booking is already assigned with your account, Go to Trip to see booking details');
+        }
         if ($booking->user_id) {
             return failedMessage('This booking is already assigned to a user');
         }
