@@ -136,27 +136,20 @@ class BookingItemGroupController extends Controller
                 })
                 ->sum('total_cost_price');
 
-            // Alternative approach: Calculate sum using relationships
-            // $totalCostPriceSum = $buildBaseQuery()
-            //     ->withSum('bookingItems', 'total_cost_price')
-            //     ->get()
-            //     ->sum('booking_items_sum_total_cost_price');
-
             // Build main query for pagination with relationships
             $main_query = $buildBaseQuery()
                 ->with([
                     'booking',
-                    'bookingItems', // Ensure bookingItems are loaded for the resource
+                    'bookingItems',
                     'cashImages',
                     'taxReceipts'
                 ]);
 
-            // Sorting Logic
+            // Sorting Logic - FIXED VERSION
             if ($request->sorting) {
                 $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
 
                 if ($request->sorting_type == 'product_name') {
-                    // Use a subquery to get the product name for sorting for each group.
                     $main_query->joinSub(
                         DB::table('booking_items as bi_sort')
                             ->select(
@@ -195,9 +188,10 @@ class BookingItemGroupController extends Controller
                         function($join) {
                             $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id');
                         }
-                    )->orderBy('product_names_for_sorting.sort_product_name', $sorting);
+                    )
+                    ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
+                    ->orderBy('booking_item_groups.id', $sorting); // ✅ FIXED: Added secondary sort
                 } else {
-                    // Sort by service date (earliest_service_date)
                     $main_query->joinSub(
                         DB::table('booking_items')
                             ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
@@ -206,11 +200,13 @@ class BookingItemGroupController extends Controller
                         function($join) {
                             $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
                         }
-                    )->orderBy('earliest_service_dates.earliest_service_date', $sorting);
+                    )
+                    ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
+                    ->orderBy('booking_item_groups.id', $sorting); // ✅ FIXED: Added secondary sort
                 }
             } else {
-                // Default sorting if no specific sorting is requested
-                $main_query->latest();
+                // ✅ FIXED: Made default sorting explicit
+                $main_query->orderBy('booking_item_groups.id', 'desc');
             }
 
             $groups = $main_query->paginate($request->get('per_page', 5));
@@ -219,7 +215,7 @@ class BookingItemGroupController extends Controller
                 ->additional([
                     'meta' => [
                         'total_page' => (int)ceil($groups->total() / $groups->perPage()),
-                        'total_cost_price_sum' => $totalCostPriceSum, // Add the total sum here
+                        'total_cost_price_sum' => $totalCostPriceSum,
                     ],
                 ])
                 ->response()
