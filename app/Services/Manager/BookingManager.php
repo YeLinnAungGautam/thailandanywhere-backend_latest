@@ -184,47 +184,125 @@ class BookingManager
 
     private static function saveBookingReceipt(Booking $booking, array $receipt_images)
     {
-        foreach ($receipt_images as $receipt) {
-            $image = $receipt['file'];
-            $amount = $receipt['amount'];
-            $bank_name = $receipt['bank_name'];
-            $date = $receipt['date'];
-            $is_corporate = $receipt['is_corporate'];
-            $note = $receipt['note'];
-            $sender = $receipt['sender'];
-            $reciever = $receipt['reciever'];
-            $interact_bank = $receipt['interact_bank'];
-            $currency = $receipt['currency'];
+        foreach ($receipt_images as $index => $receipt) {
+            // Debug log to see what we're receiving
+            Log::info("Processing receipt index: $index", ['receipt_data' => $receipt]);
 
-            $fileData = upload_file($image, 'images/');
+            $is_internal_transfer = $receipt['is_internal_transfer'] ?? false;
 
-            // BookingReceipt::create([
-            //     'booking_id' => $booking->id,
-            //     'image' => $fileData['fileName'],
-            //     'amount' => $amount,
-            //     'bank_name' => $bank_name,
-            //     'date' => $date,
-            //     'is_corporate' => $is_corporate,
-            //     'note' => $note,
-            //     'sender' => $sender,
-            //     'reciever' => $reciever,
-            //     'interact_bank' => $interact_bank ?? 'personal',
-            //     'currency' => $currency ?? 'THB',
-            // ]);
+            Log::info("Is internal transfer: " . ($is_internal_transfer ? 'yes' : 'no'));
 
-            CashImage::create([
-                'relatable_id' => $booking->id,
-                'relatable_type' => Booking::class,
-                'date' => $date,
-                'sender' => $sender,
-                'receiver' => $reciever,
-                'amount' => $amount,
-                'currency' => $currency ?? 'THB',
-                'interact_bank' => $interact_bank ?? 'personal',
-                'image' => $fileData['fileName'],
-            ]);
+            // Handle internal transfer
+            if ($is_internal_transfer) {
+                $exchange_rate = $receipt['exchange_rate'] ?? 1;
+                $note = $receipt['note'] ?? null;
 
+                // Create internal transfer record
+                $internalTransfer = \App\Models\InternalTransfer::create([
+                    'exchange_rate' => $exchange_rate,
+                    'notes' => $note,
+                ]);
 
+                // Handle "from" files (source)
+                if (isset($receipt['from_files']) && is_array($receipt['from_files'])) {
+                    Log::info("Processing from_files", ['count' => count($receipt['from_files'])]);
+
+                    foreach ($receipt['from_files'] as $fromIndex => $fromFile) {
+                        Log::info("Processing from_file index: $fromIndex", ['from_file_keys' => array_keys($fromFile)]);
+
+                        if (!isset($fromFile['file'])) {
+                            Log::warning("No file in from_files at index $fromIndex");
+                            continue;
+                        }
+
+                        $fileDataFrom = upload_file($fromFile['file'], 'images/');
+
+                        $cashImageFrom = CashImage::create([
+                            'relatable_id' => $booking->id,
+                            'relatable_type' => Booking::class,
+                            'date' => $fromFile['date'] ?? now(),
+                            'sender' => $fromFile['sender'] ?? null,
+                            'receiver' => $fromFile['receiver'] ?? null,
+                            'amount' => $fromFile['amount'] ?? 0,
+                            'currency' => $fromFile['currency'] ?? 'THB',
+                            'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
+                            'image' => $fileDataFrom['fileName'],
+                            'internal_transfer' => true,
+                        ]);
+
+                        $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, [
+                            'direction' => 'from'
+                        ]);
+                    }
+                }
+
+                // Handle "to" files (destination)
+                if (isset($receipt['to_files']) && is_array($receipt['to_files'])) {
+                    Log::info("Processing to_files", ['count' => count($receipt['to_files'])]);
+
+                    foreach ($receipt['to_files'] as $toIndex => $toFile) {
+                        Log::info("Processing to_file index: $toIndex", ['to_file_keys' => array_keys($toFile)]);
+
+                        if (!isset($toFile['file'])) {
+                            Log::warning("No file in to_files at index $toIndex");
+                            continue;
+                        }
+
+                        $fileDataTo = upload_file($toFile['file'], 'images/');
+
+                        $cashImageTo = CashImage::create([
+                            'relatable_id' => $booking->id,
+                            'relatable_type' => Booking::class,
+                            'date' => $toFile['date'] ?? now(),
+                            'sender' => $toFile['sender'] ?? null,
+                            'receiver' => $toFile['receiver'] ?? null,
+                            'amount' => $toFile['amount'] ?? 0,
+                            'currency' => $toFile['currency'] ?? 'THB',
+                            'interact_bank' => $toFile['interact_bank'] ?? 'personal',
+                            'image' => $fileDataTo['fileName'],
+                            'internal_transfer' => true,
+                        ]);
+
+                        $internalTransfer->cashImagesTo()->attach($cashImageTo->id, [
+                            'direction' => 'to'
+                        ]);
+                    }
+                }
+            } else {
+                // Regular cash image
+                Log::info("Processing regular cash image", ['receipt_keys' => array_keys($receipt)]);
+
+                if (!isset($receipt['file'])) {
+                    Log::warning("No file in regular receipt");
+                    continue;
+                }
+
+                $image = $receipt['file'];
+                $amount = $receipt['amount'] ?? 0;
+                $bank_name = $receipt['bank_name'] ?? null;
+                $date = $receipt['date'] ?? now();
+                $is_corporate = $receipt['is_corporate'] ?? false;
+                $note = $receipt['note'] ?? null;
+                $sender = $receipt['sender'] ?? null;
+                $reciever = $receipt['reciever'] ?? null;
+                $interact_bank = $receipt['interact_bank'] ?? 'personal';
+                $currency = $receipt['currency'] ?? 'THB';
+
+                $fileData = upload_file($image, 'images/');
+
+                CashImage::create([
+                    'relatable_id' => $booking->id,
+                    'relatable_type' => Booking::class,
+                    'date' => $date,
+                    'sender' => $sender,
+                    'receiver' => $reciever,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'interact_bank' => $interact_bank,
+                    'image' => $fileData['fileName'],
+                    'internal_transfer' => false,
+                ]);
+            }
         }
     }
 }

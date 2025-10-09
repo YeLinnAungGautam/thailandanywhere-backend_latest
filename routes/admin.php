@@ -465,6 +465,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Cash Image
     Route::apiResource('cash-images', CashImageController::class);
+    Route::put('cashImage/{id}/data_verify', [CashImageController::class, 'verifyData']);
+
     # Cash Image Summary Report
     Route::get('summary-report', [CashImageController::class, 'summary']);
     Route::get('/summary/export-csv', [CashImageController::class, 'exportSummaryToCsv']);

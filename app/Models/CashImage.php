@@ -17,6 +17,8 @@ class CashImage extends Model
         'amount',
         'interact_bank',
         'currency',
+        'internal_transfer',
+        'data_verify',
         'relatable_type',
         'relatable_id'
     ];
@@ -26,6 +28,8 @@ class CashImage extends Model
         'amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'internal_transfer' => 'boolean',
+        'data_verify' => 'boolean'
     ];
 
     // Polymorphic relationship
@@ -80,5 +84,30 @@ class CashImage extends Model
         return $this->morphedByMany(BookingItemGroup::class, 'imageable', 'cash_imageables')
             ->withPivot(['type', 'deposit', 'notes'])
             ->withTimestamps();
+    }
+
+    // Relationship with internal transfers
+    public function internalTransfers()
+    {
+        return $this->belongsToMany(
+            InternalTransfer::class,
+            'internal_transfer_cash_images',
+            'cash_image_id',
+            'internal_transfer_id'
+        )
+        ->withTimestamps()
+        ->withPivot('direction');
+    }
+
+    // Transfers where this is source
+    public function transfersFrom()
+    {
+        return $this->internalTransfers()->wherePivot('direction', 'from');
+    }
+
+    // Transfers where this is destination
+    public function transfersTo()
+    {
+        return $this->internalTransfers()->wherePivot('direction', 'to');
     }
 }

@@ -81,13 +81,6 @@ class CashBookController extends Controller
             'accounts.*.allocated_amount' => 'required|numeric|min:0',
             'accounts.*.note' => 'nullable|string',
             'images' => 'nullable|array',
-            'images.*.image' => 'required',
-            'images.*.date' => 'nullable|date_format:Y-m-d H:i:s',
-            'images.*.sender' => 'required|string|max:255',
-            'images.*.receiver' => 'required|string|max:255',
-            'images.*.amount' => 'required|numeric|min:0',
-            'images.*.currency' => 'required|string|max:10',
-            'images.*.interact_bank' => 'nullable|string|max:255',
             'cash_book_images' => 'nullable|array',
             'cash_book_images.*.image' => 'required',
         ]);
@@ -118,23 +111,117 @@ class CashBookController extends Controller
                     ]);
                 }
 
-                // Create cash images if provided (polymorphic relationship)
-                if (!empty($validated['images'])) {
-                    foreach ($validated['images'] as $imageData) {
-                        $fileData = $this->uploads($imageData['image'], 'images/');
+                if(!empty($validated['images'])) {
+                    foreach ($validated['images'] as $receipt) {
+                        $is_internal_transfer = filter_var($receipt['is_internal_transfer'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-                        CashImage::create([
-                            'image' => $fileData['fileName'],
-                            'date' => $imageData['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
-                            'sender' => $imageData['sender'],
-                            'receiver' => $imageData['receiver'],
-                            'amount' => $imageData['amount'],
-                            'currency' => $imageData['currency'],
-                            'interact_bank' => $imageData['interact_bank'] ?? null,
-                            'relatable_type' => CashBook::class,
-                            'relatable_id' => $cashBook->id,
-                            'image_path' => $fileData['filePath'],
-                        ]);
+                        // Handle internal transfer
+                        if ($is_internal_transfer) {
+                            $exchange_rate = $receipt['exchange_rate'] ?? 1;
+                            $note = $receipt['note'] ?? null;
+                            $id = $receipt['id'] ?? null;
+
+                            // Create internal transfer record
+                            if($id) {
+                                $internalTransfer = \App\Models\InternalTransfer::find($id);
+                                $internalTransfer->update([
+                                    'exchange_rate' => $exchange_rate,
+                                    'note' => $note,
+                                ]);
+                            }else{
+                                $internalTransfer = \App\Models\InternalTransfer::create([
+                                    'exchange_rate' => $exchange_rate,
+                                    'notes' => $note,
+                                ]);
+                            }
+
+                            // Handle "from" files (source)
+                            if (isset($receipt['from_files']) && is_array($receipt['from_files'])) {
+                                foreach ($receipt['from_files'] as $fromFile) {
+                                    if (!isset($fromFile['file'])) {
+                                        continue;
+                                    }
+
+                                    $fileDataFrom = $this->uploads($fromFile['file'], 'images/');
+
+                                    $cashImageFrom = CashImage::create([
+                                        'relatable_id' => $cashBook->id,
+                                        'relatable_type' => CashBook::class,
+                                        'date' => $fromFile['date'] ?? now(),
+                                        'sender' => $fromFile['sender'] ?? null,
+                                        'receiver' => $fromFile['receiver'] ?? null,
+                                        'amount' => $fromFile['amount'] ?? 0,
+                                        'currency' => $fromFile['currency'] ?? 'THB',
+                                        'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
+                                        'image' => $fileDataFrom['fileName'],
+                                        'internal_transfer' => true,
+                                    ]);
+
+                                    $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, [
+                                        'direction' => 'from'
+                                    ]);
+                                }
+                            }
+
+                            // Handle "to" files (destination)
+                            if (isset($receipt['to_files']) && is_array($receipt['to_files'])) {
+                                foreach ($receipt['to_files'] as $toFile) {
+                                    if (!isset($toFile['file'])) {
+                                        continue;
+                                    }
+
+                                    $fileDataTo = $this->uploads($toFile['file'], 'images/');
+
+                                    $cashImageTo = CashImage::create([
+                                        'relatable_id' => $cashBook->id,
+                                        'relatable_type' => CashBook::class,
+                                        'date' => $toFile['date'] ?? now(),
+                                        'sender' => $toFile['sender'] ?? null,
+                                        'receiver' => $toFile['receiver'] ?? null,
+                                        'amount' => $toFile['amount'] ?? 0,
+                                        'currency' => $toFile['currency'] ?? 'THB',
+                                        'interact_bank' => $toFile['interact_bank'] ?? 'personal',
+                                        'image' => $fileDataTo['fileName'],
+                                        'internal_transfer' => true,
+                                    ]);
+
+                                    $internalTransfer->cashImagesTo()->attach($cashImageTo->id, [
+                                        'direction' => 'to'
+                                    ]);
+                                }
+                            }
+                        } else {
+                            // Regular cash image (not internal transfer)
+                            if (!isset($receipt['file'])) {
+                                continue; // Skip if no file
+                            }
+
+                            $image = $receipt['file'];
+                            $amount = $receipt['amount'] ?? null;
+                            $bank_name = $receipt['bank_name'] ?? null;
+                            $date = $receipt['date'] ?? now();
+                            $is_corporate = $receipt['is_corporate'] ?? false;
+                            $note = $receipt['note'] ?? null;
+                            $sender = $receipt['sender'] ?? null;
+                            $reciever = $receipt['reciever'] ?? null;
+                            $interact_bank = $receipt['interact_bank'] ?? 'personal';
+                            $currency = $receipt['currency'] ?? 'THB';
+
+                            $fileData = $this->uploads($image, 'images/');
+
+                            CashImage::create([
+                                'relatable_id' => $cashBook->id,
+                                'relatable_type' => CashBook::class,
+                                'date' => $date,
+                                'sender' => $sender,
+                                'receiver' => $reciever,
+                                'amount' => $amount,
+                                'currency' => $currency,
+                                'interact_bank' => $interact_bank,
+                                'image' => $fileData['fileName'],
+                                'internal_transfer' => false,
+                            ]);
+                        }
                     }
                 }
 
@@ -179,14 +266,6 @@ class CashBookController extends Controller
                 'accounts.*.allocated_amount' => 'required|numeric|min:0',
                 'accounts.*.note' => 'nullable|string',
                 'images' => 'nullable|array',
-                'images.*.id' => 'nullable|integer|exists:cash_images,id',
-                'images.*.image' => 'nullable',
-                'images.*.date' => 'nullable|date_format:Y-m-d H:i:s',
-                'images.*.sender' => 'required|string|max:255',
-                'images.*.receiver' => 'required|string|max:255',
-                'images.*.amount' => 'required|numeric|min:0',
-                'images.*.currency' => 'required|string|max:10',
-                'images.*.interact_bank' => 'nullable|string|max:255',
                 'cash_book_images' => 'nullable|array',
                 'cash_book_images.*.id' => 'nullable|integer|exists:cash_book_images,id',
                 'cash_book_images.*.image' => 'nullable',
@@ -214,22 +293,136 @@ class CashBookController extends Controller
                 $cashBook->chartOfAccounts()->sync($accountsData);
 
                 // Create cash images if provided (polymorphic relationship)
-                if (!empty($validated['images'])) {
-                    foreach ($validated['images'] as $imageData) {
-                        $fileData = $this->uploads($imageData['image'], 'images/');
+                // if (!empty($validated['images'])) {
+                //     foreach ($validated['images'] as $imageData) {
+                //         $fileData = $this->uploads($imageData['image'], 'images/');
 
-                        CashImage::create([
-                            'image' => $fileData['fileName'],
-                            'date' => $imageData['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
-                            'sender' => $imageData['sender'],
-                            'receiver' => $imageData['receiver'],
-                            'amount' => $imageData['amount'],
-                            'currency' => $imageData['currency'],
-                            'interact_bank' => $imageData['interact_bank'] ?? null,
-                            'relatable_type' => CashBook::class,
-                            'relatable_id' => $cashBook->id,
-                            'image_path' => $fileData['filePath'],
-                        ]);
+                //         CashImage::create([
+                //             'image' => $fileData['fileName'],
+                //             'date' => $imageData['date'] ?? Carbon::now()->format('Y-m-d H:i:s'),
+                //             'sender' => $imageData['sender'],
+                //             'receiver' => $imageData['receiver'],
+                //             'amount' => $imageData['amount'],
+                //             'currency' => $imageData['currency'],
+                //             'interact_bank' => $imageData['interact_bank'] ?? null,
+                //             'relatable_type' => CashBook::class,
+                //             'relatable_id' => $cashBook->id,
+                //             'image_path' => $fileData['filePath'],
+                //         ]);
+                //     }
+                // }
+
+                if(!empty($validated['images'])) {
+                    foreach ($validated['images'] as $receipt) {
+                        $is_internal_transfer = filter_var($receipt['is_internal_transfer'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+                        // Handle internal transfer
+                        if ($is_internal_transfer) {
+                            $exchange_rate = $receipt['exchange_rate'] ?? 1;
+                            $note = $receipt['note'] ?? null;
+                            $id = $receipt['id'] ?? null;
+
+                            // Create internal transfer record
+                            if($id) {
+                                $internalTransfer = \App\Models\InternalTransfer::find($id);
+                                $internalTransfer->update([
+                                    'exchange_rate' => $exchange_rate,
+                                    'note' => $note,
+                                ]);
+                            }else{
+                                $internalTransfer = \App\Models\InternalTransfer::create([
+                                    'exchange_rate' => $exchange_rate,
+                                    'notes' => $note,
+                                ]);
+                            }
+
+                            // Handle "from" files (source)
+                            if (isset($receipt['from_files']) && is_array($receipt['from_files'])) {
+                                foreach ($receipt['from_files'] as $fromFile) {
+                                    if (!isset($fromFile['file'])) {
+                                        continue;
+                                    }
+
+                                    $fileDataFrom = $this->uploads($fromFile['file'], 'images/');
+
+                                    $cashImageFrom = CashImage::create([
+                                        'relatable_id' => $cashBook->id,
+                                        'relatable_type' => CashBook::class,
+                                        'date' => $fromFile['date'] ?? now(),
+                                        'sender' => $fromFile['sender'] ?? null,
+                                        'receiver' => $fromFile['receiver'] ?? null,
+                                        'amount' => $fromFile['amount'] ?? 0,
+                                        'currency' => $fromFile['currency'] ?? 'THB',
+                                        'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
+                                        'image' => $fileDataFrom['fileName'],
+                                        'internal_transfer' => true,
+                                    ]);
+
+                                    $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, [
+                                        'direction' => 'from'
+                                    ]);
+                                }
+                            }
+
+                            // Handle "to" files (destination)
+                            if (isset($receipt['to_files']) && is_array($receipt['to_files'])) {
+                                foreach ($receipt['to_files'] as $toFile) {
+                                    if (!isset($toFile['file'])) {
+                                        continue;
+                                    }
+
+                                    $fileDataTo = $this->uploads($toFile['file'], 'images/');
+
+                                    $cashImageTo = CashImage::create([
+                                        'relatable_id' => $cashBook->id,
+                                        'relatable_type' => CashBook::class,
+                                        'date' => $toFile['date'] ?? now(),
+                                        'sender' => $toFile['sender'] ?? null,
+                                        'receiver' => $toFile['receiver'] ?? null,
+                                        'amount' => $toFile['amount'] ?? 0,
+                                        'currency' => $toFile['currency'] ?? 'THB',
+                                        'interact_bank' => $toFile['interact_bank'] ?? 'personal',
+                                        'image' => $fileDataTo['fileName'],
+                                        'internal_transfer' => true,
+                                    ]);
+
+                                    $internalTransfer->cashImagesTo()->attach($cashImageTo->id, [
+                                        'direction' => 'to'
+                                    ]);
+                                }
+                            }
+                        } else {
+                            // Regular cash image (not internal transfer)
+                            if (!isset($receipt['file'])) {
+                                continue; // Skip if no file
+                            }
+
+                            $image = $receipt['file'];
+                            $amount = $receipt['amount'] ?? null;
+                            $bank_name = $receipt['bank_name'] ?? null;
+                            $date = $receipt['date'] ?? now();
+                            $is_corporate = $receipt['is_corporate'] ?? false;
+                            $note = $receipt['note'] ?? null;
+                            $sender = $receipt['sender'] ?? null;
+                            $reciever = $receipt['reciever'] ?? null;
+                            $interact_bank = $receipt['interact_bank'] ?? 'personal';
+                            $currency = $receipt['currency'] ?? 'THB';
+
+                            $fileData = $this->uploads($image, 'images/');
+
+                            CashImage::create([
+                                'relatable_id' => $cashBook->id,
+                                'relatable_type' => CashBook::class,
+                                'date' => $date,
+                                'sender' => $sender,
+                                'receiver' => $reciever,
+                                'amount' => $amount,
+                                'currency' => $currency,
+                                'interact_bank' => $interact_bank,
+                                'image' => $fileData['fileName'],
+                                'internal_transfer' => false,
+                            ]);
+                        }
                     }
                 }
 

@@ -155,6 +155,8 @@ class CashImageService
             'amount',
             'interact_bank',
             'currency',
+            'data_verify',
+            'internal_transfer',
             'image',
             'created_at',
             'updated_at',
