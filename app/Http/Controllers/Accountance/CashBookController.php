@@ -126,7 +126,7 @@ class CashBookController extends Controller
                                 $internalTransfer = \App\Models\InternalTransfer::find($id);
                                 $internalTransfer->update([
                                     'exchange_rate' => $exchange_rate,
-                                    'note' => $note,
+                                    'notes' => $note,
                                 ]);
                             }else{
                                 $internalTransfer = \App\Models\InternalTransfer::create([
@@ -327,7 +327,7 @@ class CashBookController extends Controller
                                 $internalTransfer = \App\Models\InternalTransfer::find($id);
                                 $internalTransfer->update([
                                     'exchange_rate' => $exchange_rate,
-                                    'note' => $note,
+                                    'notes' => $note,
                                 ]);
                             }else{
                                 $internalTransfer = \App\Models\InternalTransfer::create([
