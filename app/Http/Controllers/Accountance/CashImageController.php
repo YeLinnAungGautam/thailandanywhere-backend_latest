@@ -615,4 +615,23 @@ class CashImageController extends Controller
             'updated_at' => $status['updated_at'] ?? null
         ]);
     }
+
+    public function verifyData(Request $request, $id)
+    {
+        $find = CashImage::find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $request->validate([
+            'data_verify' => 'required|boolean'
+        ]);
+
+        $find->update([
+            'data_verify' => $request->data_verify
+        ]);
+
+        return $this->success(null, 'Data verified successfully');
+    }
 }
