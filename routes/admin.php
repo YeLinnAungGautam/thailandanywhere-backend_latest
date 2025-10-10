@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
+use App\Http\Controllers\Admin\InternalTransferController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PlaceController;
@@ -487,8 +488,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         Route::post('/create-and-attach', [CashImageBookingController::class, 'createAndAttach']);
     });
 
-
-
+    # Internal Transfer
+    Route::post('/internal-transfers', [InternalTransferController::class, 'store']);
+    Route::put('/internal-transfers/{id}', [InternalTransferController::class, 'update']);
+    Route::delete('/internal-transfers/{id}', [InternalTransferController::class, 'delete']);
 
     # Storage File
     Route::prefix('admin/files')->group(function () {
