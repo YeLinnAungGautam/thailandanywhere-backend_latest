@@ -54,7 +54,7 @@ class BookingResource extends JsonResource
             'admin' => $this->createdBy,
             'bill_to' => $this->customer ? $this->customer->name : "-",
             'receipts_orignal' => isset($this->receipts) ? BookingReceiptResource::collection($this->receipts) : '',
-            'receipts' => $this->formatReceiptImages(), // Changed this line
+            'receipts' => $this->formatAllReceiptImages(),
             'items' => isset($this->items) ? BookingItemResource::collection($this->items) : '',
             'item_count' => $this->items ? $this->items->count() : 0,
             'service_start_date' => $this->start_date ? Carbon::parse($this->start_date)->format('d M Y') : null,
@@ -92,48 +92,42 @@ class BookingResource extends JsonResource
             // timestamps
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
-
-            'cash_images' => $this->whenLoaded('bCashImages', function () {
-                return $this->bCashImages->map(function ($cashImage) {
-                    return [
-                        'id' => $cashImage->id,
-                        'image' => $cashImage->image ? Storage::url('images/' . $cashImage->image) : null,
-                        'date' => $cashImage->date ? $cashImage->date->format('d-m-Y H:i:s') : null,
-                        'created_at' => $cashImage->created_at->format('d-m-Y H:i:s'),
-                        'updated_at' => $cashImage->updated_at->format('d-m-Y H:i:s'),
-                        'sender' => $cashImage->sender,
-                        'receiver' => $cashImage->receiver,
-                        'amount' => $cashImage->amount,
-                        'currency' => $cashImage->currency,
-                        'interact_bank' => $cashImage->interact_bank,
-                        'pivot' => [
-                            'type' => $cashImage->pivot->type,
-                            'deposit' => $cashImage->pivot->deposit,
-                            'notes' => $cashImage->pivot->notes,
-                        ]
-                    ];
-                });
-            }, CashImageResource::collection($this->bCashImages)),
         ];
     }
 
     /**
-     * Format receipt images to group internal transfers
+     * Format all receipt images including both cashImages and bCashImages
+     * Groups internal transfers and combines all cash images in one place
      */
-    private function formatReceiptImages()
+private function formatAllReceiptImages()
     {
-        if (!isset($this->cashImages)) {
-            return '';
+        // Collect all cash images from both relationships
+        $allCashImages = collect();
+
+        // Add cashImages (used in original receipts) - load relationship first
+        if (isset($this->cashImages)) {
+            $cashImagesWithRelations = $this->cashImages->load('internalTransfers');
+            $allCashImages = $allCashImages->merge($cashImagesWithRelations);
         }
 
-        // Load internal transfer relationships
-        $cashImages = $this->cashImages->load('internalTransfers');
+        // Add bCashImages (from the cash_images field) - load relationship first
+        if (isset($this->bCashImages)) {
+            $bCashImagesWithRelations = $this->bCashImages->load('internalTransfers');
+            $allCashImages = $allCashImages->merge($bCashImagesWithRelations);
+        }
+
+        // Remove duplicates based on ID
+        $allCashImages = $allCashImages->unique('id');
+
+        if ($allCashImages->isEmpty()) {
+            return [];
+        }
 
         // Group cash images by internal transfer
         $internalTransferGroups = [];
         $regularCashImages = [];
 
-        foreach ($cashImages as $cashImage) {
+        foreach ($allCashImages as $cashImage) {
             // Check if this is an internal transfer
             if ($cashImage->internal_transfer) {
                 // Get the internal transfer
@@ -166,7 +160,17 @@ class BookingResource extends JsonResource
                         'interact_bank' => $cashImage->interact_bank,
                         'created_at' => $cashImage->created_at->format('d-m-Y H:i:s'),
                         'updated_at' => $cashImage->updated_at->format('d-m-Y H:i:s'),
+                        'relatables' => $cashImage->relatables,
                     ];
+
+                    // Add pivot data if it exists (from bCashImages)
+                    if (isset($cashImage->pivot)) {
+                        $imageData['pivot'] = [
+                            'type' => $cashImage->pivot->type ?? null,
+                            'deposit' => $cashImage->pivot->deposit ?? null,
+                            'notes' => $cashImage->pivot->notes ?? null,
+                        ];
+                    }
 
                     // Get direction from pivot
                     $direction = $internalTransfer->pivot->direction ?? null;
@@ -178,7 +182,7 @@ class BookingResource extends JsonResource
                     }
                 }
             } else {
-                // Regular cash image - add to collection for CashImageResource
+                // Regular cash image
                 $regularCashImages[] = $cashImage;
             }
         }
@@ -186,7 +190,7 @@ class BookingResource extends JsonResource
         // Convert regular cash images using CashImageResource
         $formattedRegularImages = CashImageResource::collection(collect($regularCashImages))->resolve();
 
-        // Combine regular images (from CashImageResource) and internal transfer groups
+        // Combine regular images and internal transfer groups
         return array_merge($formattedRegularImages, array_values($internalTransferGroups));
     }
 }

@@ -215,6 +215,20 @@ class BookingManager
                             continue;
                         }
 
+                        // Prepare relatables data
+                        $relatables = [];
+
+                        // If this receipt is for multiple bookings
+                        if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                            foreach ($receipt['relatables'] as $relatedBooking) {
+                                $relatables[] = [
+                                    'relatable_id' => $relatedBooking['booking_id'],
+                                    'relatable_type' => Booking::class,
+                                    'deposit' => $relatedBooking['deposit'] ?? 0,
+                                ];
+                            }
+                        }
+
                         $fileDataFrom = upload_file($fromFile['file'], 'images/');
 
                         $cashImageFrom = CashImage::create([
@@ -228,6 +242,7 @@ class BookingManager
                             'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
                             'image' => $fileDataFrom['fileName'],
                             'internal_transfer' => true,
+                            'relatables' => $relatables
                         ]);
 
                         $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, [
@@ -248,6 +263,20 @@ class BookingManager
                             continue;
                         }
 
+                        // Prepare relatables data
+                        $relatables = [];
+
+                        // If this receipt is for multiple bookings
+                        if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                            foreach ($receipt['relatables'] as $relatedBooking) {
+                                $relatables[] = [
+                                    'relatable_id' => $relatedBooking['booking_id'],
+                                    'relatable_type' => Booking::class,
+                                    'deposit' => $relatedBooking['deposit'] ?? 0,
+                                ];
+                            }
+                        }
+
                         $fileDataTo = upload_file($toFile['file'], 'images/');
 
                         $cashImageTo = CashImage::create([
@@ -261,6 +290,7 @@ class BookingManager
                             'interact_bank' => $toFile['interact_bank'] ?? 'personal',
                             'image' => $fileDataTo['fileName'],
                             'internal_transfer' => true,
+                            'relatables' => $relatables
                         ]);
 
                         $internalTransfer->cashImagesTo()->attach($cashImageTo->id, [
@@ -288,6 +318,20 @@ class BookingManager
                 $interact_bank = $receipt['interact_bank'] ?? 'personal';
                 $currency = $receipt['currency'] ?? 'THB';
 
+                // Prepare relatables data
+                $relatables = [];
+
+                // If this receipt is for multiple bookings
+                if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                    foreach ($receipt['relatables'] as $relatedBooking) {
+                        $relatables[] = [
+                            'relatable_id' => $relatedBooking['booking_id'],
+                            'relatable_type' => Booking::class,
+                            'deposit' => $relatedBooking['deposit'] ?? 0,
+                        ];
+                    }
+                }
+
                 $fileData = upload_file($image, 'images/');
 
                 CashImage::create([
@@ -301,6 +345,7 @@ class BookingManager
                     'interact_bank' => $interact_bank,
                     'image' => $fileData['fileName'],
                     'internal_transfer' => false,
+                    'relatables' => $relatables
                 ]);
             }
         }

@@ -20,6 +20,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -110,6 +111,203 @@ class CashImageController extends Controller
         }
     }
 
+    public function duplicateCashImage(Request $request)
+    {
+        $result = $this->cashImageService->duplicateCashImage($request);
+
+        if ($result['success']) {
+            return response()->json([
+                'status' => 'Request was successful.',
+                'message' => $result['message'],
+                'result' => $result['data']
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'Error has occurred.',
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+        }
+    }
+
+    public function mergeCashImages(Request $request)
+    {
+        $validated = $request->validate([
+            'keep_id' => 'required|exists:cash_images,id',
+            'delete_ids' => 'required|array',
+            'delete_ids.*' => 'required|exists:cash_images,id|different:keep_id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $keepCashImage = CashImage::with(['cashBookings', 'cashBooks', 'cashBookingItemGroups'])
+                ->findOrFail($validated['keep_id']);
+
+            // FIRST: Transfer keep_id's own polymorphic relationship to cash_imageables
+            if ($keepCashImage->relatable_type && $keepCashImage->relatable_id) {
+                $relatableClass = $keepCashImage->relatable_type;
+
+                if ($relatableClass === 'App\Models\Booking') {
+                    if (!$keepCashImage->cashBookings()
+                        ->wherePivot('imageable_id', $keepCashImage->relatable_id)
+                        ->exists()) {
+                        $keepCashImage->cashBookings()->attach($keepCashImage->relatable_id, [
+                            'type' => null,
+                            'deposit' => null,
+                            'notes' => 'Original relationship from cash image #' . $keepCashImage->id,
+                        ]);
+                    }
+                } elseif ($relatableClass === 'App\Models\CashBook') {
+                    if (!$keepCashImage->cashBooks()
+                        ->wherePivot('imageable_id', $keepCashImage->relatable_id)
+                        ->exists()) {
+                        $keepCashImage->cashBooks()->attach($keepCashImage->relatable_id, [
+                            'type' => null,
+                            'deposit' => null,
+                            'notes' => 'Original relationship from cash image #' . $keepCashImage->id,
+                        ]);
+                    }
+                } elseif ($relatableClass === 'App\Models\BookingItemGroup') {
+                    if (!$keepCashImage->cashBookingItemGroups()
+                        ->wherePivot('imageable_id', $keepCashImage->relatable_id)
+                        ->exists()) {
+                        $keepCashImage->cashBookingItemGroups()->attach($keepCashImage->relatable_id, [
+                            'type' => null,
+                            'deposit' => null,
+                            'notes' => 'Original relationship from cash image #' . $keepCashImage->id,
+                        ]);
+                    }
+                }
+            }
+
+            // SECOND: Process all delete_ids and transfer their relationships
+            foreach ($validated['delete_ids'] as $deleteId) {
+                $deleteCashImage = CashImage::with([
+                    'cashBookings',
+                    'cashBooks',
+                    'cashBookingItemGroups'
+                ])->findOrFail($deleteId);
+
+                // Transfer the polymorphic relationship (relatable_type/relatable_id) to cash_imageables
+                if ($deleteCashImage->relatable_type && $deleteCashImage->relatable_id) {
+                    $relatableClass = $deleteCashImage->relatable_type;
+
+                    if ($relatableClass === 'App\Models\Booking') {
+                        if (!$keepCashImage->cashBookings()
+                            ->wherePivot('imageable_id', $deleteCashImage->relatable_id)
+                            ->exists()) {
+                            $keepCashImage->cashBookings()->attach($deleteCashImage->relatable_id, [
+                                'type' => null,
+                                'deposit' => null,
+                                'notes' => 'Merged from cash image #' . $deleteId,
+                            ]);
+                        }
+                    } elseif ($relatableClass === 'App\Models\CashBook') {
+                        if (!$keepCashImage->cashBooks()
+                            ->wherePivot('imageable_id', $deleteCashImage->relatable_id)
+                            ->exists()) {
+                            $keepCashImage->cashBooks()->attach($deleteCashImage->relatable_id, [
+                                'type' => null,
+                                'deposit' => null,
+                                'notes' => 'Merged from cash image #' . $deleteId,
+                            ]);
+                        }
+                    } elseif ($relatableClass === 'App\Models\BookingItemGroup') {
+                        if (!$keepCashImage->cashBookingItemGroups()
+                            ->wherePivot('imageable_id', $deleteCashImage->relatable_id)
+                            ->exists()) {
+                            $keepCashImage->cashBookingItemGroups()->attach($deleteCashImage->relatable_id, [
+                                'type' => null,
+                                'deposit' => null,
+                                'notes' => 'Merged from cash image #' . $deleteId,
+                            ]);
+                        }
+                    }
+                }
+
+                // Transfer all existing many-to-many relationships from deleted to kept
+
+                // Transfer bookings from cash_imageables
+                if ($deleteCashImage->cashBookings && $deleteCashImage->cashBookings->count() > 0) {
+                    foreach ($deleteCashImage->cashBookings as $booking) {
+                        if (!$keepCashImage->cashBookings()
+                            ->wherePivot('imageable_id', $booking->id)
+                            ->exists()) {
+                            $keepCashImage->cashBookings()->attach($booking->id, [
+                                'type' => $booking->pivot->type ?? null,
+                                'deposit' => $booking->pivot->deposit ?? null,
+                                'notes' => $booking->pivot->notes ?? null,
+                            ]);
+                        }
+                    }
+                }
+
+                // Transfer cash_books from cash_imageables
+                if ($deleteCashImage->cashBooks && $deleteCashImage->cashBooks->count() > 0) {
+                    foreach ($deleteCashImage->cashBooks as $cashBook) {
+                        if (!$keepCashImage->cashBooks()
+                            ->wherePivot('imageable_id', $cashBook->id)
+                            ->exists()) {
+                            $keepCashImage->cashBooks()->attach($cashBook->id, [
+                                'type' => $cashBook->pivot->type ?? null,
+                                'deposit' => $cashBook->pivot->deposit ?? null,
+                                'notes' => $cashBook->pivot->notes ?? null,
+                            ]);
+                        }
+                    }
+                }
+
+                // Transfer booking_item_groups from cash_imageables
+                if ($deleteCashImage->cashBookingItemGroups && $deleteCashImage->cashBookingItemGroups->count() > 0) {
+                    foreach ($deleteCashImage->cashBookingItemGroups as $itemGroup) {
+                        if (!$keepCashImage->cashBookingItemGroups()
+                            ->wherePivot('imageable_id', $itemGroup->id)
+                            ->exists()) {
+                            $keepCashImage->cashBookingItemGroups()->attach($itemGroup->id, [
+                                'type' => $itemGroup->pivot->type ?? null,
+                                'deposit' => $itemGroup->pivot->deposit ?? null,
+                                'notes' => $itemGroup->pivot->notes ?? null,
+                            ]);
+                        }
+                    }
+                }
+
+                // Detach all relationships before deleting
+                $deleteCashImage->cashBookings()->detach();
+                $deleteCashImage->cashBooks()->detach();
+                $deleteCashImage->cashBookingItemGroups()->detach();
+
+                // Delete image file
+                if ($deleteCashImage->image) {
+                    Storage::delete('images/' . $deleteCashImage->image);
+                }
+
+                // Delete the cash image record (this removes it from cash_images table)
+                $deleteCashImage->delete();
+            }
+
+            // FINALLY: Clear polymorphic fields from keep_id since relationships are now in cash_imageables
+            $keepCashImage->update([
+                'relatable_id' => 0,
+                'relatables' => null
+            ]);
+
+            DB::commit();
+
+            return $this->success([
+                'kept_cash_image_id' => $keepCashImage->id,
+                'deleted_count' => count($validated['delete_ids']),
+                'message' => 'All relationships (including keep_id original relationship) transferred to cash_imageables table. Delete IDs removed from cash_images.'
+            ], 'Cash images merged successfully');
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Merge Cash Images Error: ' . $e->getMessage());
+            return $this->error(null, 'Failed to merge cash images: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = request()->validate([
@@ -188,7 +386,7 @@ class CashImageController extends Controller
             ->with([
                 'relatable',
                 'bookings',
-                'cashBookings.customer',
+                'cashBookings',
                 'cashBooks',
                 'cashBookingItemGroups'
             ])

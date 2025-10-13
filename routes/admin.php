@@ -117,6 +117,9 @@ Route::get('/print/cash-parchase-image', [CashImageController::class, 'printCash
 Route::get('/pdf-status/{jobId}', [CashImageController::class, 'checkPdfStatus']);
 Route::get('/pdf-batch-status/{jobId}', [CashImageController::class, 'checkPdfBatchStatus']);
 
+Route::get('/duplicate-cash-image', [CashImageController::class, 'duplicateCashImage']);
+Route::post('/merge-cash-image', [CashImageController::class, 'mergeCashImages']);
+
 
 Route::get('/super', function () {
     return 'this is super admin only';

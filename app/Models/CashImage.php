@@ -20,7 +20,8 @@ class CashImage extends Model
         'internal_transfer',
         'data_verify',
         'relatable_type',
-        'relatable_id'
+        'relatable_id',
+        'relatables'
     ];
 
     protected $casts = [
@@ -29,7 +30,8 @@ class CashImage extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'internal_transfer' => 'boolean',
-        'data_verify' => 'boolean'
+        'data_verify' => 'boolean',
+        'relatables' => 'array'
     ];
 
     // Polymorphic relationship
