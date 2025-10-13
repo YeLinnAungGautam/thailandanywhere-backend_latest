@@ -290,6 +290,20 @@ class BookingController extends Controller
                                     continue;
                                 }
 
+                                // Prepare relatables data
+                                $relatables = [];
+
+                                // If this receipt is for multiple bookings
+                                if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                                    foreach ($receipt['relatables'] as $relatedBooking) {
+                                        $relatables[] = [
+                                            'relatable_id' => $relatedBooking['booking_id'],
+                                            'relatable_type' => Booking::class,
+                                            'deposit' => $relatedBooking['deposit'] ?? 0,
+                                        ];
+                                    }
+                                }
+
                                 $fileDataFrom = $this->uploads($fromFile['file'], 'images/');
 
                                 $cashImageFrom = CashImage::create([
@@ -303,6 +317,7 @@ class BookingController extends Controller
                                     'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
                                     'image' => $fileDataFrom['fileName'],
                                     'internal_transfer' => true,
+                                    'relatables' => $relatables
                                 ]);
 
                                 $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, [
@@ -318,6 +333,20 @@ class BookingController extends Controller
                                     continue;
                                 }
 
+                                // Prepare relatables data
+                                $relatables = [];
+
+                                // If this receipt is for multiple bookings
+                                if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                                    foreach ($receipt['relatables'] as $relatedBooking) {
+                                        $relatables[] = [
+                                            'relatable_id' => $relatedBooking['booking_id'],
+                                            'relatable_type' => Booking::class,
+                                            'deposit' => $relatedBooking['deposit'] ?? 0,
+                                        ];
+                                    }
+                                }
+
                                 $fileDataTo = $this->uploads($toFile['file'], 'images/');
 
                                 $cashImageTo = CashImage::create([
@@ -331,6 +360,7 @@ class BookingController extends Controller
                                     'interact_bank' => $toFile['interact_bank'] ?? 'personal',
                                     'image' => $fileDataTo['fileName'],
                                     'internal_transfer' => true,
+                                    'relatables' => $relatables
                                 ]);
 
                                 $internalTransfer->cashImagesTo()->attach($cashImageTo->id, [
@@ -342,6 +372,20 @@ class BookingController extends Controller
                         // Regular cash image (not internal transfer)
                         if (!isset($receipt['file'])) {
                             continue; // Skip if no file
+                        }
+
+                        // Prepare relatables data
+                        $relatables = [];
+
+                        // If this receipt is for multiple bookings
+                        if (isset($receipt['relatables']) && is_array($receipt['relatables'])) {
+                            foreach ($receipt['relatables'] as $relatedBooking) {
+                                $relatables[] = [
+                                    'relatable_id' => $relatedBooking['booking_id'],
+                                    'relatable_type' => Booking::class,
+                                    'deposit' => $relatedBooking['deposit'] ?? 0,
+                                ];
+                            }
                         }
 
                         $image = $receipt['file'];
@@ -368,6 +412,7 @@ class BookingController extends Controller
                             'interact_bank' => $interact_bank,
                             'image' => $fileData['fileName'],
                             'internal_transfer' => false,
+                            'relatables' => $relatables
                         ]);
                     }
                 }

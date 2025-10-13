@@ -29,6 +29,7 @@ class CashImageResource extends JsonResource
             'interact_bank' => $this->interact_bank,
             'relatable_type' => $this->relatable_type,
             'relatable_id' => $this->relatable_id,
+            'relatables' => $this->relatables,
 
             // Related imageables through pivot table
             'related_bookings' => $this->whenLoaded('cashBookings', function () {
