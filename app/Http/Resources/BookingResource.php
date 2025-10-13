@@ -120,7 +120,7 @@ private function formatAllReceiptImages()
         $allCashImages = $allCashImages->unique('id');
 
         if ($allCashImages->isEmpty()) {
-            return '';
+            return [];
         }
 
         // Group cash images by internal transfer
