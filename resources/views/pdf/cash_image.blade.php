@@ -454,6 +454,9 @@
                     <div style="text-align: center; margin-top: 30px;">
                         <img style="width: auto; height: 800px; max-width: 90%; display: block; margin: 0 auto;"
                             src={{ $url['image'] ?? '' }} alt="Cash Image {{ $url['cash_image_id'] ?? '' }}">
+                        {{-- <img style="width: auto; height: 800px; max-width: 90%; display: block; margin: 0 auto;"
+                            src="https://thanywhere.sgp1.cdn.digitaloceanspaces.com/images/1761027363_18569_68f7252317c04.jpg"
+                            alt="Cash Image {{ $url['cash_image_id'] ?? '' }}"> --}}
                     </div>
 
                 </div>
