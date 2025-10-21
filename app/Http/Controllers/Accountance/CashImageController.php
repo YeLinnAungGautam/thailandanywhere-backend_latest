@@ -380,23 +380,24 @@ class CashImageController extends Controller
         return $this->success(new CashImageResource($create), 'Successfully created');
     }
 
-    public function show(string $id)
+    public function show($id)
     {
-        $find = CashImage::query()
-            ->with([
-                'relatable',
-                'bookings',
-                'cashBookings',
-                'cashBooks',
-                'cashBookingItemGroups'
-            ])
-            ->find($id);
+        $cashImage = CashImage::with([
+            'cashBookings.items.group.customerDocuments',
+            'cashBookings.items.group.taxReceipts',
+            'cashBookings.items.group.cashImages',
+            'cashBookings.items.product',
+            'cashBookings.customer',
+            'cashBookings.receipts',
+            'cashBookingItemGroups.bookingItems.product',
+            'cashBookingItemGroups.bookingItems.booking.customer',
+            'cashBookingItemGroups.customerDocuments',
+            'cashBookingItemGroups.taxReceipts',
+            'cashBookingItemGroups.cashImages',
+            'relatable'
+        ])->findOrFail($id);
 
-        if (!$find) {
-            return $this->error(null, 'Data not found', 404);
-        }
-
-        return $this->success(new CashImageDetailResource($find), 'Successfully retrieved');
+        return $this->success(new CashImageDetailResource($cashImage), 'Successfully retrieved');
     }
 
     public function update(Request $request, string $id)
@@ -670,26 +671,32 @@ class CashImageController extends Controller
 
     public function printCashImage(Request $request)
     {
-        try {
-            $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
+        $result = $this->cashImageService->onlyImages($request);
 
-            // Dispatch the PDF generation job
-            GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
-                ->onQueue('pdf_generation'); // Optional: specific queue
+        return response()->json([
+            'data' => $result
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'PDF generation started in background',
-                'job_id' => $jobId,
-                'status_url' => url("/admin/pdf-status/{$jobId}"),
-                'estimated_time' => 'This may take 2-5 minutes for large datasets'
-            ], 202); // 202 = Accepted (processing)
+        // try {
+        //     $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
 
-        } catch (Exception $e) {
-            Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+        //     // Dispatch the PDF generation job
+        //     GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
+        //         ->onQueue('pdf_generation'); // Optional: specific queue
 
-            return $this->error(null, $e->getMessage(), 500);
-        }
+        //     return response()->json([
+        //         'success' => true,
+        //         'message' => 'PDF generation started in background',
+        //         'job_id' => $jobId,
+        //         'status_url' => url("/admin/pdf-status/{$jobId}"),
+        //         'estimated_time' => 'This may take 2-5 minutes for large datasets'
+        //     ], 202); // 202 = Accepted (processing)
+
+        // } catch (Exception $e) {
+        //     Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+
+        //     return $this->error(null, $e->getMessage(), 500);
+        // }
     }
 
     public function checkPdfStatus($jobId)

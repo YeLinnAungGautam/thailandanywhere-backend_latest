@@ -163,6 +163,15 @@ class HotelPartnerController extends Controller
         return $this->success(null, 'Hotel image is successfully deleted');
     }
 
+    public function allowmentHotel(Hotel $hotel, Request $request)
+    {
+        $hotel->update([
+            'allowment' => $request->allowment,
+        ]);
+
+        return $this->success(new HotelResource($hotel), 'Successfully updated', 200);
+    }
+
     public function addImage(Hotel $hotel, Request $request)
     {
         $request->validate([
