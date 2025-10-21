@@ -21,42 +21,42 @@ class GenerateCashImagePdfJob implements ShouldQueue
 
     protected $requestData;
     protected $jobId;
+    protected $batchNumber;
+    protected $totalBatches;
 
-    // Job configuration
-    public $timeout = 1800; // 30 minutes
+    public $timeout = 1800;
     public $maxExceptions = 3;
     public $tries = 3;
 
-    public function __construct($requestData, $jobId)
+    public function __construct($requestData, $jobId, $batchNumber = 1, $totalBatches = 1)
     {
         $this->requestData = $requestData;
         $this->jobId = $jobId;
+        $this->batchNumber = $batchNumber;
+        $this->totalBatches = $totalBatches;
 
-        // Set initial status
         Cache::put("pdf_job_{$this->jobId}", [
             'status' => 'queued',
             'created_at' => now(),
-            'progress' => 0
-        ], 3600); // 1 hour cache
+            'progress' => 0,
+            'batch' => $batchNumber,
+            'total_batches' => $totalBatches
+        ], 7200);
     }
 
     public function handle(CashImageService $cashImageService)
     {
         try {
-            // Update status to processing
-            $this->updateJobStatus('processing', null, 10);
+            $this->updateJobStatus('processing', "Processing batch {$this->batchNumber} of {$this->totalBatches}...", 10);
 
-            // Create request object from array
             $request = new Request($this->requestData);
 
-            // Set PHP limits for large datasets
-            ini_set('memory_limit', '1024M'); // 1GB
-            ini_set('max_execution_time', 1800); // 30 minutes
+            ini_set('memory_limit', '1024M');
+            ini_set('max_execution_time', 1800);
             set_time_limit(1800);
 
             $this->updateJobStatus('processing', 'Fetching data from database...', 25);
 
-            // Get all data using your existing service
             $data = $cashImageService->onlyImages($request);
 
             if (empty($data['result'])) {
@@ -64,17 +64,13 @@ class GenerateCashImagePdfJob implements ShouldQueue
                 return;
             }
 
-            $this->updateJobStatus('processing', 'Processing invoice data...', 50);
-
             $imageData = $data['result'];
             $totalItems = count($imageData);
 
-            // Log for debugging
-            Log::info("Generating PDF for {$totalItems} items");
+            Log::info("Batch {$this->batchNumber}: Generating PDF for {$totalItems} items");
 
-            $this->updateJobStatus('processing', "Generating PDF for {$totalItems} items...", 75);
+            $this->updateJobStatus('processing', "Generating PDF for {$totalItems} items in batch {$this->batchNumber}...", 50);
 
-            // Generate PDF using your existing logic
             $pdf = Pdf::setOption([
                 'fontDir' => public_path('/fonts'),
                 'timeout' => 1800,
@@ -86,47 +82,49 @@ class GenerateCashImagePdfJob implements ShouldQueue
                 'defaultPaperSize' => 'A4',
             ])->loadView('pdf.cash_image', compact('imageData'));
 
-            $this->updateJobStatus('processing', 'Saving PDF file...', 90);
+            $this->updateJobStatus('processing', 'Saving PDF file...', 75);
 
-            // Generate filename with timestamp
             $timestamp = now()->format('Y-m-d_H-i-s');
-            $filename = "cash_images_{$timestamp}.pdf";
+            $filename = $this->totalBatches > 1
+                ? "cash_images_batch_{$this->batchNumber}_of_{$this->totalBatches}_{$timestamp}.pdf"
+                : "cash_images_{$timestamp}.pdf";
+
             $pdfPath = "pdfs/{$filename}";
 
-            // Save PDF to storage
             Storage::put($pdfPath, $pdf->output());
 
-            // Update status to completed
-            $this->updateJobStatus('completed', 'PDF generated successfully!', 100, [
+            $this->updateJobStatus('completed', "Batch {$this->batchNumber} completed successfully!", 100, [
                 'download_url' => Storage::url($pdfPath),
                 'filename' => $filename,
                 'file_size' => Storage::size($pdfPath),
                 'total_items' => $totalItems,
+                'batch_number' => $this->batchNumber,
+                'total_batches' => $this->totalBatches,
                 'generated_at' => now()->toISOString()
             ]);
 
-            Log::info("PDF generated successfully: {$filename}");
+            Log::info("Batch {$this->batchNumber} PDF generated successfully: {$filename}");
 
         } catch (Exception $e) {
-            Log::error("PDF Generation Job Failed: " . $e->getMessage(), [
+            Log::error("PDF Generation Job Failed (Batch {$this->batchNumber}): " . $e->getMessage(), [
                 'job_id' => $this->jobId,
+                'batch' => $this->batchNumber,
                 'trace' => $e->getTraceAsString()
             ]);
 
             $this->updateJobStatus('failed', $e->getMessage());
-
-            // Re-throw to trigger job retry if applicable
             throw $e;
         }
     }
 
     public function failed(Exception $exception)
     {
-        Log::error("PDF Generation Job Finally Failed: " . $exception->getMessage(), [
-            'job_id' => $this->jobId
+        Log::error("PDF Generation Job Finally Failed (Batch {$this->batchNumber}): " . $exception->getMessage(), [
+            'job_id' => $this->jobId,
+            'batch' => $this->batchNumber
         ]);
 
-        $this->updateJobStatus('failed', 'PDF generation failed after multiple attempts: ' . $exception->getMessage());
+        $this->updateJobStatus('failed', "Batch {$this->batchNumber} failed: " . $exception->getMessage());
     }
 
     private function updateJobStatus($status, $message = null, $progress = null, $additionalData = [])
@@ -134,6 +132,8 @@ class GenerateCashImagePdfJob implements ShouldQueue
         $statusData = array_merge([
             'status' => $status,
             'updated_at' => now(),
+            'batch' => $this->batchNumber,
+            'total_batches' => $this->totalBatches
         ], $additionalData);
 
         if ($message) {
@@ -144,6 +144,6 @@ class GenerateCashImagePdfJob implements ShouldQueue
             $statusData['progress'] = $progress;
         }
 
-        Cache::put("pdf_job_{$this->jobId}", $statusData, 3600);
+        Cache::put("pdf_job_{$this->jobId}", $statusData, 7200);
     }
 }

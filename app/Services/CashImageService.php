@@ -1161,26 +1161,33 @@ class CashImageService
             $this->validateRequest($request);
             $filters = $this->extractFilters($request);
 
+            // Get pagination parameters
+            $offset = $request->input('batch_offset', 0);
+            $limit = $request->input('batch_limit', null);
+
             $query = CashImage::select([
                 'id', 'image', 'relatable_id', 'relatable_type',
             ]);
 
             $this->applyFilters($query, $filters);
 
-            // Define common booking eager loading
+            // Apply pagination if provided
+            if ($limit !== null) {
+                $query->skip($offset)->take($limit);
+            }
+
             $bookingWith = [
-                'customer:id,name,phone_number,email', // ✅ Load customer
+                'customer:id,name,phone_number,email',
                 'items' => function ($itemsQ) {
                     $itemsQ->select([
                         'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
                         'total_cost_price', 'discount', 'product_type', 'amount',
                         'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
-                    ])->with('product:id,name'); // ✅ Load product with name
+                    ])->with('product:id,name');
                 }
             ];
 
             $query->with([
-                // Original polymorphic relationship
                 'relatable' => function ($q) use ($bookingWith) {
                     $q->when($q->getModel() instanceof \App\Models\Booking, function ($bookingQ) use ($bookingWith) {
                         $bookingQ->select([
@@ -1190,7 +1197,6 @@ class CashImageService
                         ])->with($bookingWith);
                     });
                 },
-                // Many-to-many through cash_imageables
                 'cashBookings' => function ($q) use ($bookingWith) {
                     $q->select([
                         'bookings.id', 'bookings.crm_id', 'bookings.grand_total', 'bookings.customer_id',
@@ -1199,7 +1205,6 @@ class CashImageService
                         'bookings.bank_name', 'bookings.discount', 'bookings.sub_total',
                     ])->with($bookingWith);
                 },
-                // Many-to-many through cash_image_bookings
                 'bookings' => function ($q) use ($bookingWith) {
                     $q->select([
                         'bookings.id', 'bookings.crm_id', 'bookings.grand_total', 'bookings.customer_id',
@@ -1212,68 +1217,56 @@ class CashImageService
 
             $allData = $query->get();
 
-            $nextInvoiceIndex = 0;
+            $nextInvoiceIndex = $offset; // Start invoice numbering from offset
             $transformedData = collect();
 
             foreach ($allData as $cashImage) {
-                // Collect all bookings from different relationships
                 $allBookings = collect();
 
-                // 1. From polymorphic relatable
                 if ($cashImage->relatable_type === 'App\Models\Booking' && $cashImage->relatable) {
                     $allBookings->push($cashImage->relatable);
                 }
 
-                // 2. From cashBookings (morphedByMany)
                 if ($cashImage->cashBookings && $cashImage->cashBookings->count() > 0) {
                     $allBookings = $allBookings->merge($cashImage->cashBookings);
                 }
 
-                // 3. From bookings (belongsToMany)
                 if ($cashImage->bookings && $cashImage->bookings->count() > 0) {
                     $allBookings = $allBookings->merge($cashImage->bookings);
                 }
 
-                // Remove duplicates based on booking ID
                 $uniqueBookings = $allBookings->unique('id');
 
-                // If no bookings found, still add the cash image
                 if ($uniqueBookings->isEmpty()) {
                     $transformedData->push([
                         'cash_image_id' => $cashImage->id,
                         'crm_id' => $this->getCrmIdFromCashImage($cashImage),
-                        'image' => Storage::url('images/' . $cashImage->image),
+                        'image' => 'storage/images/' . $cashImage->image, // Changed: Remove Storage::url()
                         'booking' => null,
                     ]);
                 } else {
-                    // Create one entry per booking
                     foreach ($uniqueBookings as $booking) {
-                        // ✅ Ensure customer is loaded (fallback if missing)
                         if (!$booking->relationLoaded('customer') || !$booking->customer) {
                             $booking->load('customer:id,name,phone_number,email');
                         }
 
-                        // Calculate booking totals
                         $balance = $booking->grand_total - $booking->commission;
                         $booking->sub_total_with_vat = $balance;
                         $booking->vat = $balance - ($balance / 1.07);
                         $booking->total_excluding_vat = $balance - $booking->vat;
 
-                        // ✅ Process booking items (this should create grouped_items)
                         $booking = $this->processBookingItems($booking);
 
-                        // Generate invoice number
                         $invoice_generate = "INV" . date('m', strtotime($booking->booking_date)) . "000" . ($nextInvoiceIndex + 1);
                         $booking->invoice_generate = $invoice_generate;
                         $nextInvoiceIndex++;
 
-                        // ✅ Convert to array to ensure all data is accessible in PDF
                         $bookingArray = $booking->toArray();
 
                         $transformedData->push([
                             'cash_image_id' => $cashImage->id,
                             'crm_id' => $booking->crm_id ?? $this->getCrmIdFromCashImage($cashImage),
-                            'image' => Storage::url('images/' . $cashImage->image),
+                            'image' => 'storage/images/' . $cashImage->image, // Changed: Remove Storage::url()
                             'booking' => $bookingArray,
                         ]);
                     }

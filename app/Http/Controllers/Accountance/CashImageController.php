@@ -671,31 +671,76 @@ class CashImageController extends Controller
 
     public function printCashImage(Request $request)
     {
-        // $result = $this->cashImageService->onlyImages($request);
-
-        // return response()->json([
-        //     'data' => $result
-        // ]);
-
         try {
-            $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
+            // Get total count first
+            $result = $this->cashImageService->onlyImages($request);
 
-            // Dispatch the PDF generation job
-            GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
-                ->onQueue('pdf_generation'); // Optional: specific queue
+            if (empty($result['result'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No data found to generate PDF'
+                ], 404);
+            }
+
+            $totalItems = count($result['result']);
+            $batchSize = 50;
+            $totalBatches = ceil($totalItems / $batchSize);
+
+            Log::info("Total items: {$totalItems}, Creating {$totalBatches} batches");
+
+            $jobIds = [];
+            $statusUrls = [];
+
+            // Create batches and dispatch jobs
+            for ($i = 0; $i < $totalBatches; $i++) {
+                $offset = $i * $batchSize;
+                $batchNumber = $i + 1;
+
+                // Create a copy of request with pagination
+                $batchRequest = array_merge($request->all(), [
+                    'batch_offset' => $offset,
+                    'batch_limit' => $batchSize
+                ]);
+
+                $jobId = "cash_image_pdf_batch_{$batchNumber}_" . date('Y-m-d-H-i-s');
+
+                // Dispatch job for this batch
+                GenerateCashImagePdfJob::dispatch($batchRequest, $jobId, $batchNumber, $totalBatches)
+                    ->onQueue('pdf_generation')
+                    ->delay(now()->addSeconds($i * 5)); // Stagger jobs by 5 seconds
+
+                $jobIds[] = $jobId;
+                $statusUrls[] = url("/admin/pdf-status/{$jobId}");
+            }
+
+            // Store overall job status
+            $masterJobId = "master_pdf_" . date('Y-m-d-H-i-s');
+            Cache::put("pdf_job_{$masterJobId}", [
+                'status' => 'processing',
+                'total_batches' => $totalBatches,
+                'total_items' => $totalItems,
+                'batch_jobs' => $jobIds,
+                'created_at' => now()
+            ], 7200);
 
             return response()->json([
                 'success' => true,
-                'message' => 'PDF generation started in background',
-                'job_id' => $jobId,
-                'status_url' => url("/admin/pdf-status/{$jobId}"),
-                'estimated_time' => 'This may take 2-5 minutes for large datasets'
-            ], 202); // 202 = Accepted (processing)
+                'message' => "PDF generation started for {$totalItems} items in {$totalBatches} batches",
+                'master_job_id' => $masterJobId,
+                'batch_jobs' => $jobIds,
+                'status_urls' => $statusUrls,
+                'total_items' => $totalItems,
+                'total_batches' => $totalBatches,
+                'batch_size' => $batchSize,
+                'estimated_time' => "Approximately " . ($totalBatches * 2) . "-" . ($totalBatches * 5) . " minutes"
+            ], 202);
 
         } catch (Exception $e) {
             Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
-
-            return $this->error(null, $e->getMessage(), 500);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
