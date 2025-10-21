@@ -49,6 +49,7 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     // hotel
     Route::get('hotels/{hotel}', [HotelPartnerController::class, 'show']);
     Route::put('hotels/{hotel}', [HotelPartnerController::class, 'update']);
+    Route::post('hotels/{hotel}/allowment', [HotelPartnerController::class, 'allowmentHotel']);
 
     // hotel images
     Route::delete('hotel/{hotel}/image/{hotel_image}', [HotelPartnerController::class, 'deleteImage']);

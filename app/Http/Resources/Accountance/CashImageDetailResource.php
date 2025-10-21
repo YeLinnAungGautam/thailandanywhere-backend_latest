@@ -19,9 +19,8 @@ class CashImageDetailResource extends JsonResource
         $relatable = null;
         $groupedItems = [];
 
-        // FIXED: Handle both relatable_id > 0 and relatable_id = 0 cases
+        // Handle relatable_id > 0 (direct polymorphic relationship)
         if ($this->relatable_id > 0 && $this->relatable) {
-            // Case 1: Polymorphic relationship (relatable_id > 0)
             switch ($this->relatable_type) {
                 case 'App\Models\Booking':
                     $relatable = new BookingResource($this->relatable);
@@ -44,7 +43,7 @@ class CashImageDetailResource extends JsonResource
             }
         }
 
-        // FIXED: Get attached bookings from polymorphic many-to-many relationships
+        // Get attached bookings/groups from polymorphic many-to-many relationships
         $attachedBookings = $this->getAttachedBookings();
 
         return [
@@ -68,7 +67,6 @@ class CashImageDetailResource extends JsonResource
 
     /**
      * Get attached bookings from polymorphic many-to-many relationships
-     * FIXED: Use cashBookings instead of bookings
      */
     protected function getAttachedBookings()
     {
@@ -77,32 +75,66 @@ class CashImageDetailResource extends JsonResource
         // Get bookings from cash_imageables table (polymorphic many-to-many)
         if ($this->relationLoaded('cashBookings') && $this->cashBookings->count() > 0) {
             foreach ($this->cashBookings as $booking) {
-                $attachedBookings[] = new BookingItemCashResource($booking);
+                // Load necessary relationships for the booking
+                if (!$booking->relationLoaded('items')) {
+                    $booking->load([
+                        'items.group.customerDocuments',
+                        'items.group.taxReceipts',
+                        'items.group.cashImages',
+                        'items.product',
+                        'customer',
+                        'receipts'
+                    ]);
+                }
+
+                $attachedBookings[] = [
+                    'id' => $booking->id,
+                    'crm_id' => $booking->crm_id,
+                    'booking' => new BookingResource($booking),
+                    'pivot' => [
+                        'type' => $booking->pivot->type ?? null,
+                        'deposit' => $booking->pivot->deposit ?? 0,
+                        'notes' => $booking->pivot->notes ?? null,
+                    ],
+                ];
             }
         }
 
         // Get booking item groups from cash_imageables table
         if ($this->relationLoaded('cashBookingItemGroups') && $this->cashBookingItemGroups->count() > 0) {
             foreach ($this->cashBookingItemGroups as $group) {
+                // Load necessary relationships
+                if (!$group->relationLoaded('bookingItems')) {
+                    $group->load([
+                        'bookingItems.product',
+                        'bookingItems.booking.customer',
+                        'customerDocuments',
+                        'taxReceipts',
+                        'cashImages'
+                    ]);
+                }
+
+                // Only add if group has a booking
                 if ($group->booking) {
                     // Check if this booking is not already in the array
                     $bookingId = $group->booking->id;
                     $exists = collect($attachedBookings)->contains(function($item) use ($bookingId) {
-                        return isset($item->id) && $item->id === $bookingId;
+                        return isset($item['booking']->id) && $item['booking']->id === $bookingId;
                     });
 
                     if (!$exists) {
-                        $attachedBookings[] = new BookingItemCashResource($group->booking);
+                        $attachedBookings[] = [
+                            'id' => $group->booking->id,
+                            'crm_id' => $group->booking->crm_id,
+                            'booking' => new BookingResource($group->booking),
+                            'pivot' => [
+                                'type' => $group->pivot->type ?? null,
+                                'deposit' => $group->pivot->deposit ?? 0,
+                                'notes' => $group->pivot->notes ?? null,
+                            ],
+                        ];
                     }
                 }
-            }
-        }
-
-        // Get cash books from cash_imageables table
-        if ($this->relationLoaded('cashBooks') && $this->cashBooks->count() > 0) {
-            foreach ($this->cashBooks as $cashBook) {
-                // You can add CashBook resource here if needed
-                // $attachedBookings[] = new CashBookResource($cashBook);
             }
         }
 
@@ -115,7 +147,6 @@ class CashImageDetailResource extends JsonResource
     protected function getGroupedBookingItems()
     {
         try {
-            // FIXED: Check both relatable_id and relatable existence
             if ($this->relatable_id == 0 || !$this->relatable || $this->relatable_type !== 'App\Models\Booking') {
                 return [];
             }
@@ -126,6 +157,7 @@ class CashImageDetailResource extends JsonResource
                     'group',
                     'group.customerDocuments',
                     'group.cashImages',
+                    'group.taxReceipts',
                     'product',
                     'booking'
                 ])
@@ -140,9 +172,13 @@ class CashImageDetailResource extends JsonResource
                 // Get the group information
                 $group = $itemsInGroup->first()->group ?? null;
 
+                // Calculate group total
+                $groupTotal = $itemsInGroup->sum('amount');
+
                 $result[] = [
                     'group_id' => $groupId,
                     'group_info' => $group ? new BookingItemGroupResource($group) : null,
+                    'group_total_amount' => $groupTotal,
                     'related_slip' => $group && $group->cashImages ? $group->cashImages : [],
                     'related_tax' => $group && $group->customerDocuments ?
                         CustomerDocumentResource::collection(
@@ -176,11 +212,11 @@ class CashImageDetailResource extends JsonResource
                             'balance_due_date' => $item->booking->balance_due_date ?
                                 $item->booking->balance_due_date->format('Y-m-d') : null,
                             'amount' => $item->amount,
+                            'expense' => $item->total_cost_price,
                             'payment_status' => $item->booking->payment_status ?? null,
                             'expense_status' => $item->payment_status,
                             'payment_verify_status' => $item->booking->verify_status ?? null,
                             'income' => $item->amount - $item->total_cost_price,
-                            'expense' => $item->total_cost_price,
                         ];
                     })->toArray(),
                 ];
