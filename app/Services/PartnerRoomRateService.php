@@ -162,4 +162,46 @@ class PartnerRoomRateService
 
         return $calendar_detail;
     }
+
+    public function formatCalendarDetails(array $room_rates)
+    {
+        $calendar_detail = [];
+        foreach ($room_rates as $rate) {
+            $available_rooms = $rate['stock'] - ($rate['booked_count'] ?? 0);
+            $room_price = $rate['room'] && $rate['room']->room_price ? $rate['room']->room_price : 0;
+            $current_price = $room_price - $rate['discount'];
+
+            $calendar_detail[$rate['date']] = [
+                'display_date' => Carbon::parse($rate['date'])->format('D, M j Y'),
+                'stock' => $rate['stock'],
+                'booked_count' => $rate['booked_count'] ?? 0,
+                'available_rooms' => $available_rooms <= 0 ? 0 : $available_rooms,
+                'room_price' => (float) $room_price,
+                'current_price' => (float) $current_price,
+                'discount' => (float) $rate['discount'],
+            ];
+        }
+
+        return $calendar_detail;
+    }
+
+    public function getRateForDaterange($checkin_date, $checkout_date)
+    {
+        $dates = [];
+        $currentDate = Carbon::parse($checkin_date);
+        $endDate = Carbon::parse($checkout_date);
+
+        while ($currentDate->lt($endDate)) {
+            $dates[] = $currentDate->toDateString();
+            $currentDate->addDay();
+        }
+
+        $rates = [];
+        foreach ($dates as $date) {
+            $rate = $this->getRateForDate($date);
+            $rates[$date] = $rate;
+        }
+
+        return $this->formatCalendarDetails($rates);
+    }
 }

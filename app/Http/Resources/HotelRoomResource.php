@@ -2,9 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Services\PartnerRoomRateService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Carbon\Carbon;
 
 class HotelRoomResource extends JsonResource
 {
@@ -68,6 +69,25 @@ class HotelRoomResource extends JsonResource
             $data['is_in_period'] = false;
         }
 
+        $data['room_rates'] = $this->getRoomRates();
+
         return $data;
+    }
+
+    public function getRoomRates()
+    {
+        // $service = new PartnerRoomRateService(
+        //     partner_id: 1,
+        //     room_id: 423
+        // );
+
+        // $room_rates = $service->getRateForDaterange(
+        //     checkin_date: '2025-10-29',
+        //     checkout_date: '2025-11-10'
+        // );
+
+        // return $room_rates;
+
+        return null;
     }
 }
