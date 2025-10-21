@@ -671,32 +671,32 @@ class CashImageController extends Controller
 
     public function printCashImage(Request $request)
     {
-        $result = $this->cashImageService->onlyImages($request);
+        // $result = $this->cashImageService->onlyImages($request);
 
-        return response()->json([
-            'data' => $result
-        ]);
+        // return response()->json([
+        //     'data' => $result
+        // ]);
 
-        // try {
-        //     $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
+        try {
+            $jobId = "cash_image_pdf_" . date('Y-m-d-H-i-s');
 
-        //     // Dispatch the PDF generation job
-        //     GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
-        //         ->onQueue('pdf_generation'); // Optional: specific queue
+            // Dispatch the PDF generation job
+            GenerateCashImagePdfJob::dispatch($request->all(), $jobId)
+                ->onQueue('pdf_generation'); // Optional: specific queue
 
-        //     return response()->json([
-        //         'success' => true,
-        //         'message' => 'PDF generation started in background',
-        //         'job_id' => $jobId,
-        //         'status_url' => url("/admin/pdf-status/{$jobId}"),
-        //         'estimated_time' => 'This may take 2-5 minutes for large datasets'
-        //     ], 202); // 202 = Accepted (processing)
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF generation started in background',
+                'job_id' => $jobId,
+                'status_url' => url("/admin/pdf-status/{$jobId}"),
+                'estimated_time' => 'This may take 2-5 minutes for large datasets'
+            ], 202); // 202 = Accepted (processing)
 
-        // } catch (Exception $e) {
-        //     Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
 
-        //     return $this->error(null, $e->getMessage(), 500);
-        // }
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 
     public function checkPdfStatus($jobId)
