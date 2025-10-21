@@ -21,6 +21,7 @@ class HotelController extends Controller
                 'city',
                 'rooms',
                 'images',
+                'rooms.roomRates',
                 // 'rooms.images',
                 // 'contracts',
                 'facilities',
@@ -97,6 +98,7 @@ class HotelController extends Controller
             $hotel->load(
                 'city',
                 'rooms',
+                'rooms.roomRates',
                 'rooms.images',
                 'contracts',
                 'images',
