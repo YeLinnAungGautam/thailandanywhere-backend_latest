@@ -100,7 +100,7 @@ class HotelController extends Controller
         }
 
         $official_logo_name = null;
-        if($request->official_logo){
+        if ($request->official_logo) {
             $logo_data = $this->uploads($request->official_logo, 'images/');
             $official_logo_name = Storage::url('images/' . $logo_data['fileName']);
         }
@@ -139,6 +139,9 @@ class HotelController extends Controller
             'vat_id' => $request->vat_id,
             'vat_name' => $request->vat_name,
             'vat_address' => $request->vat_address,
+
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
         ]);
 
         $contractArr = [];
@@ -213,7 +216,7 @@ class HotelController extends Controller
         }
 
         $official_logo_name = null;
-        if($request->hasFile('official_logo')){
+        if ($request->hasFile('official_logo')) {
             $logo_data = $this->uploads($request->official_logo, 'images/');
             $official_logo_name = Storage::url('images/' . $logo_data['fileName']);
         } else {
@@ -255,6 +258,9 @@ class HotelController extends Controller
             'vat_id' => $request->vat_id ?? $hotel->vat_id,
             'vat_name' => $request->vat_name ?? $hotel->vat_name,
             'vat_address' => $request->vat_address ?? $hotel->vat_address,
+
+            'latitude' => $request->latitude ?? $hotel->latitude,
+            'longitude' => $request->longitude ?? $hotel->longitude,
         ]);
 
         $contractArr = [];
@@ -396,45 +402,45 @@ class HotelController extends Controller
     }
 
     public function addSlug(Request $request, $id)
-        {
-            $hotel = Hotel::find($id);
+    {
+        $hotel = Hotel::find($id);
 
-            if (!$hotel) {
-                return $this->error(null, 'Hotel not found', 404);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'slugs' => 'required|array|min:1',
-                'slugs.*' => 'required|string|max:255',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'result' => 0,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            try {
-                // Clean and prepare slugs
-                $slugs = array_map(function($slug) {
-                    return strtolower(trim($slug));
-                }, $request->slugs);
-
-                // Remove empty values and duplicates
-                $slugs = array_values(array_unique(array_filter($slugs)));
-
-                // Update hotel with new slugs (replace all)
-                $hotel->update(['slug' => $slugs]);
-
-
-                $hotel->refresh();
-
-                return $this->success(null, 'Slugs updated successfully');
-
-            } catch (\Exception $e) {
-                return $this->error(null, $e->getMessage(), 500);
-            }
+        if (!$hotel) {
+            return $this->error(null, 'Hotel not found', 404);
         }
+
+        $validator = Validator::make($request->all(), [
+            'slugs' => 'required|array|min:1',
+            'slugs.*' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => 0,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Clean and prepare slugs
+            $slugs = array_map(function ($slug) {
+                return strtolower(trim($slug));
+            }, $request->slugs);
+
+            // Remove empty values and duplicates
+            $slugs = array_values(array_unique(array_filter($slugs)));
+
+            // Update hotel with new slugs (replace all)
+            $hotel->update(['slug' => $slugs]);
+
+
+            $hotel->refresh();
+
+            return $this->success(null, 'Slugs updated successfully');
+
+        } catch (\Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }

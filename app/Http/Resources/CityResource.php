@@ -19,6 +19,9 @@ class CityResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'image' => $this->image ? Storage::url('images/' . $this->image) : null,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+            'radius_km' => $this->radius_km,
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
         ];

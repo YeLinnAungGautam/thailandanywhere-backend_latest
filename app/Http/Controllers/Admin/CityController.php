@@ -55,6 +55,9 @@ class CityController extends Controller
 
         $data = [
             'name' => $request->name,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'radius_km' => $request->radius_km,
         ];
 
         if ($file = $request->file('image')) {
@@ -92,7 +95,10 @@ class CityController extends Controller
         }
 
         $data = [
-            'name' => $request->name ?? $find->name
+            'name' => $request->name ?? $find->name,
+            'latitude' => $request->latitude ?? $find->latitude,
+            'longitude' => $request->longitude ?? $find->longitude,
+            'radius_km' => $request->radius_km ?? $find->radius_km,
         ];
 
         if ($file = $request->file('image')) {
