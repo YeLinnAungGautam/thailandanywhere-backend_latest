@@ -112,7 +112,7 @@ Route::get('reservations/report/export', [ReservationExportController::class, 'e
 
 Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
 
-Route::get('/print/cash-image/generate', [CashImageController::class, 'printCashImage']);
+Route::get('/print/cash-image', [CashImageController::class, 'printCashImage']);
 Route::get('/print/cash-parchase-image', [CashImageController::class, 'printCashParchaseImage']);
 Route::get('/pdf-status/{jobId}', [CashImageController::class, 'checkPdfStatus']);
 Route::get('/pdf-batch-status/{jobId}', [CashImageController::class, 'checkPdfBatchStatus']);
