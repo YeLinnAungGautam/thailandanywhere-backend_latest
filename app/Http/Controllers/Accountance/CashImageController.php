@@ -741,16 +741,6 @@ class CashImageController extends Controller
                     'estimated_time' => "Approximately " . ($totalBatches * 2) . "-" . ($totalBatches * 5) . " minutes"
                 ], 202);
 
-            // return $this->success([
-            //     'master_job_id' => $masterJobId,
-            //     'batch_jobs' => $jobIds,
-            //     'status_urls' => $statusUrls,
-            //     'total_items' => $totalItems,
-            //     'total_batches' => $totalBatches,
-            //     'batch_size' => $batchSize,
-            //     'estimated_time' => "Approximately " . ($totalBatches * 2) . "-" . ($totalBatches * 5) . " minutes"
-            // ], "PDF generation started for {$totalItems} items in {$totalBatches} batches", 202);
-
         } catch (Exception $e) {
             Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
 
