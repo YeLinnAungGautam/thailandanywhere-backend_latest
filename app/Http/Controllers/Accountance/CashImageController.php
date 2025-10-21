@@ -672,12 +672,13 @@ class CashImageController extends Controller
     public function printCashImage(Request $request)
     {
         try {
+            info('Starting PDF generation job dispatch for cash images');
+
             // Get total count first
             $result = $this->cashImageService->onlyImages($request);
 
             if (empty($result['result'])) {
                 return response()
-                    ->header('Access-Control-Allow-Origin', '*')
                     ->json([
                         'success' => false,
                         'message' => 'No data found to generate PDF'
@@ -728,7 +729,6 @@ class CashImageController extends Controller
             ], 7200);
 
             return response()
-                ->header('Access-Control-Allow-Origin', '*')
                 ->json([
                     'success' => true,
                     'message' => "PDF generation started for {$totalItems} items in {$totalBatches} batches",
