@@ -25,6 +25,9 @@ class PlaceRequest extends FormRequest
             'name' => 'required|string',
             'city_id' => 'nullable|exists:cities,id',
             'address' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'radius_km' => 'nullable|numeric',
         ];
     }
 }

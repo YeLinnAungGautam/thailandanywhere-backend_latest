@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API\Partner;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateHotelRequest;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
 use App\Models\HotelContract;
@@ -38,7 +37,7 @@ class HotelPartnerController extends Controller
      */
     public function update(Request $request, Hotel $hotel)
     {
-         $hotel_nearby_places = [];
+        $hotel_nearby_places = [];
         if ($request->nearby_places) {
             foreach ($request->nearby_places as $nearby_place) {
                 $file_name = $nearby_place['image'] ?? null;
@@ -100,6 +99,9 @@ class HotelPartnerController extends Controller
             'vat_name' => $request->get('vat_name', $hotel->vat_name),
             'vat_address' => $request->get('vat_address', $hotel->vat_address),
             'nearby_places' => $request->has('nearby_places') ? json_encode($hotel_nearby_places) : $hotel->nearby_places,
+
+            'latitude' => $request->get('latitude', $hotel->latitude),
+            'longitude' => $request->get('longitude', $hotel->longitude),
         ];
 
         // Remove null values to prevent overwriting with null
@@ -213,7 +215,7 @@ class HotelPartnerController extends Controller
             'title' => 'nullable|string',
         ]);
 
-        if($request->hasFile('image')) {
+        if ($request->hasFile('image')) {
             // Delete the old image
             Storage::delete('images/' . $hotel_image->image);
 
@@ -285,7 +287,7 @@ class HotelPartnerController extends Controller
 
         try {
             // Clean and prepare slugs
-            $slugs = array_map(function($slug) {
+            $slugs = array_map(function ($slug) {
                 return strtolower(trim($slug));
             }, $request->slugs);
 
