@@ -51,12 +51,14 @@ class GenerateCashImagePdfJob implements ShouldQueue
 
             $request = new Request($this->requestData);
 
-            ini_set('memory_limit', '1024M');
+            // Increase memory and time limits
+            ini_set('memory_limit', '2048M'); // Increased from 1024M
             ini_set('max_execution_time', 1800);
             set_time_limit(1800);
 
             $this->updateJobStatus('processing', 'Fetching data from database...', 25);
 
+            // This now only fetches 50 items due to batch_offset and batch_limit
             $data = $cashImageService->onlyImages($request);
 
             if (empty($data['result'])) {
@@ -70,6 +72,11 @@ class GenerateCashImagePdfJob implements ShouldQueue
             Log::info("Batch {$this->batchNumber}: Generating PDF for {$totalItems} items");
 
             $this->updateJobStatus('processing', "Generating PDF for {$totalItems} items in batch {$this->batchNumber}...", 50);
+
+            // Clear any previous memory before PDF generation
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
 
             $pdf = Pdf::setOption([
                 'fontDir' => public_path('/fonts'),
@@ -92,6 +99,12 @@ class GenerateCashImagePdfJob implements ShouldQueue
             $pdfPath = "pdfs/{$filename}";
 
             Storage::put($pdfPath, $pdf->output());
+
+            // Clean up memory
+            unset($pdf, $imageData, $data);
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
 
             $this->updateJobStatus('completed', "Batch {$this->batchNumber} completed successfully!", 100, [
                 'download_url' => Storage::url($pdfPath),

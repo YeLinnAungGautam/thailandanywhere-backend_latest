@@ -1161,120 +1161,154 @@ class CashImageService
             $this->validateRequest($request);
             $filters = $this->extractFilters($request);
 
-            // Get pagination parameters
-            $offset = $request->input('batch_offset', 0);
-            $limit = $request->input('batch_limit', null);
-
             $query = CashImage::select([
-                'id', 'image', 'relatable_id', 'relatable_type',
+                'id', 'image', 'relatable_id', 'relatable_type', 'date',
+                'sender', 'receiver', 'amount', 'interact_bank', 'currency', 'created_at'
             ]);
 
             $this->applyFilters($query, $filters);
+            $this->applySorting($query, $filters);
 
-            // Apply pagination if provided
-            if ($limit !== null) {
-                $query->skip($offset)->take($limit);
+            // Apply pagination if batch parameters are provided
+            if ($request->has('batch_offset') && $request->has('batch_limit')) {
+                $query->skip($request->batch_offset)
+                      ->take($request->batch_limit);
             }
 
-            $bookingWith = [
-                'customer:id,name,phone_number,email',
-                'items' => function ($itemsQ) {
-                    $itemsQ->select([
-                        'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
-                        'total_cost_price', 'discount', 'product_type', 'amount',
-                        'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
-                    ])->with('product:id,name');
-                }
-            ];
-
             $query->with([
-                'relatable' => function ($q) use ($bookingWith) {
-                    $q->when($q->getModel() instanceof \App\Models\Booking, function ($bookingQ) use ($bookingWith) {
+                'relatable' => function ($q) {
+                    $q->when($q->getModel() instanceof \App\Models\Booking, function ($bookingQ) {
                         $bookingQ->select([
                             'id', 'crm_id', 'grand_total', 'customer_id', 'commission',
                             'created_at', 'start_date', 'end_date', 'booking_date',
                             'payment_method', 'payment_status', 'bank_name', 'discount', 'sub_total',
-                        ])->with($bookingWith);
+                        ])->with([
+                            'customer' => function ($customerQ) {
+                                $customerQ->select(['id', 'name', 'phone_number']);
+                            },
+                            'items' => function ($itemsQ) {
+                                $itemsQ->select([
+                                    'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
+                                    'total_cost_price', 'discount', 'product_type', 'amount',
+                                    'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
+                                ])->with('product');
+                            }
+                        ]);
                     });
                 },
-                'cashBookings' => function ($q) use ($bookingWith) {
+                'cashBookings' => function ($q) {
                     $q->select([
                         'bookings.id', 'bookings.crm_id', 'bookings.grand_total', 'bookings.customer_id',
                         'bookings.commission', 'bookings.created_at', 'bookings.start_date', 'bookings.end_date',
                         'bookings.booking_date', 'bookings.payment_method', 'bookings.payment_status',
                         'bookings.bank_name', 'bookings.discount', 'bookings.sub_total',
-                    ])->with($bookingWith);
-                },
-                'bookings' => function ($q) use ($bookingWith) {
-                    $q->select([
-                        'bookings.id', 'bookings.crm_id', 'bookings.grand_total', 'bookings.customer_id',
-                        'bookings.commission', 'bookings.created_at', 'bookings.start_date', 'bookings.end_date',
-                        'bookings.booking_date', 'bookings.payment_method', 'bookings.payment_status',
-                        'bookings.bank_name', 'bookings.discount', 'bookings.sub_total',
-                    ])->with($bookingWith);
+                    ])->with([
+                        'customer' => function ($customerQ) {
+                            $customerQ->select(['id', 'name', 'phone_number']);
+                        },
+                        'items' => function ($itemsQ) {
+                            $itemsQ->select([
+                                'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
+                                'total_cost_price', 'discount', 'product_type', 'amount',
+                                'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
+                            ])->with('product');
+                        }
+                    ]);
                 }
             ]);
 
             $allData = $query->get();
 
-            $nextInvoiceIndex = $offset; // Start invoice numbering from offset
-            $transformedData = collect();
+            // Group by month for invoice generation
+            $invoiceCounters = [];
 
-            foreach ($allData as $cashImage) {
-                $allBookings = collect();
+            // Get starting invoice number for this batch
+            $invoiceStartNumber = $request->has('invoice_start_number')
+                ? $request->invoice_start_number
+                : 1;
 
-                if ($cashImage->relatable_type === 'App\Models\Booking' && $cashImage->relatable) {
-                    $allBookings->push($cashImage->relatable);
-                }
+            // Global counter for sequential numbering across all items in this batch
+            $globalCounter = $invoiceStartNumber - 1;
 
-                if ($cashImage->cashBookings && $cashImage->cashBookings->count() > 0) {
-                    $allBookings = $allBookings->merge($cashImage->cashBookings);
-                }
+            $transformedData = $allData->map(function ($cashImage) use (&$invoiceCounters, &$globalCounter) {
+                $booking = null;
 
-                if ($cashImage->bookings && $cashImage->bookings->count() > 0) {
-                    $allBookings = $allBookings->merge($cashImage->bookings);
-                }
-
-                $uniqueBookings = $allBookings->unique('id');
-
-                if ($uniqueBookings->isEmpty()) {
-                    $transformedData->push([
-                        'cash_image_id' => $cashImage->id,
-                        'crm_id' => $this->getCrmIdFromCashImage($cashImage),
-                        'image' => 'storage/images/' . $cashImage->image, // Changed: Remove Storage::url()
-                        'booking' => null,
-                    ]);
-                } else {
-                    foreach ($uniqueBookings as $booking) {
-                        if (!$booking->relationLoaded('customer') || !$booking->customer) {
-                            $booking->load('customer:id,name,phone_number,email');
-                        }
-
-                        $balance = $booking->grand_total - $booking->commission;
-                        $booking->sub_total_with_vat = $balance;
-                        $booking->vat = $balance - ($balance / 1.07);
-                        $booking->total_excluding_vat = $balance - $booking->vat;
-
-                        $booking = $this->processBookingItems($booking);
-
-                        $invoice_generate = "INV" . date('m', strtotime($booking->booking_date)) . "000" . ($nextInvoiceIndex + 1);
-                        $booking->invoice_generate = $invoice_generate;
-                        $nextInvoiceIndex++;
-
-                        $bookingArray = $booking->toArray();
-
-                        $transformedData->push([
-                            'cash_image_id' => $cashImage->id,
-                            'crm_id' => $booking->crm_id ?? $this->getCrmIdFromCashImage($cashImage),
-                            'image' => 'storage/images/' . $cashImage->image, // Changed: Remove Storage::url()
-                            'booking' => $bookingArray,
-                        ]);
+                if ($cashImage->relatable_type === 'App\Models\Booking') {
+                    if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                        $booking = $cashImage->relatable;
+                    } elseif ($cashImage->relatable_id == 0 && $cashImage->cashBookings && $cashImage->cashBookings->count() > 0) {
+                        $booking = $cashImage->cashBookings->first();
                     }
                 }
-            }
+
+                if ($booking) {
+                    $balance = $booking->grand_total - $booking->commission;
+                    $booking->sub_total_with_vat = $balance;
+                    $booking->vat = $balance - ($balance / 1.07);
+                    $booking->total_excluding_vat = $balance - $booking->vat;
+
+                    $booking = $this->processBookingItems($booking);
+
+                    // Increment global counter for this item
+                    $globalCounter++;
+
+                    $cashImageDate = $cashImage->date ?: $cashImage->created_at;
+                    $month = date('m', strtotime($cashImageDate));
+
+                    // Generate invoice with global counter
+                    $invoice_generate = "INV" . $month . str_pad($globalCounter, 6, '0', STR_PAD_LEFT);
+                    $booking->invoice_generate = $invoice_generate;
+
+                    // Track counters per month (optional, for reference)
+                    if (!isset($invoiceCounters[$month])) {
+                        $invoiceCounters[$month] = 0;
+                    }
+                    $invoiceCounters[$month]++;
+                }
+
+                $bookingArray = null;
+                if ($booking) {
+                    $bookingArray = $booking->toArray();
+
+                    if ($booking->customer) {
+                        $bookingArray['customer'] = $booking->customer->toArray();
+                    }
+
+                    if ($booking->items) {
+                        $bookingArray['items'] = $booking->items->map(function($item) {
+                            $itemArray = $item->toArray();
+                            if ($item->product) {
+                                $itemArray['product'] = $item->product->toArray();
+                            }
+                            return $itemArray;
+                        })->toArray();
+                    }
+
+                    if (isset($booking->grouped_items)) {
+                        $bookingArray['grouped_items'] = $booking->grouped_items;
+                    }
+                }
+
+                return [
+                    'cash_image_id' => $cashImage->id,
+                    'crm_id' => $this->getCrmIdFromCashImage($cashImage),
+                    'image' => $cashImage->image,
+                    'cash_image_date' => $cashImage->date,
+                    'bank' => $cashImage->interact_bank,
+                    'currency' => $cashImage->currency,
+                    'cash_amount' => $cashImage->amount,
+                    'sender' => $cashImage->sender,
+                    'receiver' => $cashImage->receiver,
+                    'booking' => $bookingArray,
+                ];
+            });
 
             return [
-                'result' => $transformedData->toArray()
+                'status' => 1,
+                'message' => 'Cash images with booking details retrieved successfully',
+                'result' => $transformedData->values()->toArray(),
+                'invoice_counters' => $invoiceCounters,
+                'last_invoice_number' => $globalCounter, // Last number used in this batch
             ];
 
         } catch (InvalidArgumentException $e) {
