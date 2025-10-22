@@ -161,24 +161,58 @@ class RoomController extends Controller
                 };
             }
 
-            if ($request->periods) {
-                $dates = collect($request->periods)->map(function ($period) {
-                    return collect($period)->only(['start_date', 'end_date'])->all();
-                });
+            // if ($request->periods) {
+            //     $dates = collect($request->periods)->map(function ($period) {
+            //         return collect($period)->only(['start_date', 'end_date'])->all();
+            //     });
 
-                $overlap_dates = $this->checkIfOverlapped($dates);
+            //     $overlap_dates = $this->checkIfOverlapped($dates);
 
-                $room_periods = [];
-                foreach ($request->periods as $period) {
-                    $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
-                    $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
+            //     $room_periods = [];
+            //     foreach ($request->periods as $period) {
+            //         $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
+            //         $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
 
-                    if (!$sd_exists && !$ed_exists) {
-                        $room_periods[] = $period;
-                    }
+            //         if (!$sd_exists && !$ed_exists) {
+            //             $room_periods[] = $period;
+            //         }
+            //     }
+
+            //     $this->syncPeriods($room, $room_periods);
+            // }
+
+            // Handle periods - decode JSON if it's a string
+            if ($request->has('periods')) {
+                $periods = $request->periods;
+
+                // If periods is a JSON string, decode it
+                if (is_string($periods)) {
+                    $periods = json_decode($periods, true);
                 }
 
-                $this->syncPeriods($room, $room_periods);
+                // If periods is empty, delete all
+                if (empty($periods)) {
+                    $room->periods()->delete();
+                } else {
+                    // Process periods normally
+                    $dates = collect($periods)->map(function ($period) {
+                        return collect($period)->only(['start_date', 'end_date'])->all();
+                    });
+
+                    $overlap_dates = $this->checkIfOverlapped($dates);
+
+                    $room_periods = [];
+                    foreach ($periods as $period) {
+                        $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
+                        $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
+
+                        if (!$sd_exists && !$ed_exists) {
+                            $room_periods[] = $period;
+                        }
+                    }
+
+                    $this->syncPeriods($room, $room_periods);
+                }
             }
 
             DB::commit();
