@@ -11,7 +11,7 @@ class City extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['name', 'image'];
+    protected $fillable = ['name', 'image', 'latitude', 'longitude', 'radius_km'];
 
     public function privateVanTours()
     {

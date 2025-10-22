@@ -672,22 +672,20 @@ class CashImageController extends Controller
     public function printCashImage(Request $request)
     {
         try {
-            info('Starting PDF generation job dispatch for cash images');
+            // Create a method to get count or use query builder
+            $count = $this->cashImageService->getAllSummaryForExport($request);
 
-            // Get total count first
-            $result = $this->cashImageService->onlyImages($request);
+            $totalItems = $count['result']['total_records'];
 
-            if (empty($result['result'])) {
+            if ($totalItems === 0) {
                 return response()
+                    ->header('Access-Control-Allow-Origin', '*')
                     ->json([
                         'success' => false,
                         'message' => 'No data found to generate PDF'
                     ], 404);
-
-                // return $this->error(null, 'No data found to generate PDF', 404);
             }
 
-            $totalItems = count($result['result']);
             $batchSize = 50;
             $totalBatches = ceil($totalItems / $batchSize);
 
@@ -701,25 +699,26 @@ class CashImageController extends Controller
                 $offset = $i * $batchSize;
                 $batchNumber = $i + 1;
 
-                // Create a copy of request with pagination
+                // Create batch request with pagination
                 $batchRequest = array_merge($request->all(), [
                     'batch_offset' => $offset,
-                    'batch_limit' => $batchSize
+                    'batch_limit' => $batchSize,
+                    'invoice_start_number' => $offset + 1,
                 ]);
 
-                $jobId = "cash_image_pdf_batch_{$batchNumber}_" . date('Y-m-d-H-i-s');
+                $jobId = "cash_image_pdf_batch_{$batchNumber}_" . date('YmdHis') . "_" . uniqid();
 
                 // Dispatch job for this batch
                 GenerateCashImagePdfJob::dispatch($batchRequest, $jobId, $batchNumber, $totalBatches)
                     ->onQueue('pdf_generation')
-                    ->delay(now()->addSeconds($i * 5)); // Stagger jobs by 5 seconds
+                    ->delay(now()->addSeconds($i * 10)); // Increased delay to 10 seconds
 
                 $jobIds[] = $jobId;
                 $statusUrls[] = url("/admin/pdf-status/{$jobId}");
             }
 
             // Store overall job status
-            $masterJobId = "master_pdf_" . date('Y-m-d-H-i-s');
+            $masterJobId = "master_pdf_" . date('YmdHis') . "_" . uniqid();
             Cache::put("pdf_job_{$masterJobId}", [
                 'status' => 'processing',
                 'total_batches' => $totalBatches,
@@ -729,6 +728,7 @@ class CashImageController extends Controller
             ], 7200);
 
             return response()
+                ->header('Access-Control-Allow-Origin', '*')
                 ->json([
                     'success' => true,
                     'message' => "PDF generation started for {$totalItems} items in {$totalBatches} batches",
