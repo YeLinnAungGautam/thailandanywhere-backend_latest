@@ -675,25 +675,15 @@ class CashImageController extends Controller
             // Create a method to get count or use query builder
             $count = $this->cashImageService->getAllSummaryForExport($request);
 
-<<<<<<< HEAD
             $totalItems = $count['result']['total_records'];
 
             if ($totalItems === 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No data found to generate PDF'
-                ], 404);
-=======
-            if (empty($result['result'])) {
                 return response()
                     ->header('Access-Control-Allow-Origin', '*')
                     ->json([
                         'success' => false,
                         'message' => 'No data found to generate PDF'
                     ], 404);
-
-                // return $this->error(null, 'No data found to generate PDF', 404);
->>>>>>> 67858dd3ed18200b77cfc5f36736565165c375cb
             }
 
             $batchSize = 50;
@@ -737,19 +727,6 @@ class CashImageController extends Controller
                 'created_at' => now()
             ], 7200);
 
-<<<<<<< HEAD
-            return response()->json([
-                'success' => true,
-                'message' => "PDF generation started for {$totalItems} items in {$totalBatches} batches",
-                'master_job_id' => $masterJobId,
-                'batch_jobs' => $jobIds,
-                'status_urls' => $statusUrls,
-                'total_items' => $totalItems,
-                'total_batches' => $totalBatches,
-                'batch_size' => $batchSize,
-                'estimated_time' => "Approximately " . ceil($totalBatches * 2) . "-" . ceil($totalBatches * 5) . " minutes"
-            ], 202);
-=======
             return response()
                 ->header('Access-Control-Allow-Origin', '*')
                 ->json([
@@ -763,7 +740,6 @@ class CashImageController extends Controller
                     'batch_size' => $batchSize,
                     'estimated_time' => "Approximately " . ($totalBatches * 2) . "-" . ($totalBatches * 5) . " minutes"
                 ], 202);
->>>>>>> 67858dd3ed18200b77cfc5f36736565165c375cb
 
         } catch (Exception $e) {
             Log::error('PDF Job Dispatch Error: ' . $e->getMessage());

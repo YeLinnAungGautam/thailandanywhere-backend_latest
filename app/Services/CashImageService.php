@@ -879,7 +879,7 @@ class CashImageService
                         ->with([
                             'booking' => function ($bookingQuery) {
                                 $bookingQuery->select(['id', 'crm_id', 'customer_id'])
-                                    ->with(['bookingItems.product', 'customer']);
+                                    ->with(['items.product', 'customer']);
                             }
                         ]);
                 }
@@ -1045,8 +1045,8 @@ class CashImageService
         $products = [];
         $booking = $cashImage->relatable->booking;
 
-        if ($booking->bookingItems && $booking->bookingItems->count() > 0) {
-            foreach ($booking->bookingItems as $bookingItem) {
+        if ($booking->items && $booking->items->count() > 0) {
+            foreach ($booking->items as $bookingItem) {
                 if ($bookingItem->product) {
                     $products[] = [
                         'product_name' => $bookingItem->product->name ?? 'Unknown Product',
