@@ -104,6 +104,11 @@ Route::group([], function () {
     Route::post('login', [LoginController::class, 'login']);
     // Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
 
+    # Reset password
+    Route::post('forgot-password', [LoginController::class, 'forgetPassword']);
+    Route::post('reset-password', [LoginController::class, 'resetPassword']);
+    Route::post('verify-reset-token', [LoginController::class, 'verifyResetToken']);
+
     # Reservation Information
     Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
 
