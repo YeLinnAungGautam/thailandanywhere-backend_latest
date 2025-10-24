@@ -69,6 +69,9 @@ class OrderItemResource extends JsonResource
             'variation' => new EntranceTicketVariationResource($this->variation),
             'product' => $product,
             'service_days' => $stay_nights,
+
+            'room_rates' => $this->room_rates,
+            'is_incomplete_allotment' => $this->is_incomplete_allotment,
         ];
     }
 }
