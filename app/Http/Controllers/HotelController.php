@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreHotelRequest;
 use App\Http\Requests\UpdateHotelRequest;
+use App\Http\Resources\HotelMapResource;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
 use App\Models\HotelContract;
@@ -72,6 +73,38 @@ class HotelController extends Controller
             ])
             ->response()
             ->getData(), 'Hotel List');
+    }
+
+    public function listMapAll(Request $request)
+    {
+        $search = $request->query('search');
+        $city_id = $request->query('city_id');
+        $place = $request->query('place');
+
+        $hotels = Hotel::select([
+            'id',
+            'name',
+            'latitude',
+            'longitude',
+            'rating',
+            'place',
+            'city_id'
+        ])
+        ->whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->when($search, function ($query) use ($search) {
+            $query->where('name', 'LIKE', "%{$search}%");
+        })
+        ->when($city_id, function ($query) use ($city_id) {
+            $query->where('city_id', $city_id);
+        })
+        ->when($place, function ($query) use ($place) {
+            $query->where('place', $place);
+        })
+        ->with('images')
+        ->get();
+
+        return $this->success(HotelMapResource::collection($hotels), 'All Hotels');
     }
 
     /**

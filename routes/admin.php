@@ -271,6 +271,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Hotel
     Route::apiResource('hotels', HotelController::class);
+    // Route::get('hotels/map', [HotelController::class, 'listMapAll']);
+    Route::get('/map/hotels', [HotelController::class, 'listMapAll']);
     Route::post('hotels/{id}/slug', [HotelController::class, 'addSlug']);
 
     Route::patch('hotels/{id}/restore', [HotelController::class, 'restore']);

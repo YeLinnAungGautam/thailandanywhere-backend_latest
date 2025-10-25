@@ -47,6 +47,7 @@ Route::group([], function () {
 
     # Hotel
     Route::get('hotels', [HotelController::class, 'index']);
+
     Route::get('hotels/{hotel_id}', [HotelController::class, 'show']);
 
     # Hotel Cities
