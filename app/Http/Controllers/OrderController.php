@@ -221,11 +221,11 @@ class OrderController extends Controller
             if ($orderItem['product_type'] == Hotel::class) {
                 $hotel = Hotel::find($item['product_id']);
                 $partner = $hotel->partners->first();
-                $roomRateService = new PartnerRoomRateService($partner->id, $item['variation_id']);
+                $roomRateService = new PartnerRoomRateService($partner->id, $item['room_id']);
                 $room_rates = $roomRateService->getRateForDaterange($item['checkin_date'], $item['checkout_date']);
 
                 $orderItem['room_rates'] = $room_rates;
-                $orderItem['is_incomplete_allotment'] = $roomRateService->isIncompleteAllotment($item['checkin_date'], $item['checkout_date']);
+                $orderItem['incomplete_allotment'] = $roomRateService->isIncompleteAllotment($item['checkin_date'], $item['checkout_date']);
             }
 
             $order->items()->save($orderItem);

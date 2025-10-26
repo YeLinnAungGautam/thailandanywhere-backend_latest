@@ -71,7 +71,7 @@ class OrderItemResource extends JsonResource
             'service_days' => $stay_nights,
 
             'room_rates' => $this->room_rates,
-            'is_incomplete_allotment' => $this->is_incomplete_allotment,
+            'is_incomplete_allotment' => $this->incomplete_allotment,
         ];
     }
 }
