@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Room;
+use App\Services\PartnerRoomRateService;
 use App\Services\RoomService;
 use Illuminate\Http\Request;
 
@@ -18,6 +19,15 @@ class RoomPeriodController extends Controller
         $roomService = new RoomService($room);
         $pricing = $roomService->getDailyPricing($request->checkin_date, $request->checkout_date);
 
+        $room_rates = [];
+        $partner = $room->hotel->partners->first();
+        $is_incomplete_allotment = false;
+        if ($partner) {
+            $roomRateService = new PartnerRoomRateService($partner->id, $room->id);
+            $room_rates = $roomRateService->getRateForDaterange($request->checkin_date, $request->checkout_date);
+            $is_incomplete_allotment = $roomRateService->isIncompleteAllotment($request->checkin_date, $request->checkout_date);
+        }
+
         $data = [
             'room' => $room,
             'daily_pricing' => $pricing['daily'],
@@ -27,6 +37,8 @@ class RoomPeriodController extends Controller
             'total_selling_price' => $pricing['total_selling_price'],
             'overall_discount_percent' => $pricing['overall_discount_percent'],
             'service_date' => $request->service_date,
+            'room_rates' => $room_rates,
+            'is_incomplete_allotment' => $is_incomplete_allotment,
         ];
 
         return success($data);

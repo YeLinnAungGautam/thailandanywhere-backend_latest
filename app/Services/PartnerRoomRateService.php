@@ -68,7 +68,8 @@ class PartnerRoomRateService
 
         // Add room relationship and booked count
         $virtualRate->setRelation('room', $room);
-        $virtualRate->booked_count = \App\Models\BookingItem::where('room_id', $this->room_id)
+        $virtualRate->booked_count = BookingItem::query()
+            ->where('room_id', $this->room_id)
             ->where('service_date', $date)
             ->sum('quantity');
 
@@ -179,6 +180,10 @@ class PartnerRoomRateService
                 'room_price' => (float) $room_price,
                 'current_price' => (float) $current_price,
                 'discount' => (float) $rate['discount'],
+
+                'display_str' => Carbon::parse($rate['date'])->format('M j') .
+                    ' - Price: ' . number_format($current_price, 2) .
+                    ' (' . ($available_rooms <= 0 ? 'Sold Out' : 'Stock: ' . $available_rooms) . ')',
             ];
         }
 
@@ -203,5 +208,22 @@ class PartnerRoomRateService
         }
 
         return $this->formatCalendarDetails($rates);
+    }
+
+    public function isIncompleteAllotment($checkin_date, $checkout_date)
+    {
+        $currentDate = Carbon::parse($checkin_date);
+        $endDate = Carbon::parse($checkout_date);
+
+        while ($currentDate->lt($endDate)) {
+            $rate = $this->getRateForDate($currentDate->toDateString());
+            $available_rooms = $rate->stock - ($rate->booked_count ?? 0);
+            if ($available_rooms <= 0) {
+                return true;
+            }
+            $currentDate->addDay();
+        }
+
+        return false;
     }
 }

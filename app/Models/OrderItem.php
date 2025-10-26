@@ -15,7 +15,9 @@ class OrderItem extends Model
         'checkin_date' => 'date',
         'checkout_date' => 'date',
         'service_date' => 'date',
-        'individual_pricing' => 'json'
+        'individual_pricing' => 'json',
+        'room_rates' => 'json',
+        'incomplete_allotment' => 'boolean',
     ];
 
     public function order()
