@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Resources\OrderResource;
 use App\Models\Cart;
 use App\Models\Customer;
+use App\Models\Hotel;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\OrderManager;
+use App\Services\PartnerRoomRateService;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -215,6 +217,16 @@ class OrderController extends Controller
                 'pickup_time' => $item['pickup_time'] ?? null,
                 'individual_pricing' => $individualPricing,
             ]);
+
+            if ($orderItem['product_type'] == Hotel::class) {
+                $hotel = Hotel::find($item['product_id']);
+                $partner = $hotel->partners->first();
+                $roomRateService = new PartnerRoomRateService($partner->id, $item['room_id']);
+                $room_rates = $roomRateService->getRateForDaterange($item['checkin_date'], $item['checkout_date']);
+
+                $orderItem['room_rates'] = $room_rates;
+                $orderItem['incomplete_allotment'] = $roomRateService->isIncompleteAllotment($item['checkin_date'], $item['checkout_date']);
+            }
 
             $order->items()->save($orderItem);
             $createdItems[] = $orderItem;

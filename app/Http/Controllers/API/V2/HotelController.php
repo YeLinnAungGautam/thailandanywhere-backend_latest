@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\V2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HotelListResource;
+use App\Http\Resources\HotelMapResource;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
 use Exception;
@@ -87,6 +88,8 @@ class HotelController extends Controller
 
         return HotelListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
+
+
 
     public function show(string|int $hotel_id)
     {
