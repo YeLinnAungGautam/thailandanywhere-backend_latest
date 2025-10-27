@@ -17,6 +17,7 @@ class PlaceController extends Controller
     {
         $places = Place::with('hotels')
             ->when($request->search, fn ($query) => $query->where('name', 'LIKE', "%{$request->search}%"))
+            ->when($request->city_id, fn ($query) => $query->where('city_id', $request->city_id))
             ->paginate($request->limit ?? 10);
 
         return $this->success(PlaceResource::collection($places)
