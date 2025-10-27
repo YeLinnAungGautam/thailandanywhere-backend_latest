@@ -14,6 +14,8 @@ class HotelMapResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $lowest_room_price = $this->rooms->where('is_extra', 0)->sortBy('room_price')->first()->room_price ?? 0;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -23,6 +25,7 @@ class HotelMapResource extends JsonResource
             'images' => HotelImageResource::collection($this->images),
             'place' => $this->place,
             'city_id' => $this->city_id,
+            'lowest_room_price' => $lowest_room_price,
         ];
     }
 }
