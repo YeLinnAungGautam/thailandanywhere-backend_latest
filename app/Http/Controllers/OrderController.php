@@ -68,6 +68,11 @@ class OrderController extends Controller
             $userType = $request->input('type', 'user'); // Default to 'user'
             // အော်ဒါဒေတာပြင်ဆင်ခြင်း
 
+            // Check if user is authenticated
+            if (!Auth::check()) {
+                return $this->error(null, 'User must be authenticated to place an order.');
+            }
+
             $customer = Customer::where('name', $request->customer_name)->first();
 
             if (!$customer) {
@@ -75,11 +80,14 @@ class OrderController extends Controller
                     'name' => $request->customer_name,
                     'phone_number' => $request->phone_number,
                 ]);
-
-                $request->merge(['customer_id' => $customer->id]);
-            } else {
-                $request->merge(['customer_id' => $customer->id]);
             }
+
+            // Verify customer was created/found
+            if (!$customer || !$customer->id) {
+                return $this->error(null, 'Failed to create or find customer.', 500);
+            }
+
+            $request->merge(['customer_id' => $customer->id]);
 
             $payload = $request->all();
             if ($request->sold_from == 'mobile') {
@@ -101,6 +109,10 @@ class OrderController extends Controller
                 'deposit_amount' => $payload['deposit_amount'] ?? 0,
                 'comment' => $payload['comment'] ?? null,
             ];
+
+            // $authenticatedUserId = Auth::id();
+
+            // return $this->success(Auth::id(), 'Order created successfully');
 
             // Set user_id or admin_id based on type
             if ($userType === 'user') {
@@ -187,11 +199,11 @@ class OrderController extends Controller
     private function assignOrderItems($order, $items, $userType)
     {
         $createdItems = [];
+        $cartIdsToDelete = []; // Initialize here, not inside the loop
 
         foreach ($items as $item) {
             $individualPricing = null;
             if (isset($item['individual_pricing'])) {
-                // Keep as an array for the JSON column in order_items
                 $individualPricing = $item['individual_pricing'];
             }
 
@@ -218,36 +230,77 @@ class OrderController extends Controller
                 'individual_pricing' => $individualPricing,
             ]);
 
+            // Handle Hotel products
             if ($orderItem['product_type'] == Hotel::class) {
                 $hotel = Hotel::find($item['product_id']);
-                $partner = $hotel->partners->first();
-                $roomRateService = new PartnerRoomRateService($partner->id, $item['room_id']);
-                $room_rates = $roomRateService->getRateForDaterange($item['checkin_date'], $item['checkout_date']);
 
-                $orderItem['room_rates'] = $room_rates;
-                $orderItem['incomplete_allotment'] = $roomRateService->isIncompleteAllotment($item['checkin_date'], $item['checkout_date']);
+                // Check if hotel exists
+                if ($hotel) {
+                    // Check if hotel has partners
+                    $partner = $hotel->partners->first();
+
+                    if ($partner && !empty($item['room_id']) && !empty($item['checkin_date']) && !empty($item['checkout_date'])) {
+                        try {
+                            $roomRateService = new PartnerRoomRateService($partner->id, $item['room_id']);
+                            $room_rates = $roomRateService->getRateForDaterange(
+                                $item['checkin_date'],
+                                $item['checkout_date']
+                            );
+
+                            $orderItem['room_rates'] = $room_rates;
+                            $orderItem['incomplete_allotment'] = $roomRateService->isIncompleteAllotment(
+                                $item['checkin_date'],
+                                $item['checkout_date']
+                            );
+                        } catch (\Exception $e) {
+                            \Log::warning('Room rate service error - continuing without rates', [
+                                'partner_id' => $partner->id,
+                                'room_id' => $item['room_id'],
+                                'error' => $e->getMessage()
+                            ]);
+                            // Continue without room_rates and incomplete_allotment
+                        }
+                    } else {
+                        // Log the reason for skipping
+                        if (!$partner) {
+                            \Log::info('Hotel has no partner - skipping room rates', ['hotel_id' => $hotel->id]);
+                        } else {
+                            \Log::info('Missing required data for room rates', [
+                                'hotel_id' => $hotel->id,
+                                'has_room_id' => !empty($item['room_id']),
+                                'has_checkin' => !empty($item['checkin_date']),
+                                'has_checkout' => !empty($item['checkout_date'])
+                            ]);
+                        }
+                    }
+                } else {
+                    \Log::warning('Hotel not found', ['product_id' => $item['product_id']]);
+                }
             }
 
             $order->items()->save($orderItem);
             $createdItems[] = $orderItem;
 
-            //cart clean
+            // Collect cart IDs to delete
             if (isset($item['cart_id'])) {
                 $cartIdsToDelete[] = $item['cart_id'];
             }
         }
 
-        // Cart ကို ရှင်းလင်းရန် (လိုအပ်ပါက)
-
-        if (!empty($cartIdsToDelete)) {
+        // Clean up cart items
+        if (!empty($cartIdsToDelete) && Auth::check()) {
             try {
                 Cart::where('owner_id', Auth::id())
                     ->where('owner_type', get_class(Auth::user()))
                     ->whereIn('id', $cartIdsToDelete)
                     ->delete();
+
+                \Log::info('Cart cleaned', ['deleted_count' => count($cartIdsToDelete)]);
             } catch (\Exception $e) {
-                // Log error but don't stop the process
-                return $this->error('Failed to delete cart items: ' . $e->getMessage(), 500);
+                \Log::error('Failed to delete cart items', [
+                    'error' => $e->getMessage(),
+                    'cart_ids' => $cartIdsToDelete
+                ]);
             }
         }
 
