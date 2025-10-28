@@ -52,6 +52,7 @@ Route::group([], function () {
 
     # Hotel Cities
     Route::get('hotel-cities', HotelCityController::class);
+    Route::get('/map/hotels', [HotelController::class, 'listMap']);
 
     # Hotel Facilities
     Route::get('facilities', [FacilityController::class, 'index']);

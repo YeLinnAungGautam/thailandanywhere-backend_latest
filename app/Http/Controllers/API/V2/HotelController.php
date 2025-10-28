@@ -116,4 +116,36 @@ class HotelController extends Controller
             throw new Exception($e->getMessage());
         }
     }
+
+    public function listMap(Request $request)
+    {
+        $search = $request->query('search');
+        $city_id = $request->query('city_id');
+        $place = $request->query('place');
+
+        $hotels = Hotel::select([
+            'id',
+            'name',
+            'latitude',
+            'longitude',
+            'rating',
+            'place',
+            'city_id'
+        ])
+        ->whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->when($search, function ($query) use ($search) {
+            $query->where('name', 'LIKE', "%{$search}%");
+        })
+        ->when($city_id, function ($query) use ($city_id) {
+            $query->where('city_id', $city_id);
+        })
+        ->when($place, function ($query) use ($place) {
+            $query->where('place', $place);
+        })
+        ->with('images')
+        ->get();
+
+        return success(HotelMapResource::collection($hotels), 'All Hotels');
+    }
 }

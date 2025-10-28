@@ -14,6 +14,7 @@ use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -253,19 +254,15 @@ class OrderController extends Controller
                                 $item['checkout_date']
                             );
                         } catch (\Exception $e) {
-                            \Log::warning('Room rate service error - continuing without rates', [
-                                'partner_id' => $partner->id,
-                                'room_id' => $item['room_id'],
-                                'error' => $e->getMessage()
-                            ]);
+                            Log::error($e);
                             // Continue without room_rates and incomplete_allotment
                         }
                     } else {
                         // Log the reason for skipping
                         if (!$partner) {
-                            \Log::info('Hotel has no partner - skipping room rates', ['hotel_id' => $hotel->id]);
+                            Log::info('Hotel has no partner - skipping room rates', ['hotel_id' => $hotel->id]);
                         } else {
-                            \Log::info('Missing required data for room rates', [
+                            Log::info('Missing required data for room rates', [
                                 'hotel_id' => $hotel->id,
                                 'has_room_id' => !empty($item['room_id']),
                                 'has_checkin' => !empty($item['checkin_date']),
@@ -274,7 +271,7 @@ class OrderController extends Controller
                         }
                     }
                 } else {
-                    \Log::warning('Hotel not found', ['product_id' => $item['product_id']]);
+                    Log::warning('Hotel not found', ['product_id' => $item['product_id']]);
                 }
             }
 
@@ -295,9 +292,9 @@ class OrderController extends Controller
                     ->whereIn('id', $cartIdsToDelete)
                     ->delete();
 
-                \Log::info('Cart cleaned', ['deleted_count' => count($cartIdsToDelete)]);
+                Log::info('Cart cleaned', ['deleted_count' => count($cartIdsToDelete)]);
             } catch (\Exception $e) {
-                \Log::error('Failed to delete cart items', [
+                Log::error('Failed to delete cart items', [
                     'error' => $e->getMessage(),
                     'cart_ids' => $cartIdsToDelete
                 ]);
@@ -306,7 +303,6 @@ class OrderController extends Controller
 
         return $createdItems;
     }
-
 
     public function show(Request $request, $id)
     {
