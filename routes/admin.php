@@ -120,7 +120,6 @@ Route::get('/pdf-batch-status/{jobId}', [CashImageController::class, 'checkPdfBa
 Route::get('/duplicate-cash-image', [CashImageController::class, 'duplicateCashImage']);
 Route::post('/merge-cash-image', [CashImageController::class, 'mergeCashImages']);
 
-
 Route::get('/super', function () {
     return 'this is super admin only';
 })->middleware(['auth:sanctum', 'abilities:*']);
@@ -272,7 +271,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Hotel
     Route::apiResource('hotels', HotelController::class);
     // Route::get('hotels/map', [HotelController::class, 'listMapAll']);
-    Route::get('/map/hotels', [HotelController::class, 'listMapAll']);
+
     Route::post('hotels/{id}/slug', [HotelController::class, 'addSlug']);
 
     Route::patch('hotels/{id}/restore', [HotelController::class, 'restore']);
