@@ -139,7 +139,7 @@ class CashImageService
         $query = CashImage::select([
             'id', 'date', 'sender', 'receiver', 'amount', 'interact_bank', 'currency',
             'data_verify', 'internal_transfer', 'image', 'created_at', 'updated_at',
-            'relatable_id', 'relatable_type'
+            'relatable_id', 'relatable_type', 'bank_verify'
         ]);
 
         $this->applyFilters($query, $filters);
@@ -1404,6 +1404,7 @@ class CashImageService
                     'amount' => 'nullable|numeric|min:0',
                     'interact_bank' => 'nullable|in:' . implode(',', self::VALID_INTERACT_BANK),
                     'data_verify' => 'nullable|in:0,1,true,false',
+                    'bank_verify' => 'nullable|in:0,1,true,false',
                     'currency' => 'nullable|in:' . implode(',', self::VALID_CURRENCY),
                     'limit' => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE,
                     'page' => 'nullable|integer|min:1',
@@ -1448,6 +1449,11 @@ class CashImageService
                 $query->where('data_verify', $dataVerify);
             }
 
+            if ($request->has('bank_verify')) {
+                $bankVerify = filter_var($request->bank_verify, FILTER_VALIDATE_BOOLEAN);
+                $query->where('bank_verify', $bankVerify);
+            }
+
             $query->with([
                 'relatable',
                 'cashBookings' => function ($q) {
@@ -1486,6 +1492,8 @@ class CashImageService
                         'total_amount' => $group->sum('amount'),
                         'verified_count' => $group->where('data_verify', true)->count(),
                         'unverified_count' => $group->where('data_verify', false)->count(),
+                        'bank_verified_count' => $group->where('bank_verify', true)->count(),
+                        'bank_unverified_count' => $group->where('bank_verify', false)->count(),
                         'cash_images' => AccountanceCashImageResource::collection($group)
                             ->additional(['include_relatable' => true, 'include_bookings' => true])
                             ->resolve($mockRequest),
@@ -1663,5 +1671,370 @@ class CashImageService
                 'message' => 'An error occurred: ' . $e->getMessage()
             ];
         }
+    }
+
+
+    public function getCashImageInternal(Request $request)
+    {
+        try {
+            // Validate request
+            $validator = Validator(
+                $request->all(),
+                [
+                    'date' => 'nullable|string',
+                    'limit' => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE,
+                    'page' => 'nullable|integer|min:1',
+                ]
+            );
+
+            if ($validator->fails()) {
+                throw new InvalidArgumentException($validator->errors()->first());
+            }
+
+            if ($request->date) {
+                $this->validateDateFormat($request->date);
+            }
+
+            $limit = min((int) $request->get('limit', self::PER_PAGE), self::MAX_PER_PAGE);
+
+            // Step 1: Get MMK cash images with Booking relatable_type
+            $query = CashImage::select([
+                'id', 'date', 'sender', 'receiver', 'amount', 'interact_bank',
+                'currency', 'internal_transfer', 'data_verify','bank_verify', 'image',
+                'relatable_id', 'relatable_type', 'created_at', 'updated_at'
+            ])
+            ->where('currency', 'MMK')
+            ->where('relatable_type', 'App\Models\Booking');
+
+            // Apply date filter if provided
+            if ($request->filled('date')) {
+                $this->applyDateFilter($query, $request->date);
+            }
+
+            // Load relationships
+            $query->with([
+                'relatable' => function ($q) {
+                    $q->select([
+                        'id', 'crm_id', 'customer_id', 'grand_total', 'sub_total',
+                        'discount', 'payment_method', 'payment_status', 'bank_name',
+                        'start_date', 'end_date', 'booking_date', 'created_at'
+                    ])
+                    ->with(['customer:id,name,phone_number,email']);
+                },
+                'cashBookings' => function ($q) {
+                    $q->select([
+                        'bookings.id', 'bookings.crm_id', 'bookings.customer_id',
+                        'bookings.grand_total', 'bookings.sub_total',
+                        'bookings.discount', 'bookings.payment_method', 'bookings.payment_status',
+                        'bookings.bank_name', 'bookings.start_date', 'bookings.end_date',
+                        'bookings.booking_date', 'bookings.created_at'
+                    ])
+                    ->with(['customer:id,name,phone_number,email']);
+                },
+                'internalTransfers'
+            ]);
+
+            $query->orderBy('date', 'desc')->orderBy('created_at', 'desc');
+            $data = $query->paginate($limit);
+
+            // Step 2: Process each cash image and get all related booking cash images
+            $transformedData = $data->getCollection()->map(function ($cashImage) {
+                // Get the booking
+                $booking = null;
+                $bookingId = null;
+
+                if ($cashImage->relatable_id > 0 && $cashImage->relatable) {
+                    $booking = $cashImage->relatable;
+                    $bookingId = $booking->id;
+                } elseif ($cashImage->relatable_id == 0 && $cashImage->cashBookings && $cashImage->cashBookings->count() > 0) {
+                    $booking = $cashImage->cashBookings->first();
+                    $bookingId = $booking->id;
+                }
+
+                // Step 3: Get ALL cash images related to this booking
+                $allBookingCashImages = collect();
+                if ($bookingId) {
+                    $allBookingCashImages = CashImage::where(function($q) use ($bookingId) {
+                        // Polymorphic relationship
+                        $q->where('relatable_type', 'App\Models\Booking')
+                          ->where('relatable_id', $bookingId);
+                    })
+                    ->orWhereHas('cashBookings', function($q) use ($bookingId) {
+                        // Many-to-many relationship
+                        $q->where('bookings.id', $bookingId);
+                    })
+                    ->with('internalTransfers')
+                    ->get();
+                }
+
+                // Step 4: Analyze internal transfer status
+                $internalTransferAnalysis = $this->analyzeInternalTransfers($allBookingCashImages, $cashImage->id);
+
+                return [
+                    'cash_image' => [
+                        'id' => $cashImage->id,
+                        'date' => $cashImage->date,
+                        'sender' => $cashImage->sender,
+                        'receiver' => $cashImage->receiver,
+                        'amount' => $cashImage->amount,
+                        'interact_bank' => $cashImage->interact_bank,
+                        'currency' => $cashImage->currency,
+                        'internal_transfer' => $cashImage->internal_transfer,
+                        'data_verify' => $cashImage->data_verify,
+                        'bank_verify' => $cashImage->bank_verify,
+                        'image' => $cashImage->image,
+                        'relatable_id' => $cashImage->relatable_id,
+                        'relatable_type' => $cashImage->relatable_type,
+                        'created_at' => $cashImage->created_at,
+                        'updated_at' => $cashImage->updated_at,
+                    ],
+                    'booking' => $booking ? [
+                        'id' => $booking->id,
+                        'crm_id' => $booking->crm_id,
+                        'grand_total' => $booking->grand_total,
+                        'sub_total' => $booking->sub_total,
+                        'discount' => $booking->discount,
+                        'payment_method' => $booking->payment_method,
+                        'payment_status' => $booking->payment_status,
+                        'bank_name' => $booking->bank_name,
+                        'start_date' => $booking->start_date,
+                        'end_date' => $booking->end_date,
+                        'booking_date' => $booking->booking_date,
+                        'created_at' => $booking->created_at,
+                        'customer' => $booking->customer ? [
+                            'id' => $booking->customer->id,
+                            'name' => $booking->customer->name,
+                            'phone_number' => $booking->customer->phone_number,
+                            'email' => $booking->customer->email ?? null,
+                        ] : null,
+                    ] : null,
+                    'all_booking_cash_images' => $allBookingCashImages->map(function($img) {
+                        // Get internal transfer info for this cash image
+                        $transferInfo = $this->getInternalTransferInfo($img);
+
+                        return [
+                            'id' => $img->id,
+                            'date' => $img->date,
+                            'sender' => $img->sender,
+                            'receiver' => $img->receiver,
+                            'amount' => $img->amount,
+                            'currency' => $img->currency,
+                            'interact_bank' => $img->interact_bank,
+                            'internal_transfer' => $img->internal_transfer,
+                            'image' => $img->image,
+                            'has_internal_transfer_record' => $img->internalTransfers && $img->internalTransfers->count() > 0,
+                            'internal_transfer_info' => $transferInfo,
+                        ];
+                    })->toArray(),
+                    'internal_transfer_analysis' => $internalTransferAnalysis,
+                ];
+            });
+
+            $data->setCollection($transformedData);
+
+            return [
+                'success' => true,
+                'data' => [
+                    'items' => $transformedData,
+                    'pagination' => [
+                        'current_page' => $data->currentPage(),
+                        'per_page' => $data->perPage(),
+                        'total' => $data->total(),
+                        'last_page' => $data->lastPage(),
+                        'from' => $data->firstItem(),
+                        'to' => $data->lastItem(),
+                    ],
+                    'links' => [
+                        'first' => $data->url(1),
+                        'last' => $data->url($data->lastPage()),
+                        'prev' => $data->previousPageUrl(),
+                        'next' => $data->nextPageUrl(),
+                    ],
+                ],
+                'message' => 'Cash images with MMK currency and Booking type retrieved successfully'
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            Log::error('Get Cash Image Internal Validation Error: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'Validation Error: ' . $e->getMessage(),
+                'error_type' => 'validation'
+            ];
+        } catch (Exception $e) {
+            Log::error('Get Cash Image Internal Error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+
+            return [
+                'success' => false,
+                'data' => null,
+                'message' => 'An error occurred while retrieving cash images. Error: ' . $e->getMessage(),
+                'error_type' => 'system'
+            ];
+        }
+    }
+
+    /**
+     * Get internal transfer information for a cash image
+     */
+    private function getInternalTransferInfo($cashImage)
+    {
+        if (!$cashImage->internal_transfer || !$cashImage->internalTransfers || $cashImage->internalTransfers->count() === 0) {
+            return null;
+        }
+
+        $transfersInfo = [];
+
+        foreach ($cashImage->internalTransfers as $transfer) {
+            // Get direction from pivot table
+            $direction = $transfer->pivot->direction ?? null;
+
+            $transfersInfo[] = [
+                'internal_transfer_id' => $transfer->id,
+                'direction' => $direction,
+                'rate' => $transfer->rate ?? null,
+                'notes' => $transfer->notes ?? null,
+                'status' => $transfer->status ?? 'active',
+                'created_at' => $transfer->created_at,
+            ];
+        }
+
+        return $transfersInfo;
+    }
+
+    /**
+     * Analyze internal transfers for booking cash images
+     */
+    private function analyzeInternalTransfers($allCashImages, $currentCashImageId)
+    {
+        $analysis = [
+            'current_cash_image_id' => $currentCashImageId,
+            'total_cash_images' => $allCashImages->count(),
+            'images_with_internal_transfer_true' => 0,
+            'images_with_internal_transfer_false' => 0,
+            'images_needing_transfer_setup' => [],
+            'existing_transfers' => [],
+            'transfer_suggestions' => []
+        ];
+
+        $imagesWithTransferTrue = $allCashImages->where('internal_transfer', true);
+        $imagesWithTransferFalse = $allCashImages->where('internal_transfer', false);
+
+        $analysis['images_with_internal_transfer_true'] = $imagesWithTransferTrue->count();
+        $analysis['images_with_internal_transfer_false'] = $imagesWithTransferFalse->count();
+
+        // Process images with internal_transfer = true
+        foreach ($imagesWithTransferTrue as $image) {
+            if ($image->internalTransfers && $image->internalTransfers->count() > 0) {
+                foreach ($image->internalTransfers as $transfer) {
+                    // Get direction from pivot table
+                    $direction = $transfer->pivot->direction ?? null;
+
+                    // Get FROM cash image IDs for this transfer
+                    $fromImageIds = DB::table('internal_transfer_cash_images')
+                        ->where('internal_transfer_id', $transfer->id)
+                        ->where('direction', 'from')
+                        ->pluck('cash_image_id')
+                        ->toArray();
+
+                    // Get TO cash image IDs for this transfer
+                    $toImageIds = DB::table('internal_transfer_cash_images')
+                        ->where('internal_transfer_id', $transfer->id)
+                        ->where('direction', 'to')
+                        ->pluck('cash_image_id')
+                        ->toArray();
+
+                    $analysis['existing_transfers'][] = [
+                        'cash_image_id' => $image->id,
+                        'internal_transfer_id' => $transfer->id,
+                        'direction' => $direction,
+                        'from_cash_image_ids' => $fromImageIds,
+                        'to_cash_image_ids' => $toImageIds,
+                        'rate' => $transfer->rate ?? null,
+                        'notes' => $transfer->notes ?? null,
+                        'status' => $transfer->status ?? 'active',
+                        'created_at' => $transfer->created_at,
+                    ];
+                }
+            }
+        }
+
+        // Check images with internal_transfer = false
+        foreach ($imagesWithTransferFalse as $image) {
+            $hasTransferRecord = $image->internalTransfers && $image->internalTransfers->count() > 0;
+
+            if ($hasTransferRecord) {
+                // Has transfer records - list them
+                foreach ($image->internalTransfers as $transfer) {
+                    // Get direction from pivot table
+                    $direction = $transfer->pivot->direction ?? null;
+
+                    // Get FROM cash image IDs for this transfer
+                    $fromImageIds = DB::table('internal_transfer_cash_images')
+                        ->where('internal_transfer_id', $transfer->id)
+                        ->where('direction', 'from')
+                        ->pluck('cash_image_id')
+                        ->toArray();
+
+                    // Get TO cash image IDs for this transfer
+                    $toImageIds = DB::table('internal_transfer_cash_images')
+                        ->where('internal_transfer_id', $transfer->id)
+                        ->where('direction', 'to')
+                        ->pluck('cash_image_id')
+                        ->toArray();
+
+                    $analysis['existing_transfers'][] = [
+                        'cash_image_id' => $image->id,
+                        'internal_transfer_id' => $transfer->id,
+                        'direction' => $direction,
+                        'from_cash_image_ids' => $fromImageIds,
+                        'to_cash_image_ids' => $toImageIds,
+                        'rate' => $transfer->rate ?? null,
+                        'notes' => $transfer->notes ?? null,
+                        'status' => $transfer->status ?? 'active',
+                        'action_needed' => 'update', // Should update, not create
+                    ];
+                }
+            } else {
+                // No transfer records - needs to be set up
+                $analysis['images_needing_transfer_setup'][] = [
+                    'cash_image_id' => $image->id,
+                    'amount' => $image->amount,
+                    'currency' => $image->currency,
+                    'date' => $image->date,
+                    'sender' => $image->sender,
+                    'receiver' => $image->receiver,
+                    'interact_bank' => $image->interact_bank,
+                    'action_needed' => 'create', // Should create new transfer
+                ];
+            }
+        }
+
+        // Generate transfer suggestions
+        if (count($analysis['images_needing_transfer_setup']) > 1) {
+            // Suggest possible from/to pairs
+            $needingSetup = $analysis['images_needing_transfer_setup'];
+
+            for ($i = 0; $i < count($needingSetup); $i++) {
+                for ($j = $i + 1; $j < count($needingSetup); $j++) {
+                    $analysis['transfer_suggestions'][] = [
+                        'from_cash_image_id' => $needingSetup[$i]['cash_image_id'],
+                        'from_amount' => $needingSetup[$i]['amount'],
+                        'from_currency' => $needingSetup[$i]['currency'],
+                        'from_bank' => $needingSetup[$i]['interact_bank'],
+                        'to_cash_image_id' => $needingSetup[$j]['cash_image_id'],
+                        'to_amount' => $needingSetup[$j]['amount'],
+                        'to_currency' => $needingSetup[$j]['currency'],
+                        'to_bank' => $needingSetup[$j]['interact_bank'],
+                        'amounts_match' => $needingSetup[$i]['amount'] == $needingSetup[$j]['amount'],
+                        'currencies_different' => $needingSetup[$i]['currency'] != $needingSetup[$j]['currency'],
+                    ];
+                }
+            }
+        }
+
+        return $analysis;
     }
 }

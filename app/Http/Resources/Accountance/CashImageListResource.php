@@ -49,6 +49,7 @@ class CashImageListResource extends JsonResource
             'amount' => $this->amount,
             'internal_transfer' => $this->internal_transfer ?? false,
             'data_verify' => $this->data_verify ?? false,
+            'bank_verify' => $this->bank_verify ?? false,
             'currency' => $this->currency,
             'interact_bank' => $this->interact_bank,
             'relatable' => $this->when($request->input('include_relatable'), $relatable),
