@@ -93,6 +93,8 @@ class CashImageService
                 'sort_order' => 'nullable|in:asc,desc',
                 'sender' => 'nullable|string|max:255',
                 'receiver' => 'nullable|string|max:255',
+                'data_verify' => 'nullable|in:0,1,true,false',
+                'internal_transfer' => 'nullable|in:0,1,true,false',
                 'amount' => 'nullable|numeric|min:0',
                 'date' => 'nullable|string',
                 'crm_id' => 'nullable|string|max:255',
@@ -199,6 +201,14 @@ class CashImageService
     {
         if (!empty($filters['date'])) {
             $this->applyDateFilter($query, $filters['date']);
+        }
+
+        if (!empty($filters['data_verify'])) {
+            $query->where('data_verify', $filters['data_verify']);
+        }
+
+        if (!empty($filters['bank_verify'])) {
+            $query->where('bank_verify', $filters['bank_verify']);
         }
 
         if (!empty($filters['sender'])) {
@@ -391,6 +401,8 @@ class CashImageService
             'sender' => $request->input('sender'),
             'amount' => $request->input('amount'),
             'date' => $request->input('date'),
+            'data_verify' => $request->input('data_verify'),
+            'bank_verify' => $request->input('bank_verify'),
             'crm_id' => $request->input('crm_id'),
             'sort_by' => $request->input('sort_by'),
             'sort_order' => $request->input('sort_order'),
@@ -1682,6 +1694,8 @@ class CashImageService
                 $request->all(),
                 [
                     'date' => 'nullable|string',
+                    'data_verify' => 'nullable|in:0,1,true,false',
+                    'bank_verify' => 'nullable|in:0,1,true,false',
                     'limit' => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE,
                     'page' => 'nullable|integer|min:1',
                 ]
@@ -1704,7 +1718,8 @@ class CashImageService
                 'relatable_id', 'relatable_type', 'created_at', 'updated_at'
             ])
             ->where('currency', 'MMK')
-            ->where('relatable_type', 'App\Models\Booking');
+            ->where('relatable_type', 'App\Models\Booking')
+            ->where('data_verify', 1);
 
             // Apply date filter if provided
             if ($request->filled('date')) {
