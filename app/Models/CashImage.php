@@ -19,6 +19,7 @@ class CashImage extends Model
         'currency',
         'internal_transfer',
         'data_verify',
+        'bank_verify',
         'relatable_type',
         'relatable_id',
         'relatables'
@@ -31,6 +32,7 @@ class CashImage extends Model
         'updated_at' => 'datetime',
         'internal_transfer' => 'boolean',
         'data_verify' => 'boolean',
+        'bank_verify' => 'boolean',
         'relatables' => 'array'
     ];
 

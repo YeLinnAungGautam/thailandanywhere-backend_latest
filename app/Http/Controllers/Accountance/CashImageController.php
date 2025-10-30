@@ -308,6 +308,119 @@ class CashImageController extends Controller
         }
     }
 
+    public function getCashImageInternal(Request $request)
+    {
+        try {
+            $result = $this->cashImageService->getCashImageInternal($request);
+
+            if ($result['success']) {
+                return response()->json([
+                    'status' => 'Request was successful.',
+                    'message' => $result['message'],
+                    'result' => $result['data']
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'Error has occurred.',
+                'message' => $result['message'],
+                'result' => null
+            ], $result['error_type'] === 'validation' ? 422 : 500);
+
+        } catch (\Exception $e) {
+            \Log::error('Controller Error in getCashImageInternal: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'Error has occurred.',
+                'message' => 'An unexpected error occurred',
+                'result' => null
+            ], 500);
+        }
+    }
+
+    public function CashImageInternalEdit(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $validated = $request->validate([
+                'internal_transfer_id' => 'nullable|exists:internal_transfers,id',
+                'from_cash_image_ids' => 'nullable|array',
+                'from_cash_image_ids.*' => 'exists:cash_images,id',
+                'to_cash_image_ids' => 'nullable|array',
+                'to_cash_image_ids.*' => 'exists:cash_images,id',
+                'exchange_rate' => 'required|numeric|min:0',
+                'notes' => 'nullable|string',
+            ]);
+
+            // Check if we're editing existing or creating new
+            if ($validated['internal_transfer_id']) {
+                // Editing existing internal transfer
+                $internalTransfer = \App\Models\InternalTransfer::findOrFail($validated['internal_transfer_id']);
+
+                $internalTransfer->update([
+                    'exchange_rate' => $validated['exchange_rate'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            } else {
+                // Creating new internal transfer
+                $internalTransfer = \App\Models\InternalTransfer::create([
+                    'exchange_rate' => $validated['exchange_rate'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
+
+            // Handle FROM images
+            if (!empty($validated['from_cash_image_ids'])) {
+                foreach ($validated['from_cash_image_ids'] as $cashImageId) {
+                    $cashImage = \App\Models\CashImage::findOrFail($cashImageId);
+
+                    // Update the cash_image to mark as internal transfer
+                    $cashImage->update(['internal_transfer' => true]);
+
+                    // Check if already attached to avoid duplicates
+                    if (!$internalTransfer->cashImagesFrom()->where('cash_image_id', $cashImageId)->exists()) {
+                        $internalTransfer->cashImagesFrom()->attach($cashImageId, [
+                            'direction' => 'from'
+                        ]);
+                    }
+                }
+            }
+
+            // Handle TO images
+            if (!empty($validated['to_cash_image_ids'])) {
+                foreach ($validated['to_cash_image_ids'] as $cashImageId) {
+                    $cashImage = \App\Models\CashImage::findOrFail($cashImageId);
+
+                    // Update the cash_image to mark as internal transfer
+                    $cashImage->update(['internal_transfer' => true]);
+
+                    // Check if already attached to avoid duplicates
+                    if (!$internalTransfer->cashImagesTo()->where('cash_image_id', $cashImageId)->exists()) {
+                        $internalTransfer->cashImagesTo()->attach($cashImageId, [
+                            'direction' => 'to'
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 1,
+                'message' => 'Internal transfer updated successfully',
+                'data' => $internalTransfer->load(['cashImagesFrom', 'cashImagesTo'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 0,
+                'message' => 'Failed to update internal transfer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = request()->validate([
@@ -889,6 +1002,25 @@ class CashImageController extends Controller
 
         $find->update([
             'data_verify' => $request->data_verify
+        ]);
+
+        return $this->success(null, 'Data verified successfully');
+    }
+
+    public function verifyBank(Request $request, $id)
+    {
+        $find = CashImage::find($id);
+
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $request->validate([
+            'bank_verify' => 'required|boolean'
+        ]);
+
+        $find->update([
+            'bank_verify' => $request->bank_verify
         ]);
 
         return $this->success(null, 'Data verified successfully');

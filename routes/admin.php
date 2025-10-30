@@ -471,6 +471,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Cash Image
     Route::apiResource('cash-images', CashImageController::class);
     Route::put('cashImage/{id}/data_verify', [CashImageController::class, 'verifyData']);
+    Route::put('cashImage/{id}/bank_verify', [CashImageController::class, 'verifyBank']);
+    Route::get('list/cash-images/internal', [CashImageController::class, 'getCashImageInternal']);
+    Route::post('list/cash-images/internal-edit', [CashImageController::class, 'CashImageInternalEdit']);
 
     # Cash Image Summary Report
     Route::get('summary-report', [CashImageController::class, 'summary']);
