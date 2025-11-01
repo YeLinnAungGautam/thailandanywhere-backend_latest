@@ -203,11 +203,11 @@ class CashImageService
             $this->applyDateFilter($query, $filters['date']);
         }
 
-        if (!empty($filters['data_verify'])) {
+        if (isset($filters['data_verify']) && $filters['data_verify'] !== null && $filters['data_verify'] !== '') {
             $query->where('data_verify', $filters['data_verify']);
         }
 
-        if (!empty($filters['bank_verify'])) {
+        if (isset($filters['bank_verify']) && $filters['bank_verify'] !== null && $filters['bank_verify'] !== '') {
             $query->where('bank_verify', $filters['bank_verify']);
         }
 
