@@ -181,6 +181,10 @@ class CashImageReportService
      * Get monthly summary of cash images by agent
      * လတစ်လလုံးရဲ့ agent တစ်ယောက်ချင်းစီရဲ့ cash image စုစုပေါင်း (currency အလိုက်)
      */
+    /**
+     * Get monthly summary of cash images by agent
+     * လတစ်လလုံးရဲ့ agent တစ်ယောက်ချင်းစီရဲ့ cash image စုစုပေါင်း (currency အလိုက်)
+     */
     public function getMonthlyCashImageSummary($created_by = null): array
     {
         // Original income query (Booking class)
@@ -204,25 +208,71 @@ class CashImageReportService
 
         // Get expense totals for THB and MMK only
         $expense_totals = CashImage::query()
-        ->where('cash_images.relatable_type', '!=', Booking::class)
-        ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
-        ->whereIn('cash_images.currency', ['THB', 'MMK'])
-        ->select(
-            'cash_images.currency',
-            DB::raw('SUM(cash_images.amount) as total_expense_amount'),
-            DB::raw('COUNT(cash_images.id) as total_expense_images')
-        )
-        ->groupBy('cash_images.currency')
-        ->get()
-        ->keyBy('currency');
+            ->where('cash_images.relatable_type', '!=', Booking::class)
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_expense_amount'),
+                DB::raw('COUNT(cash_images.id) as total_expense_images')
+            )
+            ->groupBy('cash_images.currency')
+            ->get()
+            ->keyBy('currency');
 
-        return $this->generateMonthlySummaryResponseWithExpenseTotals($monthly_summary, $expense_totals, $created_by);
+        // NEW: Get income breakdown by interact_bank
+        $income_by_interact_bank = CashImage::query()
+            ->join('bookings', function ($join) {
+                $join->on('cash_images.relatable_id', '=', 'bookings.id')
+                     ->where('cash_images.relatable_type', '=', Booking::class);
+            })
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('bookings.created_by', explode(',', $created_by));
+            })
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.interact_bank',
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_amount'),
+                DB::raw('COUNT(cash_images.id) as total_count')
+            )
+            ->groupBy('cash_images.interact_bank', 'cash_images.currency')
+            ->get();
+
+        // NEW: Get expense breakdown by interact_bank
+        $expense_by_interact_bank = CashImage::query()
+            ->where('cash_images.relatable_type', '!=', Booking::class)
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            ->select(
+                'cash_images.interact_bank',
+                'cash_images.currency',
+                DB::raw('SUM(cash_images.amount) as total_amount'),
+                DB::raw('COUNT(cash_images.id) as total_count')
+            )
+            ->groupBy('cash_images.interact_bank', 'cash_images.currency')
+            ->get();
+
+        return $this->generateMonthlySummaryResponseWithExpenseTotals(
+            $monthly_summary,
+            $expense_totals,
+            $created_by,
+            $income_by_interact_bank,
+            $expense_by_interact_bank
+        );
     }
 
     /**
-     * Generate monthly summary response with expense totals added
+     * Generate monthly summary response with expense totals and interact_bank breakdown
      */
-    private function generateMonthlySummaryResponseWithExpenseTotals($monthly_summary, $expense_totals, $created_by = null): array
+    private function generateMonthlySummaryResponseWithExpenseTotals(
+        $monthly_summary,
+        $expense_totals,
+        $created_by = null,
+        $income_by_interact_bank = null,
+        $expense_by_interact_bank = null
+    ): array
     {
         $agents = Admin::query()
             ->agentAndSaleManager()
@@ -285,8 +335,46 @@ class CashImageReportService
             return $b['total_cash_images'] <=> $a['total_cash_images'];
         });
 
+        // NEW: Format income by interact_bank
+        $income_interact_bank_summary = [];
+        if ($income_by_interact_bank) {
+            foreach ($income_by_interact_bank as $item) {
+                $bank = $item->interact_bank ?? 'unknown';
+                $currency = strtolower($item->currency);
+
+                if (!isset($income_interact_bank_summary[$bank])) {
+                    $income_interact_bank_summary[$bank] = [
+                        'thb' => ['amount' => 0, 'count' => 0],
+                        'mmk' => ['amount' => 0, 'count' => 0],
+                    ];
+                }
+
+                $income_interact_bank_summary[$bank][$currency]['amount'] = $item->total_amount;
+                $income_interact_bank_summary[$bank][$currency]['count'] = $item->total_count;
+            }
+        }
+
+        // NEW: Format expense by interact_bank
+        $expense_interact_bank_summary = [];
+        if ($expense_by_interact_bank) {
+            foreach ($expense_by_interact_bank as $item) {
+                $bank = $item->interact_bank ?? 'unknown';
+                $currency = strtolower($item->currency);
+
+                if (!isset($expense_interact_bank_summary[$bank])) {
+                    $expense_interact_bank_summary[$bank] = [
+                        'thb' => ['amount' => 0, 'count' => 0],
+                        'mmk' => ['amount' => 0, 'count' => 0],
+                    ];
+                }
+
+                $expense_interact_bank_summary[$bank][$currency]['amount'] = $item->total_amount;
+                $expense_interact_bank_summary[$bank][$currency]['count'] = $item->total_count;
+            }
+        }
+
         return [
-            'month' => Carbon::parse($this->date)->format('F Y'), // July 2025
+            'month' => Carbon::parse($this->date)->format('F Y'),
             'period' => [
                 'start_date' => $this->start_date,
                 'end_date' => $this->end_date
@@ -294,10 +382,8 @@ class CashImageReportService
             'total_agents' => count($agent_summaries),
             'grand_total_cash_images' => $grand_total_images,
             'grand_totals_by_currency' => $grand_totals_by_currency,
-            // Legacy field for backward compatibility
             'grand_total_cash_amount' => !empty($grand_totals_by_currency) ?
                 array_values($grand_totals_by_currency)[0]['total_cash_amount'] : 0,
-            // UPDATED: Add expense totals with both amount and count for THB and MMK
             'expense_summary' => [
                 'thb' => [
                     'amount' => $expense_totals['THB']->total_expense_amount ?? 0,
@@ -308,9 +394,18 @@ class CashImageReportService
                     'count' => $expense_totals['MMK']->total_expense_images ?? 0,
                 ],
             ],
+            // NEW: Add interact_bank breakdown for income
+            'income_by_interact_bank' => $income_interact_bank_summary,
+            // NEW: Add interact_bank breakdown for expense
+            'expense_by_interact_bank' => $expense_interact_bank_summary,
             'agents' => $agent_summaries
         ];
     }
+
+    /**
+     * Generate monthly summary response with expense totals added
+     */
+
 
     /**
      * Generate monthly summary response with currency breakdown
