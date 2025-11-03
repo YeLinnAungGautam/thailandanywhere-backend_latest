@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Accountance;
 
+use App\Http\Resources\Accountance\Detail\CashBookChartOfAccountResource;
 use App\Http\Resources\ChartOfAccountResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,7 +25,8 @@ class CashBookResource extends JsonResource
             'cash_structure' => new CashStructureResource($this->cashStructure),
             'cash_images' => CashImageResource::collection($this->cashImages),
             // 'chart_of_accounts' => ChartOfAccountResource::collection($this->chartOfAccounts),
-            'chart_of_accounts' => $this->chartOfAccounts,
+            'chart_of_accounts' => CashBookChartOfAccountResource::collection($this->chartOfAccounts),
+            // 'chart_of_accounts' => $this->chartOfAccounts,
             'interact_bank' => $this->interact_bank,
             'description' => $this->description,
             'amount' => $this->amount,
