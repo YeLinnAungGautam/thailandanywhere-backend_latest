@@ -31,6 +31,7 @@ class HotelController extends Controller
         $max_price = (int) $request->query('max_price');
         $city_id = $request->query('city_id');
         $place = $request->query('place');
+        $allowment = $request->query('allowment');
 
         $query = Hotel::query()
             ->with('rooms', 'hotelPlace')
@@ -50,6 +51,9 @@ class HotelController extends Controller
             })
             ->when($search, function ($s_query) use ($search) {
                 $s_query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($allowment !== null, function ($q) use ($allowment) {
+                $q->where('allowment', $allowment);
             })
             ->when($request->type, function ($q) use ($request) {
                 $q->where('type', $request->type);
