@@ -23,9 +23,16 @@ class PartnerRoomRateService
             ->whereYear('date', $year)
             ->whereMonth('date', $month)
             ->when($date, fn ($q, $date) => $q->where('date', $date))
+            // ->withSum([
+            //     'bookingItems as booked_count' => function ($query) {
+            //         $query->whereColumn('service_date', 'date');
+            //     }
+            // ], 'quantity')
             ->withSum([
                 'bookingItems as booked_count' => function ($query) {
-                    $query->whereColumn('service_date', 'date');
+                    // ✅ ပြောင်းလဲချက်
+                    $query->whereColumn('checkin_date', '<=', 'partner_room_rates.date')
+                          ->whereColumn('checkout_date', '>', 'partner_room_rates.date');
                 }
             ], 'quantity')
             ->get();
@@ -41,7 +48,9 @@ class PartnerRoomRateService
             ->where('date', $date)
             ->withSum([
                 'bookingItems as booked_count' => function ($query) use ($date) {
-                    $query->where('service_date', $date);
+                    // $query->where('service_date', $date);
+                    $query->where('checkin_date', '<=', $date)
+                      ->where('checkout_date', '>', $date);
                 }
             ], 'quantity')
             ->first();
@@ -70,7 +79,9 @@ class PartnerRoomRateService
         $virtualRate->setRelation('room', $room);
         $virtualRate->booked_count = BookingItem::query()
             ->where('room_id', $this->room_id)
-            ->where('service_date', $date)
+            // ->where('service_date', $date)
+            ->where('checkin_date', '<=', $date)
+            ->where('checkout_date', '>', $date)
             ->sum('quantity');
 
         return $virtualRate;
