@@ -29,7 +29,7 @@ class BookingItemGroupListResource extends JsonResource
             'total_amount' => $this->bookingItems->sum('amount'),
             'expense_amount' => BookingItemDataService::getTotalExpenseAmount($this->bookingItems()),
 
-            'latest_service_date' => Carbon::parse($this->bookingItems->max('service_date'))->format('M d, Y') ?? 'N/A',
+            'latest_service_date' => Carbon::parse($this->bookingItems->max('checkout_date'))->format('M d, Y') ?? 'N/A',
             'firstest_service_date' => Carbon::parse($this->bookingItems->min('service_date'))->format('M d, Y') ?? 'N/A',
 
             'customer_payment_status' => $this->booking->payment_status ?? 'not_paid',
