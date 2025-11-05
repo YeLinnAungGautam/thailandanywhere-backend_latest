@@ -181,13 +181,11 @@ class CashImageReportService
      * Get monthly summary of cash images by agent
      * လတစ်လလုံးရဲ့ agent တစ်ယောက်ချင်းစီရဲ့ cash image စုစုပေါင်း (currency အလိုက်)
      */
-    /**
-     * Get monthly summary of cash images by agent
-     * လတစ်လလုံးရဲ့ agent တစ်ယောက်ချင်းစီရဲ့ cash image စုစုပေါင်း (currency အလိုက်)
-     */
     public function getMonthlyCashImageSummary($created_by = null): array
     {
-        // Original income query (Booking class)
+        // ============================================
+        // 1. INCOME TOTALS (from Bookings)
+        // ============================================
         $monthly_summary = CashImage::query()
             ->join('bookings', function ($join) {
                 $join->on('cash_images.relatable_id', '=', 'bookings.id')
@@ -206,7 +204,9 @@ class CashImageReportService
             ->groupBy('bookings.created_by', 'cash_images.currency')
             ->get();
 
-        // Get expense totals for THB and MMK only
+        // ============================================
+        // 2. EXPENSE TOTALS (non-Booking)
+        // ============================================
         $expense_totals = CashImage::query()
             ->where('cash_images.relatable_type', '!=', Booking::class)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
@@ -220,7 +220,9 @@ class CashImageReportService
             ->get()
             ->keyBy('currency');
 
-        // NEW: Get income breakdown by interact_bank
+        // ============================================
+        // 3. INCOME BY BANK (must match total income)
+        // ============================================
         $income_by_interact_bank = CashImage::query()
             ->join('bookings', function ($join) {
                 $join->on('cash_images.relatable_id', '=', 'bookings.id')
@@ -231,27 +233,31 @@ class CashImageReportService
             })
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
             ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            // IMPORTANT: Use COALESCE to handle NULL values
             ->select(
-                'cash_images.interact_bank',
+                DB::raw('COALESCE(cash_images.interact_bank, "Unknown") as interact_bank'),
                 'cash_images.currency',
                 DB::raw('SUM(cash_images.amount) as total_amount'),
                 DB::raw('COUNT(cash_images.id) as total_count')
             )
-            ->groupBy('cash_images.interact_bank', 'cash_images.currency')
+            ->groupBy('interact_bank', 'cash_images.currency')
             ->get();
 
-        // NEW: Get expense breakdown by interact_bank
+        // ============================================
+        // 4. EXPENSE BY BANK (must match total expense)
+        // ============================================
         $expense_by_interact_bank = CashImage::query()
             ->where('cash_images.relatable_type', '!=', Booking::class)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
             ->whereIn('cash_images.currency', ['THB', 'MMK'])
+            // IMPORTANT: Use COALESCE to handle NULL values
             ->select(
-                'cash_images.interact_bank',
+                DB::raw('COALESCE(cash_images.interact_bank, "Unknown") as interact_bank'),
                 'cash_images.currency',
                 DB::raw('SUM(cash_images.amount) as total_amount'),
                 DB::raw('COUNT(cash_images.id) as total_count')
             )
-            ->groupBy('cash_images.interact_bank', 'cash_images.currency')
+            ->groupBy('interact_bank', 'cash_images.currency')
             ->get();
 
         return $this->generateMonthlySummaryResponseWithExpenseTotals(
@@ -325,21 +331,22 @@ class CashImageReportService
                 'name' => $agent_name,
                 'total_cash_images' => $total_images_for_agent,
                 'currencies' => $currencies,
-                // Legacy fields for backward compatibility (will show first currency or 0)
                 'total_cash_amount' => !empty($currencies) ? array_values($currencies)[0]['total_cash_amount'] : 0,
             ];
         }
 
-        // Sort by total images descending (အများဆုံးရရှိသူကို အပေါ်မှာ ပြမယ်)
+        // Sort by total images descending
         usort($agent_summaries, function($a, $b) {
             return $b['total_cash_images'] <=> $a['total_cash_images'];
         });
 
-        // NEW: Format income by interact_bank
+        // ============================================
+        // FORMAT: Income by interact_bank
+        // ============================================
         $income_interact_bank_summary = [];
         if ($income_by_interact_bank) {
             foreach ($income_by_interact_bank as $item) {
-                $bank = $item->interact_bank ?? 'unknown';
+                $bank = $item->interact_bank ?? 'Unknown';
                 $currency = strtolower($item->currency);
 
                 if (!isset($income_interact_bank_summary[$bank])) {
@@ -349,16 +356,18 @@ class CashImageReportService
                     ];
                 }
 
-                $income_interact_bank_summary[$bank][$currency]['amount'] = $item->total_amount;
-                $income_interact_bank_summary[$bank][$currency]['count'] = $item->total_count;
+                $income_interact_bank_summary[$bank][$currency]['amount'] += $item->total_amount;
+                $income_interact_bank_summary[$bank][$currency]['count'] += $item->total_count;
             }
         }
 
-        // NEW: Format expense by interact_bank
+        // ============================================
+        // FORMAT: Expense by interact_bank
+        // ============================================
         $expense_interact_bank_summary = [];
         if ($expense_by_interact_bank) {
             foreach ($expense_by_interact_bank as $item) {
-                $bank = $item->interact_bank ?? 'unknown';
+                $bank = $item->interact_bank ?? 'Unknown';
                 $currency = strtolower($item->currency);
 
                 if (!isset($expense_interact_bank_summary[$bank])) {
@@ -368,9 +377,36 @@ class CashImageReportService
                     ];
                 }
 
-                $expense_interact_bank_summary[$bank][$currency]['amount'] = $item->total_amount;
-                $expense_interact_bank_summary[$bank][$currency]['count'] = $item->total_count;
+                $expense_interact_bank_summary[$bank][$currency]['amount'] += $item->total_amount;
+                $expense_interact_bank_summary[$bank][$currency]['count'] += $item->total_count;
             }
+        }
+
+        // ============================================
+        // VERIFICATION: Check if bank totals match grand totals
+        // ============================================
+        $income_bank_totals_thb = 0;
+        $income_bank_totals_mmk = 0;
+        $income_bank_count_thb = 0;
+        $income_bank_count_mmk = 0;
+
+        foreach ($income_interact_bank_summary as $bank => $data) {
+            $income_bank_totals_thb += $data['thb']['amount'];
+            $income_bank_totals_mmk += $data['mmk']['amount'];
+            $income_bank_count_thb += $data['thb']['count'];
+            $income_bank_count_mmk += $data['mmk']['count'];
+        }
+
+        $expense_bank_totals_thb = 0;
+        $expense_bank_totals_mmk = 0;
+        $expense_bank_count_thb = 0;
+        $expense_bank_count_mmk = 0;
+
+        foreach ($expense_interact_bank_summary as $bank => $data) {
+            $expense_bank_totals_thb += $data['thb']['amount'];
+            $expense_bank_totals_mmk += $data['mmk']['amount'];
+            $expense_bank_count_thb += $data['thb']['count'];
+            $expense_bank_count_mmk += $data['mmk']['count'];
         }
 
         return [
@@ -384,6 +420,8 @@ class CashImageReportService
             'grand_totals_by_currency' => $grand_totals_by_currency,
             'grand_total_cash_amount' => !empty($grand_totals_by_currency) ?
                 array_values($grand_totals_by_currency)[0]['total_cash_amount'] : 0,
+
+            // Main expense summary
             'expense_summary' => [
                 'thb' => [
                     'amount' => $expense_totals['THB']->total_expense_amount ?? 0,
@@ -394,10 +432,47 @@ class CashImageReportService
                     'count' => $expense_totals['MMK']->total_expense_images ?? 0,
                 ],
             ],
-            // NEW: Add interact_bank breakdown for income
+
+            // Bank breakdowns
             'income_by_interact_bank' => $income_interact_bank_summary,
-            // NEW: Add interact_bank breakdown for expense
             'expense_by_interact_bank' => $expense_interact_bank_summary,
+
+            // VERIFICATION DATA (for debugging)
+            'verification' => [
+                'income' => [
+                    'thb' => [
+                        'grand_total' => $grand_totals_by_currency['THB']['total_cash_amount'] ?? 0,
+                        'bank_total' => $income_bank_totals_thb,
+                        'matches' => abs(($grand_totals_by_currency['THB']['total_cash_amount'] ?? 0) - $income_bank_totals_thb) < 0.01,
+                        'grand_count' => $grand_totals_by_currency['THB']['total_cash_images'] ?? 0,
+                        'bank_count' => $income_bank_count_thb,
+                    ],
+                    'mmk' => [
+                        'grand_total' => $grand_totals_by_currency['MMK']['total_cash_amount'] ?? 0,
+                        'bank_total' => $income_bank_totals_mmk,
+                        'matches' => abs(($grand_totals_by_currency['MMK']['total_cash_amount'] ?? 0) - $income_bank_totals_mmk) < 0.01,
+                        'grand_count' => $grand_totals_by_currency['MMK']['total_cash_images'] ?? 0,
+                        'bank_count' => $income_bank_count_mmk,
+                    ],
+                ],
+                'expense' => [
+                    'thb' => [
+                        'grand_total' => $expense_totals['THB']->total_expense_amount ?? 0,
+                        'bank_total' => $expense_bank_totals_thb,
+                        'matches' => abs(($expense_totals['THB']->total_expense_amount ?? 0) - $expense_bank_totals_thb) < 0.01,
+                        'grand_count' => $expense_totals['THB']->total_expense_images ?? 0,
+                        'bank_count' => $expense_bank_count_thb,
+                    ],
+                    'mmk' => [
+                        'grand_total' => $expense_totals['MMK']->total_expense_amount ?? 0,
+                        'bank_total' => $expense_bank_totals_mmk,
+                        'matches' => abs(($expense_totals['MMK']->total_expense_amount ?? 0) - $expense_bank_totals_mmk) < 0.01,
+                        'grand_count' => $expense_totals['MMK']->total_expense_images ?? 0,
+                        'bank_count' => $expense_bank_count_mmk,
+                    ],
+                ],
+            ],
+
             'agents' => $agent_summaries
         ];
     }
