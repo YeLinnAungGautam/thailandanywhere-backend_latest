@@ -52,6 +52,11 @@ class BookingItemGroupController extends Controller
                                 });
                         });
                     })
+                    ->when($request->is_allowment_have, function ($query) {
+                        $query->whereHas('bookingItems', function ($q) {
+                            $q->where('is_allowment_have', 1);
+                        });
+                    })
                     ->when($request->invoice_status, function ($query) use ($request) {
                         if ($request->invoice_status == 'not_receive') {
                             $query->whereDoesntHave('customerDocuments', function ($q) {
