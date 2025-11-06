@@ -169,6 +169,12 @@ class ReservationController extends Controller
             }
         }
 
+        if($request->is_allowment_have){
+            $query->whereHas('bookingItems', function ($q) {
+                $q->where('is_allowment_have', 1);
+            });
+        }
+
         // Invoice Filter (based on booking confirm letter documents)
         if ($request->invoice) {
             if ($request->invoice === 'received') {

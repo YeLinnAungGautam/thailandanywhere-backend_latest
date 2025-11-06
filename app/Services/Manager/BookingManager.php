@@ -17,6 +17,7 @@ use App\Http\Requests\BookingRequest;
 use App\Jobs\PersistBookingItemGroupJob;
 use App\Action\UpsertBookingItemGroupAction;
 use App\Models\CashImage;
+use App\Models\Room;
 
 class BookingManager
 {
@@ -108,6 +109,18 @@ class BookingManager
     {
         $is_excluded = ($item['product_type'] == Airline::class) ? true : false;
 
+        // Check allotment availability for rooms
+        $is_allotment_have = false;
+        if (isset($item['room_id']) && isset($item['product_id']) && isset($item['checkin_date']) && isset($item['checkout_date'])) {
+            $is_allotment_have = self::checkRoomAllotment(
+                $item['product_id'], // hotel/product ID
+                $item['room_id'],
+                $item['checkin_date'],
+                $item['checkout_date'],
+                $item['quantity'] ?? 1
+            );
+        }
+
         $data = [
             'booking_id' => $booking->id,
             'crm_id' => $booking->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
@@ -115,6 +128,7 @@ class BookingManager
             'room_number' => $item['room_number'] ?? null,
             'product_id' => $item['product_id'],
             'is_excluded' => $is_excluded,
+            'is_allowment_have' => $is_allotment_have, // Add this field
             // Save these fields directly without isset check
             'car_id' => $item['car_id'] ?? null,
             'room_id' => $item['room_id'] ?? null,
@@ -175,6 +189,40 @@ class BookingManager
         }
 
         BookingItem::create($data);
+    }
+
+    // app/Services/Manager/BookingManager.php
+
+    private static function checkRoomAllotment($productId, $roomId, $checkinDate, $checkoutDate, $quantity = 1)
+    {
+        try {
+            // Get the room
+            $room = Room::find($roomId);
+
+            if (!$room) {
+                return false;
+            }
+
+            // Check if the hotel has a partner
+            $partner = $room->hotel->partners->first();
+
+            if (!$partner) {
+                return false; // No partner means no allotment system
+            }
+
+            // Use PartnerRoomRateService to check allotment
+            $roomRateService = new \App\Services\PartnerRoomRateService($partner->id, $roomId);
+
+            // ✅ Pass quantity to check
+            $isIncomplete = $roomRateService->isIncompleteAllotment($checkinDate, $checkoutDate, $quantity);
+
+            // If it's NOT incomplete, then allotment is available
+            return !$isIncomplete;
+
+        } catch (\Exception $e) {
+            Log::error('Error checking room allotment: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public static function persistBookingItemGroup(Booking $booking)
