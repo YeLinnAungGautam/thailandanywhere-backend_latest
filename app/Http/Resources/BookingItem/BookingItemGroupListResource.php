@@ -58,6 +58,7 @@ class BookingItemGroupListResource extends JsonResource
                 'booking_status' => $this->booking->payment_status ?? 'not_paid',
                 'service_date' => Carbon::parse($item->service_date)->format('M d') ?? 'N/A',
                 'quantity' => $item->quantity,
+                'is_allowment_have' => $item->is_allowment_have,
             ];
 
             $individualPricing = $item->individual_pricing ?
