@@ -43,6 +43,11 @@ class Room extends Model
         return $this->belongsToMany(Roitem::class, 'room_roitems');
     }
 
+    public function partnerRoomMetas()
+    {
+        return $this->hasMany(PartnerRoomMeta::class, 'room_id');
+    }
+
     // ✅ မှန်ကန်တဲ့ grouped method
     public function roitemsGrouped()
     {
