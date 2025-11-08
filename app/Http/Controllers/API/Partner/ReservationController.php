@@ -67,6 +67,7 @@ class ReservationController extends Controller
             $productType = $request->product_type;
             $crm_id = $request->crm_id;
             $date_range = $request->date_range;
+            $payment_status = $request->payment_status;
 
             $query = BookingItem::query()->with([
                 'product','group.cashImages','room','booking','booking.customer'
@@ -85,7 +86,11 @@ class ReservationController extends Controller
                 $query->where('crm_id', $crm_id);
             }
 
-            $query->where('payment_status', 'fully_paid');
+            // $query->where('payment_status', 'fully_paid');
+
+            if($payment_status) {
+                $query->where('payment_status', $payment_status);
+            }
 
             $query->whereHas('room', function ($q) {
                 $q->where('is_extra', 0);
