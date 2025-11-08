@@ -31,6 +31,7 @@ class RoomResource extends JsonResource
             'images' => RoomImageResource::collection($this->images),
             'room_periods' => RoomPeriodResource::collection($this->periods),
             'max_person' => $this->max_person,
+            'partner_id' => $this->roomRates,
             'total_night' => count($this->getTotalDates($request->period)) <= 0 ? 1 : count($this->getTotalDates($request->period)),
             'deleted_at' => $this->deleted_at,
             'updated_at' => $this->updated_at,
@@ -117,16 +118,18 @@ class RoomResource extends JsonResource
 
     private function getRoomRates($request)
     {
-        $partner = $request->user();
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
 
-        if (!$partner) {
+        // Get partner_id from request, authenticated user, or from PartnerRoomMeta
+        $partner_id = $this->partnerRoomMetas()->first()?->partner_id;
+
+        if (!$partner_id) {
             return null;
         }
 
         $service = new PartnerRoomRateService(
-            partner_id: $partner->id,
+            partner_id: $partner_id,
             room_id: $this->id
         );
 
@@ -135,6 +138,7 @@ class RoomResource extends JsonResource
             month: (int) $month
         );
 
+        // return $partner_id;
         return $room_rates;
     }
 }
