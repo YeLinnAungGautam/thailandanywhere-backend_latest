@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CashImageableController;
+use App\Http\Controllers\Admin\CashImageProfitController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
 use App\Http\Controllers\Admin\CityController;
@@ -147,7 +148,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('product-type-sales', [DashboardController::class, 'productTypeSalesReport']);
     Route::get('product-type-booking-item', [DashboardController::class, 'productTypeBooking']);
     Route::get('product-type-remain-expense', [DashboardController::class, 'productTypeRemainExpense']);
-    Route::get('product-type-booking', [DashboardController::class, 'productTypeBookingCount']);
+    Route::get('product-type-booking', [CashImageProfitController::class, 'getBookingItemsByDate']);
 
     Route::get('unpaid-bookings', [DashboardController::class, 'getUnpaidBooking']);
     Route::get('sale-counts', [DashboardController::class, 'getSaleCounts']);
@@ -482,6 +483,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/parchase_tax/export-csv', [CashImageController::class, 'exportParchaseTaxToCsv']);
     Route::get('/invoice/export-csv', [CashImageController::class, 'exportInvoiceToCsv']);
     Route::get('/remain-tax-receipt', [CashImageController::class, 'remindTaxReceipt']);
+    Route::get('/cashImage-profit', [CashImageProfitController::class, 'index']);
 
     # Summary Report Vat
     Route::get('summary-report-vat', [VatCalculationController::class, 'getMonthlySummary']);
