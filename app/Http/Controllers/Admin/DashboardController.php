@@ -210,7 +210,7 @@ class DashboardController extends Controller
                 ->where('booking_items.product_type', $request->product_type)
                 ->where('booking_items.service_date', $request->date)
                 ->whereNull('booking_items.deleted_at')
-                ->where('bookings.payment_status','fully_paid')
+                ->where('bookings.payment_status','!=','not_paid')
                 ->get();
 
             return $this->success(
