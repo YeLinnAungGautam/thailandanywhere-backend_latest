@@ -15,7 +15,7 @@ use InvalidArgumentException;
 class CashImageService
 {
     const PER_PAGE = 10;
-    const MAX_PER_PAGE = 100;
+    const MAX_PER_PAGE = 1000;
 
     const VALID_INTERACT_BANK = [
         'personal', 'company', 'all', 'cash_at_office', 'to_money_changer', 'deposit_management', 'pay_to_driver'
