@@ -7,6 +7,8 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Collection;
 
 class CashImageProfitService
 {
@@ -48,75 +50,73 @@ class CashImageProfitService
             ->whereDate('date', '>=', trim($startDate))
             ->whereDate('date', '<=', trim($endDate))
             ->with([
-                'relatable.items' => $itemsQuery,
-                'relatable.items.product',
-                'cashBookings.items' => $itemsQuery,
-                'cashBookings.items.product'
+                'relatable' => function ($query) use ($itemsQuery) {
+                    $query->with(['items' => $itemsQuery]);
+                },
+                'cashBookings' => function ($query) use ($itemsQuery) {
+                    $query->with(['items' => $itemsQuery]);
+                }
             ])
             ->get();
 
-            // Process data
+            // Process data - track CRM IDs globally
             $result = [];
             $seenCrmIds = [];
             $rowNumber = 1;
 
             foreach ($cashImages as $cashImage) {
-                // Get booking from polymorphic or many-to-many
-                $booking = $cashImage->relatable_id > 0
-                    ? $cashImage->relatable
-                    : $cashImage->cashBookings->first();
+                // Get ALL bookings from cash image
+                $bookings = $this->getAllBookingsFromCashImage($cashImage);
 
-                if (!$booking || !$booking->crm_id) {
-                    continue;
-                }
-
-                // Skip if no items (when filtered by product_type)
-                if ($booking->items->isEmpty()) {
-                    continue;
-                }
-
-                // Split CRM IDs if multiple
-                $crmIds = array_filter(array_map('trim', explode(',', $booking->crm_id)));
-
-                foreach ($crmIds as $crmId) {
-                    if (in_array($crmId, $seenCrmIds)) {
+                foreach ($bookings as $booking) {
+                    if (!$booking || !$booking->crm_id || $booking->items->isEmpty()) {
                         continue;
                     }
 
-                    $seenCrmIds[] = $crmId;
+                    // Split CRM IDs if multiple
+                    $crmIds = array_filter(array_map('trim', explode(',', $booking->crm_id)));
 
-                    // Format booking items
-                    $bookingItems = $booking->items->map(function ($item) {
-                        return [
-                            'id' => $item->id,
-                            'crm_id' => $item->crm_id ?? null,
-                            'b_crm_id' => $item->booking->crm_id ?? null,
-                            'product_name' => $item->product->name ?? $item->product_name ?? null,
-                            'product_type' => class_basename($item->product_type),
-                            'customer' => $item->booking->customer->name ?? null,
-                            'service_date' => $item->service_date ?? null,
-                            'quantity' => $item->quantity ?? 1,
-                            'amount' => $item->amount ?? 0,
-                            'cost' => $item->total_cost_price ?? 0,
-                            'profit' => $item->amount - $item->total_cost_price,
-                            'payment_status' => $item->payment_status,
-                            'b_payment_status' => $item->booking->payment_status
+                    foreach ($crmIds as $crmId) {
+                        // Skip if this CRM ID has already been processed globally
+                        if (in_array($crmId, $seenCrmIds)) {
+                            continue;
+                        }
+
+                        $seenCrmIds[] = $crmId;
+
+                        // Format booking items
+                        $bookingItems = $booking->items->map(function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'crm_id' => $item->crm_id ?? null,
+                                'b_crm_id' => $item->booking->crm_id ?? null,
+                                'product_name' => $item->product->name ?? $item->product_name ?? null,
+                                'product_type' => class_basename($item->product_type),
+                                'customer' => $item->booking->customer->name ?? null,
+                                'service_date' => $item->service_date ?? null,
+                                'quantity' => $item->quantity ?? 1,
+                                'amount' => $item->amount ?? 0,
+                                'cost' => $item->total_cost_price ?? 0,
+                                'profit' => $item->amount - $item->total_cost_price,
+                                'payment_status' => $item->payment_status,
+                                'b_payment_status' => $item->booking->payment_status
+                            ];
+                        });
+
+                        $result[] = [
+                            'row_number' => $rowNumber++,
+                            'crm_id' => $crmId,
+                            'booking_id' => $booking->id,
+                            'cash_image_id' => $cashImage->id,
+                            'date' => $cashImage->date,
+                            'amount' => $cashImage->amount,
+                            'currency' => $cashImage->currency,
+                            'sender' => $cashImage->sender,
+                            'receiver' => $cashImage->receiver,
+                            'booking_items' => $bookingItems,
+                            'total_items' => $bookingItems->count(),
                         ];
-                    });
-
-                    $result[] = [
-                        'row_number' => $rowNumber++,
-                        'crm_id' => $crmId,
-                        'booking_id' => $booking->id,
-                        'cash_image_id' => $cashImage->id,
-                        'date' => $cashImage->date,
-                        'amount' => $cashImage->amount,
-                        'currency' => $cashImage->currency,
-                        'sender' => $cashImage->sender,
-                        'receiver' => $cashImage->receiver,
-                        'booking_items' => $bookingItems,
-                        'total_items' => $bookingItems->count(),
-                    ];
+                    }
                 }
             }
 
@@ -151,15 +151,35 @@ class CashImageProfitService
         }
     }
 
+    /**
+     * Get ALL bookings from cash image (both polymorphic and many-to-many)
+     */
+    private function getAllBookingsFromCashImage(CashImage $cashImage): Collection
+    {
+        $bookings = collect();
+
+        // Get from polymorphic relationship
+        if ($cashImage->relatable_type === 'App\Models\Booking' && $cashImage->relatable) {
+            $bookings->push($cashImage->relatable);
+        }
+
+        // Get from cashBookings many-to-many relationship
+        if ($cashImage->cashBookings->isNotEmpty()) {
+            $bookings = $bookings->merge($cashImage->cashBookings);
+        }
+
+        return $bookings;
+    }
+
     private function validateRequest(Request $request)
     {
-        $validator = Validator(
+        $validator = Validator::make(
             $request->all(),
             [
                 'date' => 'required|string',
                 'interact_bank' => 'required|in:' . implode(',', self::VALID_INTERACT_BANK),
                 'relatable_type' => 'required|in:' . implode(',', self::VALID_RELATABLE_TYPES),
-                'product_type' => 'nullable|string', // Optional filter
+                'product_type' => 'nullable|string',
                 'limit' => 'nullable|integer|min:1|max:1000',
             ]
         );
