@@ -99,7 +99,8 @@ class CashImageProfitService
                                 'cost' => $item->total_cost_price ?? 0,
                                 'profit' => $item->amount - $item->total_cost_price,
                                 'payment_status' => $item->payment_status,
-                                'b_payment_status' => $item->booking->payment_status
+                                'b_payment_status' => $item->booking->payment_status,
+                                'balance_due' => $item->booking->balance_due ?? 0
                             ];
                         });
 
