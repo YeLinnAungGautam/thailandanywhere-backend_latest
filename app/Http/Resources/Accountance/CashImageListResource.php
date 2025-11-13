@@ -308,9 +308,16 @@ class CashImageListResource extends JsonResource
     protected function calculateMultipleBookingsVat()
     {
         try {
-            if ($this->relationLoaded('bookings')) {
-                return $this->bookings->sum('grand_total') - ($this->bookings->sum('grand_total') / 1.07);
+            if ($this->relationLoaded('cashBookings') && $this->cashBookings) {
+                return $this->cashBookings->sum('grand_total') - ($this->cashBookings->sum('grand_total') / 1.07);
             }
+
+            // If not loaded, fetch from database
+            $totalGrandTotal = \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                ->where('cash_image_bookings.cash_image_id', $this->id)
+                ->sum('bookings.grand_total');
+
+            return $totalGrandTotal - ($totalGrandTotal / 1.07);
 
         } catch (\Exception $e) {
             Log::error("Error calculating multiple bookings VAT for CashImage {$this->id}: " . $e->getMessage());
@@ -394,9 +401,16 @@ class CashImageListResource extends JsonResource
         try {
             $totalCommission = 0;
 
-            $totalCommission = $this->bookings->sum('grand_total');
+            if ($this->relationLoaded('cashBookings') && $this->cashBookings) {
+                $totalCommission = $this->cashBookings->sum('grand_total');
+            } else {
+                // If not loaded, fetch from database
+                $totalCommission = \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                    ->where('cash_image_bookings.cash_image_id', $this->id)
+                    ->sum('bookings.grand_total');
+            }
 
-            $totalCommission = $totalCommission/2;
+            $totalCommission = $totalCommission / 2;
 
             if ($totalCommission > 0) {
                 return $totalCommission - ($totalCommission / 1.07);
@@ -408,7 +422,6 @@ class CashImageListResource extends JsonResource
             return 0;
         }
     }
-
     /**
      * Get commission value (UPDATED for many-to-many)
      */
@@ -453,11 +466,20 @@ class CashImageListResource extends JsonResource
     protected function getMultipleBookingsCommission()
     {
         try {
-            $commission = $this->bookings->sum('grand_total');
+            if ($this->relationLoaded('cashBookings') && $this->cashBookings) {
+                $commission = $this->cashBookings->sum('grand_total');
+                return $commission / 2;
+            }
 
-            return $commission/2;
+            // If not loaded, fetch from database
+            $totalGrandTotal = \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                ->where('cash_image_bookings.cash_image_id', $this->id)
+                ->sum('bookings.grand_total');
+
+            return $totalGrandTotal / 2;
+
         } catch (\Exception $e) {
-
+            Log::error("Error getting multiple bookings commission for CashImage {$this->id}: " . $e->getMessage());
             return 0;
         }
     }
@@ -536,14 +558,24 @@ class CashImageListResource extends JsonResource
     protected function getMultipleBookingsCrmId()
     {
         try {
-
+            // Check if cashBookings relationship is loaded
+            if ($this->relationLoaded('cashBookings') && $this->cashBookings) {
                 // Option 1: Return first booking's CRM ID
-                // $firstBooking = $this->bookings->first();
+                // $firstBooking = $this->cashBookings->first();
                 // return $firstBooking ? $firstBooking->crm_id : null;
 
-                // Option 2: Return comma-separated CRM IDs (uncomment if needed)
-                return $this->bookings->pluck('crm_id')->filter()->implode(', ');
+                // Option 2: Return comma-separated CRM IDs
+                return $this->cashBookings->pluck('crm_id')->filter()->implode(', ');
+            }
 
+            // If not loaded, fetch from database
+            $crmIds = \App\Models\Booking::join('cash_image_bookings', 'bookings.id', '=', 'cash_image_bookings.booking_id')
+                ->where('cash_image_bookings.cash_image_id', $this->id)
+                ->pluck('bookings.crm_id')
+                ->filter()
+                ->toArray();
+
+            return implode(', ', $crmIds);
 
         } catch (\Exception $e) {
             Log::error("Error getting multiple bookings CRM ID for CashImage {$this->id}: " . $e->getMessage());

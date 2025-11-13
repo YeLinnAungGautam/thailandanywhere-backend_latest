@@ -23,15 +23,15 @@ class CashImageProfitController extends Controller
      */
     public function index(Request $request)
     {
-        $result = $this->cashImageProfitService->generateProfitReport($request);
+        $result = $this->cashImageProfitService->getUniqueCrmIds($request);
 
         return response()->json($result, $result['success'] ? 200 : 400);
     }
 
-    public function getBookingItemsByDate(Request $request)
-    {
-        $result = $this->cashImageProfitService->getBookingItemsByDate($request);
+    // public function getBookingItemsByDate(Request $request)
+    // {
+    //     $result = $this->cashImageProfitService->getBookingItemsByDate($request);
 
-        return response()->json($result, $result['success'] ? 200 : 400);
-    }
+    //     return response()->json($result, $result['success'] ? 200 : 400);
+    // }
 }
