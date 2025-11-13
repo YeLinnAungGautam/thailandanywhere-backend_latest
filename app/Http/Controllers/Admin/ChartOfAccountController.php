@@ -44,6 +44,10 @@ class ChartOfAccountController extends Controller
             $query->where('account_code', 'LIKE', "%{$searchCode}%");
         }
 
+        $query->orderByRaw(
+            "LENGTH(account_code), account_code"
+        );
+
         $data = $query->paginate($limit);
         $collection = ChartOfAccountResource::collection($data);
 
