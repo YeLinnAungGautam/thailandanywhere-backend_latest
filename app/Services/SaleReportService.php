@@ -208,6 +208,30 @@ class SaleReportService
             ->get();
     }
 
+    public function getAirlineSaleData($created_by = null): array
+    {
+        $sales = Booking::query()
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('created_by', explode(',', $created_by));
+            })
+            ->whereHas('items', function ($q) {
+                $q->where('product_type', 'App\Models\Airline'); // Adjust based on your airline model
+            })
+            ->whereBetween('created_at', [$this->start_date, $this->end_date])
+            ->select(
+                'created_by',
+                DB::raw('COUNT(*) as total_count'),
+                DB::raw('SUM(grand_total) as total'),
+                DB::raw('SUM(deposit) as total_deposit'),
+                DB::raw('SUM(balance_due) as total_balance'),
+                DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d") as sale_date')
+            )
+            ->groupBy('created_by', 'created_at')
+            ->get();
+
+        return $this->generateSaleResponse($sales, $created_by, true, true);
+    }
+
     private function getDaysOfMonth(): array
     {
         $dates = Carbon::parse($this->date)->startOfMonth()

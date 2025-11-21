@@ -462,6 +462,7 @@ class ReportController extends Controller
             'sales' => $report_service->getSaleData($request->created_by),
             'sales_count' => $report_service->getSaleCountData($request->created_by),
             'bookings' => $report_service->getBookingData($request->created_by),
+            'airline_sales' => $report_service->getAirlineSaleData($request->created_by),
         ];
 
         return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));
