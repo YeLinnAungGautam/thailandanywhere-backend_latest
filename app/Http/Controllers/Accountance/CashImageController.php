@@ -792,7 +792,7 @@ class CashImageController extends Controller
 
             if ($totalItems === 0) {
                 return response()
-                    ->header('Access-Control-Allow-Origin', '*')
+
                     ->json([
                         'success' => false,
                         'message' => 'No data found to generate PDF'
@@ -841,7 +841,6 @@ class CashImageController extends Controller
             ], 7200);
 
             return response()
-                ->header('Access-Control-Allow-Origin', '*')
                 ->json([
                     'success' => true,
                     'message' => "PDF generation started for {$totalItems} items in {$totalBatches} batches",
@@ -858,7 +857,6 @@ class CashImageController extends Controller
             Log::error('PDF Job Dispatch Error: ' . $e->getMessage());
 
             return response()
-                ->header('Access-Control-Allow-Origin', '*')
                 ->json([
                     'success' => false,
                     'message' => $e->getMessage()
