@@ -31,26 +31,76 @@ class ReportService
     /**
      * Get sales data grouped by agent
      */
+    // public static function getSalesByAgent(string $daterange)
+    // {
+    //     [$start_date, $end_date] = self::parseDateRange($daterange);
+
+    //     $bookings = Booking::query()
+    //         ->join('admins', 'bookings.created_by', '=', 'admins.id')
+    //         ->with('createdBy:id,name,target_amount')
+    //         ->whereBetween('bookings.created_at', [$start_date, $end_date])
+    //         ->selectRaw(
+    //             'bookings.created_by,
+    //             admins.target_amount as target_amount,
+    //             GROUP_CONCAT(bookings.id) AS booking_ids,
+    //             GROUP_CONCAT(CONCAT(DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
+    //             SUM(bookings.grand_total) as total,
+    //             COUNT(*) as total_booking'
+    //         )
+    //         ->groupBy('bookings.created_by', 'admins.target_amount')
+    //         ->get();
+
+    //     foreach ($bookings as $booking) {
+    //         $booking->over_target_count = self::calculateOverTargetCount($booking);
+    //     }
+
+    //     return $bookings;
+    // }
+
     public static function getSalesByAgent(string $daterange)
     {
         [$start_date, $end_date] = self::parseDateRange($daterange);
 
         $bookings = Booking::query()
             ->join('admins', 'bookings.created_by', '=', 'admins.id')
-            ->with('createdBy:id,name,target_amount')
+            ->with([
+                'createdBy:id,name,target_amount',
+                'items' => function($query) {
+                    $query->where('product_type', 'App\\Models\\Airline')
+                        ->select('booking_id', 'product_type', 'amount');
+                }
+            ])
             ->whereBetween('bookings.created_at', [$start_date, $end_date])
             ->selectRaw(
                 'bookings.created_by,
                 admins.target_amount as target_amount,
                 GROUP_CONCAT(bookings.id) AS booking_ids,
                 GROUP_CONCAT(CONCAT(DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
-                SUM(bookings.grand_total) as total,
+                SUM(bookings.grand_total) as total_with_airline,
                 COUNT(*) as total_booking'
             )
             ->groupBy('bookings.created_by', 'admins.target_amount')
             ->get();
 
         foreach ($bookings as $booking) {
+            // Calculate total airline amount for this agent's bookings
+            $airlineTotal = 0;
+            $bookingIds = explode(',', $booking->booking_ids);
+
+            // Get airline amounts from booking items
+            $airlineAmounts = DB::table('booking_items')
+                ->whereIn('booking_id', $bookingIds)
+                ->where('product_type', 'App\\Models\\Airline')
+                ->selectRaw('SUM(amount) as airline_total')
+                ->first();
+
+            $airlineTotal = $airlineAmounts->airline_total ?? 0;
+
+            // Store both values
+            $booking->total_with_airline = $booking->total_with_airline;
+            $booking->airline_total = $airlineTotal;
+            $booking->total = $booking->total_with_airline - $airlineTotal; // Total without airline
+
             $booking->over_target_count = self::calculateOverTargetCount($booking);
         }
 
