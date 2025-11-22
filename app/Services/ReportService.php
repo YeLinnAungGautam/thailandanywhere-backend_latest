@@ -28,54 +28,26 @@ class ReportService
         PrivateVanTour::class,
     ];
 
-    /**
-     * Get sales data grouped by agent
-     */
-    // public static function getSalesByAgent(string $daterange)
-    // {
-    //     [$start_date, $end_date] = self::parseDateRange($daterange);
-
-    //     $bookings = Booking::query()
-    //         ->join('admins', 'bookings.created_by', '=', 'admins.id')
-    //         ->with('createdBy:id,name,target_amount')
-    //         ->whereBetween('bookings.created_at', [$start_date, $end_date])
-    //         ->selectRaw(
-    //             'bookings.created_by,
-    //             admins.target_amount as target_amount,
-    //             GROUP_CONCAT(bookings.id) AS booking_ids,
-    //             GROUP_CONCAT(CONCAT(DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
-    //             SUM(bookings.grand_total) as total,
-    //             COUNT(*) as total_booking'
-    //         )
-    //         ->groupBy('bookings.created_by', 'admins.target_amount')
-    //         ->get();
-
-    //     foreach ($bookings as $booking) {
-    //         $booking->over_target_count = self::calculateOverTargetCount($booking);
-    //     }
-
-    //     return $bookings;
-    // }
-
     public static function getSalesByAgent(string $daterange)
     {
         [$start_date, $end_date] = self::parseDateRange($daterange);
 
+        // Get airline totals per booking
+        $airlineTotals = DB::table('booking_items')
+            ->where('product_type', 'App\\Models\\Airline')
+            ->selectRaw('booking_id, SUM(amount) as airline_amount')
+            ->groupBy('booking_id')
+            ->pluck('airline_amount', 'booking_id');
+
         $bookings = Booking::query()
             ->join('admins', 'bookings.created_by', '=', 'admins.id')
-            ->with([
-                'createdBy:id,name,target_amount',
-                'items' => function($query) {
-                    $query->where('product_type', 'App\\Models\\Airline')
-                        ->select('booking_id', 'product_type', 'amount');
-                }
-            ])
+            ->with('createdBy:id,name,target_amount')
             ->whereBetween('bookings.created_at', [$start_date, $end_date])
             ->selectRaw(
                 'bookings.created_by,
                 admins.target_amount as target_amount,
                 GROUP_CONCAT(bookings.id) AS booking_ids,
-                GROUP_CONCAT(CONCAT(DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
+                GROUP_CONCAT(CONCAT(bookings.id, "||", DATE(bookings.created_at), "__", bookings.grand_total)) AS created_at_grand_total,
                 SUM(bookings.grand_total) as total_with_airline,
                 COUNT(*) as total_booking'
             )
@@ -83,23 +55,67 @@ class ReportService
             ->get();
 
         foreach ($bookings as $booking) {
-            // Calculate total airline amount for this agent's bookings
+            $bookingIds = !empty($booking->booking_ids) ? explode(',', $booking->booking_ids) : [];
+
+            // Calculate total airline amount for this agent
             $airlineTotal = 0;
-            $bookingIds = explode(',', $booking->booking_ids);
+            foreach ($bookingIds as $bookingId) {
+                $airlineTotal += $airlineTotals[$bookingId] ?? 0;
+            }
 
-            // Get airline amounts from booking items
-            $airlineAmounts = DB::table('booking_items')
-                ->whereIn('booking_id', $bookingIds)
-                ->where('product_type', 'App\\Models\\Airline')
-                ->selectRaw('SUM(amount) as airline_total')
-                ->first();
+            // Update date-wise grand totals to separate airline amounts
+            $dateGrandTotals = !empty($booking->created_at_grand_total)
+                ? explode(',', $booking->created_at_grand_total)
+                : [];
 
-            $airlineTotal = $airlineAmounts->airline_total ?? 0;
+            $updatedDateGrandTotalsWithAirline = [];
+            $updatedDateGrandTotalsWithoutAirline = [];
 
-            // Store both values
-            $booking->total_with_airline = $booking->total_with_airline;
+            foreach ($dateGrandTotals as $item) {
+                // Check if the item contains the delimiter
+                if (strpos($item, '||') === false) {
+                    // Skip malformed items
+                    continue;
+                }
+
+                $parts = explode('||', $item, 2); // Limit to 2 parts
+                if (count($parts) !== 2) {
+                    continue;
+                }
+
+                [$bookingId, $dateAndTotal] = $parts;
+
+                // Check if dateAndTotal contains the delimiter
+                if (strpos($dateAndTotal, '__') === false) {
+                    continue;
+                }
+
+                $dateParts = explode('__', $dateAndTotal, 2);
+                if (count($dateParts) !== 2) {
+                    continue;
+                }
+
+                [$date, $grandTotal] = $dateParts;
+
+                // Get airline amount for this specific booking
+                $bookingAirlineAmount = $airlineTotals[$bookingId] ?? 0;
+                $adjustedGrandTotal = $grandTotal - $bookingAirlineAmount;
+
+                // Store both versions
+                $updatedDateGrandTotalsWithAirline[] = $date . '__' . $grandTotal;
+                $updatedDateGrandTotalsWithoutAirline[] = $date . '__' . $adjustedGrandTotal;
+            }
+
+            // Set all values
             $booking->airline_total = $airlineTotal;
-            $booking->total = $booking->total_with_airline - $airlineTotal; // Total without airline
+            $booking->total_with_airline = $booking->total_with_airline; // Total including airline
+            $booking->total_without_airline = $booking->total_with_airline - $airlineTotal; // Total excluding airline
+            $booking->created_at_grand_total_with_airline = implode(',', $updatedDateGrandTotalsWithAirline);
+            $booking->created_at_grand_total_without_airline = implode(',', $updatedDateGrandTotalsWithoutAirline);
+
+            // Default to total with airline for backward compatibility
+            $booking->total = $booking->total_with_airline;
+            $booking->created_at_grand_total = $booking->created_at_grand_total_with_airline;
 
             $booking->over_target_count = self::calculateOverTargetCount($booking);
         }
