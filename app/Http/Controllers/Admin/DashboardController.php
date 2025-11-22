@@ -168,7 +168,7 @@ class DashboardController extends Controller
                 ->join('bookings', 'booking_items.booking_id', 'bookings.id')
                 ->where('booking_items.product_type', $request->product_type)
                 ->where('bookings.booking_date', $request->date)
-                ->where('bookings.payment_status','fully_paid')
+
                 ->whereNull('deleted_at')
                 ->get();
 
