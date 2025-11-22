@@ -26,6 +26,7 @@ class ReportService
         Hotel::class,
         EntranceTicket::class,
         PrivateVanTour::class,
+
     ];
 
     public static function getSalesByAgent(string $daterange)
@@ -122,10 +123,6 @@ class ReportService
 
         return $bookings;
     }
-
-    /**
-     * Get product type sales based on fully paid cash images
-     */
     public static function getProductTypeSales(string $daterange)
     {
         [$start_date, $end_date] = self::parseDateRange($daterange);
@@ -139,7 +136,7 @@ class ReportService
             ];
 
             foreach (self::PRODUCT_TYPES_FOR_ANALYSIS as $productType) {
-                $productData = self::getProductDataForDate($date, $productType);
+                $productData = self::getProductDataForDateNew($date, $productType);
 
                 if (!empty($productData)) {
                     $dateData['product_types'][] = $productData;
@@ -152,6 +149,126 @@ class ReportService
         }
 
         return collect($results);
+    }
+
+    private static function getProductDataForDateNew(string $date, string $productType): ?array
+    {
+        // Get all booking items for this product type where booking_date matches
+        $bookingItems = DB::table('booking_items')
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->where('booking_items.product_type', $productType)
+            ->whereDate('bookings.booking_date', $date)
+            ->whereNull('booking_items.deleted_at')
+            ->whereNotNull('booking_items.amount')
+            ->whereNotNull('booking_items.total_cost_price')
+            ->where('booking_items.amount', '>', 0)
+            ->where('booking_items.total_cost_price', '>', 0)
+            ->select(
+                'booking_items.booking_id',
+                'booking_items.quantity',
+                'booking_items.amount',
+                'booking_items.total_cost_price',
+                'booking_items.payment_status as item_payment_status',
+                'bookings.payment_status as booking_payment_status'
+            )
+            ->get();
+
+        if ($bookingItems->isEmpty()) {
+            return null;
+        }
+
+        $totalRevenue = 0;
+        $totalCost = 0;
+        $totalProfit = 0;
+        $totalQuantity = 0;
+        $bookingIds = [];
+        $fullyPaidBookingIds = [];
+        $bookingItemCount = 0;
+        $fullyPaidItemCount = 0;
+
+        // Total expense calculation: sum cost where item payment_status is fully_paid
+        $totalExpense = 0;
+
+        foreach ($bookingItems as $item) {
+            $itemAmount = (float)$item->amount;
+            $itemCost = (float)$item->total_cost_price;
+
+            // Total calculations (all items)
+            $totalRevenue += $itemAmount;
+            $totalCost += $itemCost;
+            $totalProfit += ($itemAmount - $itemCost); // Profit per item
+            $totalQuantity += $item->quantity;
+            $bookingIds[] = $item->booking_id;
+            $bookingItemCount++;
+
+            // Expense: only if item payment_status is fully_paid
+            if ($item->item_payment_status === 'fully_paid') {
+                $totalExpense += $itemCost;
+            }
+
+            // Sales metrics: booking and item both fully_paid
+            if ($item->booking_payment_status === 'fully_paid' &&
+                $item->item_payment_status === 'fully_paid') {
+                $fullyPaidBookingIds[] = $item->booking_id;
+                $fullyPaidItemCount++;
+            }
+        }
+
+        $bookingIds = array_unique($bookingIds);
+        $fullyPaidBookingIds = array_unique($fullyPaidBookingIds);
+
+        $profitMargin = $totalRevenue > 0 ? ($totalProfit / $totalRevenue) : 0;
+
+        // Remaining expense: items where booking is fully_paid but item is not fully_paid
+        $remainExpense = $bookingItems
+            ->filter(fn($item) =>
+                $item->booking_payment_status === 'fully_paid' &&
+                $item->item_payment_status !== 'fully_paid'
+            )
+            ->sum(fn($item) => (float)$item->total_cost_price);
+
+        return [
+            'product_type' => $productType,
+            'product_type_name' => self::getProductTypeName($productType),
+            'booking_count' => count($bookingIds),
+            'booking_item_count' => $bookingItemCount,
+            'total_quantity' => $totalQuantity,
+            'total_sales' => round($totalRevenue, 2),
+            'total_expense' => round($totalExpense, 2),
+            'total_profit' => round($totalProfit, 2),
+            'profit_margin_percentage' => round($profitMargin * 100, 2),
+            'booking_count_sale' => count($fullyPaidBookingIds),
+            'booking_item_count_sale' => $fullyPaidItemCount,
+            'remain_expense_total' => round($remainExpense, 2),
+        ];
+    }
+
+
+
+    /**
+     * Calculate remaining expense (revenue paid but expense not paid)
+     */
+    private static function calculateRemainingExpenseNew(string $productType, string $date): float
+    {
+        // Get booking IDs that have expense payments
+        $expensePaidBookingIds = self::getBookingIdsWithExpensePayments();
+
+        // FIXED: Use booking_date instead of service_date
+        // Get items where booking is fully paid but expense is not paid
+        $remainExpense = DB::table('booking_items')
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->where('booking_items.product_type', $productType)
+            ->whereDate('bookings.booking_date', $date)  // FIXED: Use booking_date
+            ->whereNotNull('booking_items.amount')
+            ->whereNotNull('booking_items.total_cost_price')
+            ->where('booking_items.amount', '>', 0)
+            ->whereNull('booking_items.deleted_at')
+            ->where('bookings.payment_status', 'fully_paid')
+            ->where('booking_items.payment_status', 'fully_paid')
+            ->whereNotIn('booking_items.booking_id', $expensePaidBookingIds)
+            ->sum(DB::raw('CAST(booking_items.total_cost_price AS DECIMAL(10,2))'));
+
+        return $remainExpense ?? 0;
     }
 
     /**
@@ -247,50 +364,7 @@ class ReportService
     /**
      * Get product data for specific date and type
      */
-    private static function getProductDataForDate(string $date, string $productType): ?array
-    {
-        $allBookingIdsFromCashImages = self::getAllFullyPaidBookingIdsFromCashImages();
 
-        if (empty($allBookingIdsFromCashImages)) {
-            return null;
-        }
-
-        $filteredBookingIds = self::getBookingIdsByProductAndDate(
-            $allBookingIdsFromCashImages,
-            $productType,
-            $date
-        );
-
-        if (empty($filteredBookingIds)) {
-            return null;
-        }
-
-        $expensePaidBookingIds = self::getBookingIdsWithExpensePayments();
-        $financialData = self::calculateFinancialData($date, $filteredBookingIds, $expensePaidBookingIds, $productType);
-        $itemStats = self::getBookingItemStats($date, $filteredBookingIds, $productType);
-        $salesMetrics = self::getSalesMetrics($date, $filteredBookingIds, $productType);
-        $remainExpense = self::calculateRemainingExpense($filteredBookingIds, $expensePaidBookingIds, $productType, $date);
-
-        $totalProfit = $financialData['total_revenue'] - $financialData['total_cost'];
-        $profitMargin = $financialData['total_revenue'] > 0
-            ? ($totalProfit / $financialData['total_revenue'])
-            : 0;
-
-        return [
-            'product_type' => $productType,
-            'product_type_name' => self::getProductTypeName($productType),
-            'booking_count' => $itemStats['booking_count'],
-            'booking_item_count' => $itemStats['booking_item_count'],
-            'total_quantity' => $itemStats['total_quantity'],
-            'total_sales' => $financialData['total_revenue'],
-            'total_expense' => $financialData['total_cost'],
-            'total_profit' => round($totalProfit, 2),
-            'profit_margin_percentage' => round($profitMargin * 100, 2),
-            'booking_count_sale' => $salesMetrics['booking_count_sale'],
-            'booking_item_count_sale' => $salesMetrics['booking_item_count_sale'],
-            'remain_expense_total' => round($remainExpense, 2),
-        ];
-    }
 
     /**
      * Calculate financial data from booking items (fully paid only)
@@ -333,119 +407,6 @@ class ReportService
     }
 
     /**
-     * Get ALL booking IDs from cash images (THB currency, fully paid only)
-     */
-    private static function getAllFullyPaidBookingIdsFromCashImages(): array
-    {
-        // Polymorphic relationship bookings
-        $polymorphicIds = DB::table('cash_images')
-            ->join('bookings', 'cash_images.relatable_id', '=', 'bookings.id')
-            ->where('cash_images.relatable_type', Booking::class)
-            ->where('cash_images.relatable_id', '>', 0)
-            ->where('cash_images.data_verify', 1)
-            ->where('cash_images.currency', 'THB')
-            ->where('bookings.payment_status', 'fully_paid')
-            ->pluck('cash_images.relatable_id')
-            ->toArray();
-
-        // Many-to-many relationship bookings
-        $pivotIds = DB::table('cash_images')
-            ->join('cash_image_bookings', 'cash_images.id', '=', 'cash_image_bookings.cash_image_id')
-            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
-            ->where('cash_images.relatable_type', Booking::class)
-            ->where('cash_images.relatable_id', 0)
-            ->where('cash_images.data_verify', 1)
-            ->where('cash_images.currency', 'THB')
-            ->where('bookings.payment_status', 'fully_paid')
-            ->pluck('cash_image_bookings.booking_id')
-            ->toArray();
-
-        // BookingItemGroup relationship bookings
-        $itemGroupIds = DB::table('cash_images')
-            ->join('booking_item_groups', 'cash_images.relatable_id', '=', 'booking_item_groups.id')
-            ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-            ->where('cash_images.relatable_type', 'App\Models\BookingItemGroup')
-            ->where('cash_images.relatable_id', '>', 0)
-            ->where('cash_images.data_verify', 1)
-            ->where('cash_images.currency', 'THB')
-            ->where('bookings.payment_status', 'fully_paid')
-            ->pluck('booking_item_groups.booking_id')
-            ->toArray();
-
-        return array_unique(array_merge($polymorphicIds, $pivotIds, $itemGroupIds));
-    }
-
-    /**
-     * Get booking IDs filtered by product type and service date
-     */
-    private static function getBookingIdsByProductAndDate(
-        array $bookingIds,
-        string $productType,
-        string $date
-    ): array {
-        return DB::table('booking_items')
-            ->whereIn('booking_id', $bookingIds)
-            ->where('product_type', $productType)
-            ->whereDate('service_date', $date)
-            ->whereNull('deleted_at')
-            ->distinct()
-            ->pluck('booking_id')
-            ->toArray();
-    }
-
-    /**
-     * Get booking item statistics for a specific date (fully paid only)
-     */
-    private static function getBookingItemStats(string $date, array $bookingIds, string $productType): array
-    {
-        $stats = DB::table('booking_items')
-            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
-            ->whereIn('booking_items.booking_id', $bookingIds)
-            ->where('booking_items.product_type', $productType)
-            ->whereDate('booking_items.service_date', $date)
-            ->where('bookings.payment_status', 'fully_paid')
-            ->where('booking_items.payment_status', 'fully_paid')
-            ->whereNull('booking_items.deleted_at')
-            ->selectRaw('
-                COUNT(DISTINCT booking_items.booking_id) as booking_count,
-                COUNT(booking_items.id) as booking_item_count,
-                SUM(booking_items.quantity) as total_quantity
-            ')
-            ->first();
-
-        return [
-            'booking_count' => $stats->booking_count ?? 0,
-            'booking_item_count' => $stats->booking_item_count ?? 0,
-            'total_quantity' => $stats->total_quantity ?? 0,
-        ];
-    }
-
-    /**
-     * Get sales metrics (fully paid only) - FIXED: Properly qualify column names
-     */
-    private static function getSalesMetrics(string $date, array $bookingIds, string $productType): array
-    {
-        $salesMetrics = DB::table('booking_items')
-            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
-            ->whereIn('booking_items.booking_id', $bookingIds)
-            ->where('booking_items.product_type', $productType)
-            ->whereDate('booking_items.service_date', $date)
-            ->where('bookings.payment_status', 'fully_paid')
-            ->where('booking_items.payment_status', 'fully_paid')
-            ->whereNull('booking_items.deleted_at')
-            ->selectRaw('
-                COUNT(DISTINCT booking_items.booking_id) as booking_count_sale,
-                COUNT(booking_items.id) as booking_item_count_sale
-            ')
-            ->first();
-
-        return [
-            'booking_count_sale' => $salesMetrics->booking_count_sale ?? 0,
-            'booking_item_count_sale' => $salesMetrics->booking_item_count_sale ?? 0,
-        ];
-    }
-
-    /**
      * Get booking IDs that have expense payments
      */
     private static function getBookingIdsWithExpensePayments(): array
@@ -461,33 +422,6 @@ class ReportService
             ->toArray();
     }
 
-    /**
-     * Calculate remaining expense for unpaid bookings
-     */
-    private static function calculateRemainingExpense(
-        array $bookingIds,
-        array $expensePaidBookingIds,
-        string $productType,
-        string $date
-    ): float {
-        $unpaidExpenseBookingIds = array_diff($bookingIds, $expensePaidBookingIds);
-
-        if (empty($unpaidExpenseBookingIds)) {
-            return 0;
-        }
-
-        $remainExpense = DB::table('booking_items')
-            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
-            ->whereIn('booking_items.booking_id', $unpaidExpenseBookingIds)
-            ->where('booking_items.product_type', $productType)
-            ->whereDate('booking_items.service_date', $date)
-            ->whereNull('booking_items.deleted_at')
-            ->where('bookings.payment_status', 'fully_paid')
-            ->where('booking_items.payment_status', '!=', 'fully_paid')
-            ->sum(DB::raw('CAST(booking_items.total_cost_price AS DECIMAL(10,2))'));
-
-        return $remainExpense ?? 0;
-    }
 
     /**
      * Calculate how many days an agent exceeded their target
