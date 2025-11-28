@@ -374,6 +374,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Report by sale date
     Route::get('sale-report-by-date', [DashboardController::class, 'saleReportByDate']);
+    Route::get('dashboard-sale-summary',[DashboardController::class, 'getDashBoardSummary']);
 
     # Admin Meta
     Route::get('admin-metas/sale-targets', [AdminMetaController::class, 'index']);

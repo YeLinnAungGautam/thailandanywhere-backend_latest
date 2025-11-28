@@ -278,4 +278,17 @@ class DashboardController extends Controller
             return failedMessage($e->getMessage());
         }
     }
+
+    public function getDashBoardSummary(Request $request)
+    {
+        try {
+            if(!$request->daterange) {
+                throw new Exception('Dashboard Summary: Invalid daterange to filter');
+            }
+
+            return $this->success(ReportService::getDashboardSummary($request->daterange, $request->admin_id), 'Dashboard summary report');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }
