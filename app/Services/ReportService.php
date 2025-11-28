@@ -496,4 +496,69 @@ class ReportService
     {
         return self::PRODUCT_TYPE_MAP[$productType] ?? 'Unknown';
     }
+
+    public static function getDashboardSummary(string $daterange, ?string $admin_id = null)
+    {
+        // Parse the daterange (format: YYYY-MM)
+        $month = substr($daterange, 0, 2);
+        $year = substr($daterange, 3, 4);
+
+        // Build the base query for bookings
+        $bookingsQuery = Booking::whereYear('booking_date', $year)
+            ->whereMonth('booking_date', $month);
+
+        // Filter by admin if provided
+        if ($admin_id) {
+            $bookingsQuery->where('created_by', $admin_id);
+        }
+
+        // Get all bookings for the period
+        $bookings = $bookingsQuery->get();
+        $totalBookings = $bookings->count();
+
+        // Calculate average grand total
+        $averageGrandTotal = $totalBookings > 0
+            ? $bookings->avg('grand_total')
+            : 0;
+
+        // Get all booking items with their product types
+        $bookingIds = $bookings->pluck('id');
+
+        $bookingItems = BookingItem::whereIn('booking_id', $bookingIds)
+            ->get();
+
+        $totalItems = $bookingItems->count();
+
+        // Group by product_type and count
+        $productTypeCounts = $bookingItems->groupBy('product_type')
+            ->map(function ($items, $productType) use ($totalItems) {
+                $count = $items->count();
+                $percentage = $totalItems > 0
+                    ? round(($count / $totalItems) * 100, 2)
+                    : 0;
+
+                // Get human-readable product type name
+                $productTypeName = $items->first()->acsr_product_type_name ?? 'Unknown';
+
+                return [
+                    'product_type' => $productType,
+                    'product_type_name' => $productTypeName,
+                    'count' => $count,
+                    'percentage' => $percentage,
+                ];
+            })
+            ->values(); // Reset array keys
+
+        // Calculate grand total sum
+        $totalGrandTotal = $bookings->sum('grand_total');
+
+        return [
+            'period' => $daterange,
+            'total_bookings' => $totalBookings,
+            'average_grand_total' => round($averageGrandTotal, 2),
+            'total_grand_total' => round($totalGrandTotal, 2),
+            'product_type_summary' => $productTypeCounts,
+            'total_booking_items' => $totalItems,
+        ];
+    }
 }
