@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\EntranceTicket;
 use App\Models\Hotel;
+use App\Models\InclusiveProduct;
 use App\Models\PrivateVanTour;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -20,13 +21,14 @@ class ReportService
         PrivateVanTour::class => 'Private Van Tour',
         Airline::class => 'Airline',
         'App\Models\GroupTour' => 'Group Tour',
+
     ];
 
     private const PRODUCT_TYPES_FOR_ANALYSIS = [
         Hotel::class,
         EntranceTicket::class,
         PrivateVanTour::class,
-
+        InclusiveProduct::class
     ];
 
     public static function getSalesByAgent(string $daterange)
@@ -160,9 +162,13 @@ class ReportService
             ->whereDate('bookings.booking_date', $date)
             ->whereNull('booking_items.deleted_at')
             ->whereNotNull('booking_items.amount')
-            ->whereNotNull('booking_items.total_cost_price')
             ->where('booking_items.amount', '>', 0)
-            ->where('booking_items.total_cost_price', '>', 0)
+            ->when($productType !== InclusiveProduct::class, function($query) {
+                $query->where(function($q) {
+                    $q->whereNotNull('booking_items.total_cost_price')
+                      ->where('booking_items.total_cost_price', '>', 0);
+                });
+            })
             ->select(
                 'booking_items.booking_id',
                 'booking_items.quantity',
