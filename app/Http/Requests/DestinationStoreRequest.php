@@ -31,6 +31,8 @@ class DestinationStoreRequest extends FormRequest
             'summary' => 'nullable',
             'detail' => 'nullable',
             'place_id' => 'nullable',
+            'latitude' => 'nullable',
+            'longitude' => 'nullable',
         ];
     }
 }

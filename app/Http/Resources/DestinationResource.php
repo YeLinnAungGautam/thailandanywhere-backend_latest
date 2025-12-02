@@ -35,6 +35,8 @@ class DestinationResource extends JsonResource
             'detail' => $this->detail,
             'place_id' => $this->place_id,
             'images' => $images,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
 
             'created_at' => $this->created_at->format('d-m-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-m-Y H:i:s'),
