@@ -212,21 +212,20 @@ class SaleReportService
     {
         $sales = Booking::query()
             ->when($created_by, function ($q) use ($created_by) {
-                $q->whereIn('created_by', explode(',', $created_by));
+                $q->whereIn('bookings.created_by', explode(',', $created_by));
             })
-            ->whereHas('items', function ($q) {
-                $q->where('product_type', 'App\Models\Airline'); // Adjust based on your airline model
-            })
-            ->whereBetween('created_at', [$this->start_date, $this->end_date])
+            ->join('booking_items', 'bookings.id', '=', 'booking_items.booking_id')
+            ->where('booking_items.product_type', 'App\Models\Airline')
+            ->whereBetween('bookings.created_at', [$this->start_date, $this->end_date])
             ->select(
-                'created_by',
-                DB::raw('COUNT(*) as total_count'),
-                DB::raw('SUM(grand_total) as total'),
-                DB::raw('SUM(deposit) as total_deposit'),
-                DB::raw('SUM(balance_due) as total_balance'),
-                DB::raw('DATE_FORMAT(created_at, "%Y-%m-%d") as sale_date')
+                'bookings.created_by',
+                DB::raw('COUNT(DISTINCT bookings.id) as total_count'),
+                DB::raw('SUM(booking_items.amount) as total'),
+                DB::raw('0 as total_deposit'),
+                DB::raw('SUM(booking_items.amount) as total_balance'),
+                DB::raw('DATE_FORMAT(bookings.created_at, "%Y-%m-%d") as sale_date')
             )
-            ->groupBy('created_by', 'created_at')
+            ->groupBy('bookings.created_by', DB::raw('DATE_FORMAT(bookings.created_at, "%Y-%m-%d")'))
             ->get();
 
         return $this->generateSaleResponse($sales, $created_by, true, true);

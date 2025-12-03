@@ -34,4 +34,8 @@ class Destination extends Model
     {
         return $this->morphMany(ProductImage::class, 'ownerable');
     }
+
+    public function placement(){
+        return $this->belongsTo(Place::class, 'placement_id');
+    }
 }

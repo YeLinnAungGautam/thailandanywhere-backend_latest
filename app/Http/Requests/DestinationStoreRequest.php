@@ -31,6 +31,7 @@ class DestinationStoreRequest extends FormRequest
             'summary' => 'nullable',
             'detail' => 'nullable',
             'place_id' => 'nullable',
+            'placement_id' => 'nullable',
             'latitude' => 'nullable',
             'longitude' => 'nullable',
         ];

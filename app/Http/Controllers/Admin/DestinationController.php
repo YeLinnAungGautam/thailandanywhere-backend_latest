@@ -27,7 +27,7 @@ class DestinationController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = Destination::query();
+        $query = Destination::query()->with('placement');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
