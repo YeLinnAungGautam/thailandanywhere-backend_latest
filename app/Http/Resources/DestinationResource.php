@@ -34,6 +34,8 @@ class DestinationResource extends JsonResource
             'summary' => $this->summary,
             'detail' => $this->detail,
             'place_id' => $this->place_id,
+            'placement_id' => $this->placement_id,
+            'placement' => $this->whenLoaded('placement'),
             'images' => $images,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
