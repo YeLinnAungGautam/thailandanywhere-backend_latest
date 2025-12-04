@@ -12,7 +12,7 @@ Route::get('test', function () {
         $message->to('davidgautam.1234@gmail.com')
             ->cc(['gg.haak0007@gmail.com'])
             ->bcc(['taryarlin0088@gmail.com'])
-            ->replyTo(['dev.taryarlin@gmail.com', 'ceo@thanywhere.com', 'kumarmyanmars@gmail.com'])
+            ->replyTo(['dev.taryarlin@gmail.com', 'homnathgautam23@gmail.com'])
             ->subject('Test Email');
     });
 
