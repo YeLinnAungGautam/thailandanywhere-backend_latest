@@ -26,11 +26,17 @@ class DestinationController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $mapping = $request->query('mapping', false);
 
         $query = Destination::query()->with('placement');
 
         if ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
+        }
+
+        if ($mapping) {
+            $query->whereNotNull('latitude')
+                  ->whereNotNull('longitude');
         }
 
         $data = $query->paginate($limit);
