@@ -15,17 +15,10 @@ class DestinationController extends Controller
     {
         $query = Destination::query()
             ->when($request->search, fn ($s_query) => $s_query->where('name', 'LIKE', "{$request->search}%"))
-            // ->when($request->city_id, function ($query) use ($request) {
-            //     $query->whereIn('id', function ($q1) use ($request) {
-            //         $q1->select('destination_id')
-            //             ->from('private_van_tour_destinations')
-            //             ->whereIn('private_van_tour_id', function ($q2) use ($request) {
-            //                 $q2->select('private_van_tour_id')
-            //                     ->from('private_van_tour_cities')
-            //                     ->where('city_id', $request->city_id);
-            //             });
-            //     });
-            // });
+            ->when($request->mapping, function ($query) {
+                $query->whereNotNull('latitude')
+                      ->whereNotNull('longitude');
+            })
             ->when($request->city_id, function ($query) use ($request) {
                 $query->where('city_id', $request->city_id);
             });
