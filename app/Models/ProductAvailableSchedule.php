@@ -17,4 +17,12 @@ class ProductAvailableSchedule extends Model
     {
         return $this->morphTo();
     }
+
+    public function createdBy(){
+        return $this->belongsTo(Admin::class, 'created_by');
+    }
+
+    public function updatedBy(){
+        return $this->belongsTo(Admin::class, 'updated_by');
+    }
 }
