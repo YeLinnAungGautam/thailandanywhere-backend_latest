@@ -18,7 +18,7 @@ class ProductAvailableScheduleController extends Controller
     public function index(Request $request)
     {
         $schedules = ProductAvailableSchedule::query()
-            ->with('ownerable', 'variable')
+            ->with('ownerable', 'variable', 'createdBy' , 'updatedBy')
             ->when($request->product_type, function ($query) use ($request) {
                 if($request->product_type === 'hotel') {
                     $query->where('ownerable_type', Hotel::class);
@@ -28,6 +28,8 @@ class ProductAvailableScheduleController extends Controller
             })
             ->when($request->product_id, fn ($query) => $query->where('ownerable_id', $request->product_id))
             ->when($request->variation_id, fn ($query) => $query->where('ownerable_id', $request->variable_id))
+            ->when($request->status, fn ($query) => $query->where('status', $request->status))
+            ->when($request->created_by, fn ($query) => $query->where('created_by', $request->created_by))
             ->when($request->daterange, function ($query) use ($request) {
                 $dates = explode(',', $request->daterange);
 
@@ -54,6 +56,8 @@ class ProductAvailableScheduleController extends Controller
                     'checkin_date' => $variation['checkin_date'] ?? null,
                     'checkout_date' => $variation['checkout_date'] ?? null,
                     'date' => $variation['date'] ?? null,
+                    'created_by' => auth()->id(),
+                    'commands' => $variation['commands'] ?? null,
                     'status' => $variation['status'] ?? 'pending',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -82,6 +86,7 @@ class ProductAvailableScheduleController extends Controller
             $data = [
                 'quantity' => $request->quantity,
                 'status' => $request->status,
+                'updated_by' => auth()->id(),
             ];
 
             $schedule->update($data);
