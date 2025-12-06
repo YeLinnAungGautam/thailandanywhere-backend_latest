@@ -27,10 +27,15 @@ class EntranceTicketController extends Controller
     {
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
+        $have_latlong = $request->query('have_latlong', false);
 
         $query = EntranceTicket::query()
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->when($have_latlong, function ($query) {
+                $query->whereNotNull('latitude')
+                    ->whereNotNull('longitude');
             })
             ->when($request->query('city_id'), function ($c_query) use ($request) {
                 $c_query->whereIn('id', function ($q) use ($request) {
@@ -93,6 +98,8 @@ class EntranceTicketController extends Controller
             'vat_id' => $request->vat_id,
             'vat_name' => $request->vat_name,
             'vat_address' => $request->vat_address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -196,6 +203,9 @@ class EntranceTicketController extends Controller
             'vat_id' => $request->vat_id ?? $find->vat_id,
             'vat_name' => $request->vat_name ?? $find->vat_name,
             'vat_address' => $request->vat_address ?? $find->vat_address,
+
+            'latitude' => $request->latitude ?? $find->latitude,
+            'longitude' => $request->longitude ?? $find->longitude,
         ];
 
 
