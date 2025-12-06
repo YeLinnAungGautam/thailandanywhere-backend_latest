@@ -54,6 +54,9 @@ class EntranceTicketResource extends JsonResource
             'vat_name' => $this->vat_name,
             'vat_address' => $this->vat_address,
 
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
+
             'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
             'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
         ];
