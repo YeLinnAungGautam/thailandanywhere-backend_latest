@@ -43,6 +43,9 @@ class BookingItemGroupListResource extends JsonResource
             'has_confirm_letter' => $this->hasConfirmLetter(),
             'booking_items_payment_detail' => $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsPaymentDetail() : false,
             'booking_items_assigned' =>  $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsAssigned() : false,
+
+            'booking_email_sent_date' => $this->booking_email_sent_date,
+            'expense_email_sent_date' => $this->expense_email_sent_date,
         ];
 
         return $result;

@@ -299,6 +299,12 @@ class BookingItemGroupController extends Controller
             if($request->sent_expense_mail){
                 $data['sent_expense_mail'] = $request->sent_expense_mail;
             }
+            if($request->booking_email_sent_date){
+                $data['booking_email_sent_date'] = $request->booking_email_sent_date;
+            }
+            if($request->expense_email_sent_date){
+                $data['expense_email_sent_date'] = $request->expense_email_sent_date;
+            }
             if($request->expense_method){
                 $data['expense_method'] = $request->expense_method;
             }
