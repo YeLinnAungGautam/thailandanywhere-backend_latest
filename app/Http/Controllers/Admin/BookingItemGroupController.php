@@ -57,6 +57,42 @@ class BookingItemGroupController extends Controller
                             $q->where('is_allowment_have', 1);
                         });
                     })
+                    ->when($request->sent_booking_request,function ($q) use ($request) {
+                        if($request->sent_booking_request == 'sent') {
+                            $q->where('sent_booking_request', 1);
+                        }else if($request->sent_booking_request == 'not_sent') {
+                            $q->where('sent_booking_request', 0);
+                        }
+                    })
+                    ->when($request->booking_request_proof, function ($query) use ($request) {
+                        if ($request->booking_request_proof == 'not_proved') {
+                            $query->whereDoesntHave('customerDocuments', function ($q) {
+                                $q->where('type', 'booking_request_proof');
+                            });
+                        }else {
+                            $query->whereHas('customerDocuments', function ($q) {
+                                $q->where('type', 'booking_request_proof');
+                            });
+                        }
+                    })
+                    ->when($request->sent_expense_mail,function ($q) use ($request) {
+                        if($request->sent_expense_mail == 'sent') {
+                            $q->where('sent_expense_mail', 1);
+                        }else if($request->sent_expense_mail == 'not_sent') {
+                            $q->where('sent_expense_mail', 0);
+                        }
+                    })
+                    ->when($request->expense_mail_proof, function ($query) use ($request) {
+                        if ($request->expense_mail_proof == 'not_proved') {
+                            $query->whereDoesntHave('customerDocuments', function ($q) {
+                                $q->where('type', 'expense_mail_proof');
+                            });
+                        }else {
+                            $query->whereHas('customerDocuments', function ($q) {
+                                $q->where('type', 'expense_mail_proof');
+                            });
+                        }
+                    })
                     ->when($request->invoice_status, function ($query) use ($request) {
                         if ($request->invoice_status == 'not_receive') {
                             $query->whereDoesntHave('customerDocuments', function ($q) {
@@ -68,6 +104,7 @@ class BookingItemGroupController extends Controller
                             });
                         }
                     })
+
                     ->when($request->vantour_payment_details, function ($query) use ($request) {
                         if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
                             $query->whereHas('bookingItems', function ($q) {
@@ -150,11 +187,12 @@ class BookingItemGroupController extends Controller
                     'taxReceipts'
                 ]);
 
-            // Sorting Logic - FIXED VERSION
+            // Sorting Logic
             if ($request->sorting) {
                 $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
 
                 if ($request->sorting_type == 'product_name') {
+                    // Sort by product name
                     $main_query->joinSub(
                         DB::table('booking_items as bi_sort')
                             ->select(
@@ -195,8 +233,9 @@ class BookingItemGroupController extends Controller
                         }
                     )
                     ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
-                    ->orderBy('booking_item_groups.id', $sorting); // ✅ FIXED: Added secondary sort
-                } else {
+                    ->orderBy('booking_item_groups.id', $sorting);
+                } elseif ($request->sorting_type == 'service_date') {
+                    // Sort by earliest service date
                     $main_query->joinSub(
                         DB::table('booking_items')
                             ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
@@ -207,10 +246,13 @@ class BookingItemGroupController extends Controller
                         }
                     )
                     ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
-                    ->orderBy('booking_item_groups.id', $sorting); // ✅ FIXED: Added secondary sort
+                    ->orderBy('booking_item_groups.id', $sorting);
+                } else {
+                    // Default sorting by ID
+                    $main_query->orderBy('booking_item_groups.id', $sorting);
                 }
             } else {
-                // ✅ FIXED: Made default sorting explicit
+                // Default sorting when no sorting parameter is provided
                 $main_query->orderBy('booking_item_groups.id', 'desc');
             }
 
