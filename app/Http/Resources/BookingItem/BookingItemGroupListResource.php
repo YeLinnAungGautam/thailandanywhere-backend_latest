@@ -26,6 +26,8 @@ class BookingItemGroupListResource extends JsonResource
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
             'customer_name' => $this->booking->customer->name ?? 'N/A',
             'have_tax_receipt' => $this->taxReceipts()->count() > 0 ? true : false,
+            'sent_booking_request' => $this->sent_booking_request,
+            'sent_expense_mail' => $this->sent_expense_mail,
             'total_amount' => $this->bookingItems->sum('amount'),
             'expense_amount' => BookingItemDataService::getTotalExpenseAmount($this->bookingItems()),
 
