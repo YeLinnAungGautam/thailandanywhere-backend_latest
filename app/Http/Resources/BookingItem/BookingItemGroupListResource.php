@@ -43,9 +43,13 @@ class BookingItemGroupListResource extends JsonResource
             'has_confirm_letter' => $this->hasConfirmLetter(),
             'booking_items_payment_detail' => $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsPaymentDetail() : false,
             'booking_items_assigned' =>  $this->product_type === 'App\Models\PrivateVanTour' ? $this->bookingItemsAssigned() : false,
+            'booking_request_proof' =>$this->bookingRequestProof(),
 
             'booking_email_sent_date' => $this->booking_email_sent_date,
             'expense_email_sent_date' => $this->expense_email_sent_date,
+            'invoice_mail_sent_date' => $this->invoice_mail_sent_date,
+            'have_invoice_mail' => $this->have_invoice_mail,
+            'invoice_mail_proof' => $this->haveInvoiceMailProof(),
         ];
 
         return $result;
@@ -121,6 +125,16 @@ class BookingItemGroupListResource extends JsonResource
     private function hasConfirmLetter()
     {
         return $this->customerDocuments->contains('type', 'confirmation_letter');
+    }
+
+    private function bookingRequestProof()
+    {
+        return $this->customerDocuments->contains('type', 'booking_request_proof');
+    }
+
+    private function haveInvoiceMailProof()
+    {
+        return $this->customerDocuments->contains('type', 'invoice_mail_proof');
     }
 
     private function bookingItemsPaymentDetail()
