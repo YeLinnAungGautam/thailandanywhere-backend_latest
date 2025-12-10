@@ -69,7 +69,7 @@ class BookingItemGroupController extends Controller
                             $query->whereDoesntHave('customerDocuments', function ($q) {
                                 $q->where('type', 'booking_request_proof');
                             });
-                        }else {
+                        }else if ($request->booking_request_proof == 'proved') {
                             $query->whereHas('customerDocuments', function ($q) {
                                 $q->where('type', 'booking_request_proof');
                             });
@@ -87,9 +87,27 @@ class BookingItemGroupController extends Controller
                             $query->whereDoesntHave('customerDocuments', function ($q) {
                                 $q->where('type', 'expense_mail_proof');
                             });
-                        }else {
+                        }else if ($request->expense_mail_proof == 'proved') {
                             $query->whereHas('customerDocuments', function ($q) {
                                 $q->where('type', 'expense_mail_proof');
+                            });
+                        }
+                    })
+                    ->when($request->have_invoice_mail,function ($q) use ($request) {
+                        if($request->have_invoice_mail == 'sent') {
+                            $q->where('have_invoice_mail', 1);
+                        }else if($request->have_invoice_mail == 'not_sent') {
+                            $q->where('have_invoice_mail', 0);
+                        }
+                    })
+                    ->when($request->invoice_mail_proof, function ($query) use ($request) {
+                        if ($request->invoice_mail_proof == 'not_proved') {
+                            $query->whereDoesntHave('customerDocuments', function ($q) {
+                                $q->where('type', 'invoice_mail_proof');
+                            });
+                        }else if ($request->invoice_mail_proof == 'proved') {
+                            $query->whereHas('customerDocuments', function ($q) {
+                                $q->where('type', 'invoice_mail_proof');
                             });
                         }
                     })
@@ -98,7 +116,7 @@ class BookingItemGroupController extends Controller
                             $query->whereDoesntHave('customerDocuments', function ($q) {
                                 $q->where('type', 'booking_confirm_letter');
                             });
-                        } else {
+                        } else if ($request->invoice_status == 'receive') {
                             $query->whereHas('customerDocuments', function ($q) {
                                 $q->where('type', 'booking_confirm_letter');
                             });
@@ -302,6 +320,7 @@ class BookingItemGroupController extends Controller
             if($request->booking_email_sent_date){
                 $data['booking_email_sent_date'] = $request->booking_email_sent_date;
             }
+
             if($request->expense_email_sent_date){
                 $data['expense_email_sent_date'] = $request->expense_email_sent_date;
             }
@@ -325,6 +344,12 @@ class BookingItemGroupController extends Controller
             }
             if($request->confirmation_code){
                 $data['confirmation_code'] = $request->confirmation_code;
+            }
+            if($request->have_invoice_mail){
+                $data['have_invoice_mail'] = $request->have_invoice_mail;
+            }
+            if($request->invoice_mail_sent_date){
+                $data['invoice_mail_sent_date'] = $request->invoice_mail_sent_date;
             }
 
             $booking_item_group->update($data);

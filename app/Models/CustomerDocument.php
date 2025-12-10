@@ -36,6 +36,9 @@ class CustomerDocument extends Model
             case 'expense_mail_proof':
                 return 'files/';
 
+            case 'invoice_mail_proof':
+                return 'images/';
+
             case 'invoice':
                 return 'invoices/';
 
