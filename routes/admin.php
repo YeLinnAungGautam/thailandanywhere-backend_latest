@@ -35,6 +35,8 @@ use App\Http\Controllers\Admin\DestinationController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
+use App\Http\Controllers\Admin\GmailAuthController;
+use App\Http\Controllers\Admin\GmailInboxController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
@@ -374,7 +376,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Report by sale date
     Route::get('sale-report-by-date', [DashboardController::class, 'saleReportByDate']);
-    Route::get('dashboard-sale-summary',[DashboardController::class, 'getDashBoardSummary']);
+    Route::get('dashboard-sale-summary', [DashboardController::class, 'getDashBoardSummary']);
 
     # Admin Meta
     Route::get('admin-metas/sale-targets', [AdminMetaController::class, 'index']);
@@ -547,5 +549,24 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::apiResource('settings/hotels/discount', HotelDiscountController::class);
     Route::apiResource('settings/entrance-tickets/discount', EntranceTicketDiscountController::class);
-    Route::apiResource('settings/private-van-tours/discount',SettingPrivateVanTourController::class);
+    Route::apiResource('settings/private-van-tours/discount', SettingPrivateVanTourController::class);
+
+    # Gmail Authentication
+    Route::get('gmail/auth/url', [GmailAuthController::class, 'getAuthUrl']);
+    Route::post('gmail/auth/callback', [GmailAuthController::class, 'handleCallback']);
+    Route::get('gmail/auth/status', [GmailAuthController::class, 'getConnectionStatus']);
+    Route::post('gmail/auth/refresh', [GmailAuthController::class, 'refreshToken']);
+    Route::delete('gmail/auth/disconnect', [GmailAuthController::class, 'disconnect']);
+
+    # Gmail Inbox Management
+    Route::get('gmail/inbox', [GmailInboxController::class, 'inbox']);
+    Route::get('gmail/threads', [GmailInboxController::class, 'threads']);
+    Route::get('gmail/threads/{threadId}', [GmailInboxController::class, 'getThread']);
+    Route::post('gmail/compose', [GmailInboxController::class, 'compose']);
+    Route::post('gmail/emails/{emailId}/reply', [GmailInboxController::class, 'sendReply']);
+    Route::patch('gmail/emails/mark-read', [GmailInboxController::class, 'markAsRead']);
+    Route::patch('gmail/emails/mark-unread', [GmailInboxController::class, 'markAsUnread']);
+    Route::patch('gmail/emails/archive', [GmailInboxController::class, 'archive']);
+    Route::delete('gmail/emails', [GmailInboxController::class, 'delete']);
+    Route::post('gmail/sync', [GmailInboxController::class, 'syncFromGmail']);
 });
