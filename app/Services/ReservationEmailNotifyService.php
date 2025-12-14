@@ -7,7 +7,7 @@ class ReservationEmailNotifyService
     {
         $attach_files = [];
 
-        if(isset($attachments)) {
+        if (isset($attachments)) {
             foreach ($attachments as $attachment) {
                 $attach_files[] = uploadFile($attachment, '/temp_files/attachments/');
             }
