@@ -9,6 +9,7 @@ use App\Jobs\HotelConfirmationReceiptUploadNotifierJob;
 use App\Jobs\SendReservationNotifyEmailJob;
 use App\Models\Booking;
 use App\Models\BookingItem;
+use App\Models\EmailLog;
 use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationBookingConfirmLetter;
 use App\Models\ReservationCarInfo;
@@ -60,11 +61,11 @@ class ReservationController extends Controller
                 // Split "2024-01-01,2024-01-31" into ["2024-01-01", "2024-01-31"]
                 $dates = explode(',', $request->sale_daterange);
 
-                if($request->booking_date_search == true) {
+                if ($request->booking_date_search == true) {
                     // Filter by booking creation date
                     $q->whereBetween('bookings.booking_date', [$dates[0], $dates[1]]);
                 }
-                if($request->booking_date_search == false) {
+                if ($request->booking_date_search == false) {
                     // Filter by service delivery date
                     $q->whereBetween('booking_items.service_date', [$dates[0], $dates[1]]);
                 }
@@ -701,10 +702,32 @@ class ReservationController extends Controller
 
         try {
             $attachments = ReservationEmailNotifyService::saveAttachToTemp($request->attachments);
-
             $users = explode(',', $request->mail_tos);
+            $emailLogs = [];
 
             foreach ($users as $mail_to) {
+                $mail_to = trim($mail_to);
+
+                // Create email log entry before sending
+                $emailLog = EmailLog::create([
+                    'type' => 'sent',
+                    'from_email' => config('mail.from.address'),
+                    'from_name' => config('mail.from.name'),
+                    'to_email' => $mail_to,
+                    'cc' => json_encode([$ccEmail]),
+                    'subject' => $request->mail_subject,
+                    'body' => $request->mail_body,
+                    'plain_body' => strip_tags($request->mail_body),
+                    'attachments' => $attachments ? json_encode($attachments) : null,
+                    'status' => 'pending',
+                    'related_booking_id' => $booking_item->booking_id,
+                    'related_model_type' => 'App\\Models\\BookingItem',
+                    'related_model_id' => $booking_item->id,
+                ]);
+
+                $emailLogs[] = $emailLog->id;
+
+                // Dispatch job with email log ID for tracking
                 dispatch(new SendReservationNotifyEmailJob(
                     $mail_to,
                     $request->mail_subject,
@@ -713,15 +736,23 @@ class ReservationController extends Controller
                     $booking_item,
                     $attachments,
                     $ccEmail,
-                    $request->email_type
+                    $request->email_type,
+                    $emailLog->id
                 ));
             }
 
             $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';
 
-            return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
+            return $this->success([
+                'email_logs' => $emailLogs,
+                'total_recipients' => count($users)
+            ], $messageType . ' notify emails queued for sending.', 200);
         } catch (Exception $e) {
-            Log::error($e);
+            Log::error('SendNotifyEmail Error: ' . $e->getMessage(), [
+                'booking_item_id' => $booking_item->id,
+                'email_type' => $request->email_type,
+                'recipients' => $request->mail_tos
+            ]);
 
             return $this->error(null, $e->getMessage(), 500);
         }

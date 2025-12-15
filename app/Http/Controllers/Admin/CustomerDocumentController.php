@@ -14,7 +14,7 @@ class CustomerDocumentController extends Controller
 {
     use HttpResponses;
 
-    protected $document_type_validation_rule = 'required|in:invoice,expense_receipt,passport,booking_request_proof,expense_mail_proof,assign_driver,booking_confirm_letter,confirmation_letter,tax_receipt,tax_slip';
+    protected $document_type_validation_rule = 'required|in:invoice,expense_receipt,passport,booking_request_proof,expense_mail_proof,invoice_mail_proof,assign_driver,booking_confirm_letter,confirmation_letter,tax_receipt,tax_slip';
 
     public function index(BookingItemGroup $booking_item_group, Request $request)
     {

@@ -84,6 +84,7 @@ class HotelController extends Controller
         $search = $request->query('search');
         $city_id = $request->query('city_id');
         $place = $request->query('place');
+        $direct_booking = $request->query('direct_booking');
 
         $hotels = Hotel::select([
             'id',
@@ -96,6 +97,7 @@ class HotelController extends Controller
         ])
         ->whereNotNull('latitude')
         ->whereNotNull('longitude')
+        ->where('type', $direct_booking ?? 'direct_booking')
         ->when($search, function ($query) use ($search) {
             $query->where('name', 'LIKE', "%{$search}%");
         })

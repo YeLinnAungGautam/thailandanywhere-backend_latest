@@ -4,16 +4,24 @@ namespace App\Jobs;
 
 use App\Mail\ReservationNotifyEmail;
 use App\Models\BookingItem;
+use App\Models\EmailLog;
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SendReservationNotifyEmailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    // Retry configuration
+    public $tries = 3;
+    public $maxExceptions = 3;
+    public $backoff = [60, 300, 900]; // 1min, 5min, 15min
 
     protected $default_email = 'negyi.partnership@thanywhere.com';
     protected $mail_to;
@@ -23,12 +31,13 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     protected $booking_item;
     protected $ccEmail;
     protected $email_type;
+    protected $email_log_id;
     public $attachments;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null, $ccEmail = null, $email_type = 'booking')
+    public function __construct($mail_to, $mail_subject, $sent_to_default, $mail_body, BookingItem $booking_item, $attachments = null, $ccEmail = null, $email_type = 'booking', $email_log_id = null)
     {
         $this->mail_to = $mail_to;
         $this->mail_subject = $mail_subject;
@@ -38,6 +47,7 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         $this->attachments = $attachments;
         $this->ccEmail = $ccEmail;
         $this->email_type = $email_type;
+        $this->email_log_id = $email_log_id;
     }
 
     /**
@@ -45,13 +55,65 @@ class SendReservationNotifyEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Mail::to($this->getMails())->cc($this->ccEmail)
-            ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
+        try {
+            // Update email log status to 'sending'
+            if ($this->email_log_id) {
+                EmailLog::where('id', $this->email_log_id)->update([
+                    'status' => 'sending'
+                ]);
+            }
 
-        if($this->email_type == 'booking'){
-            $this->booking_item->update(['is_booking_request' => true]);
-        }else if($this->email_type == 'expense'){
-            $this->booking_item->update(['is_expense_email_sent' => true]);
+            // Send the email
+            Mail::to($this->getMails())->cc($this->ccEmail)
+                ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
+
+            // Update email log status to 'sent' on success
+            if ($this->email_log_id) {
+                EmailLog::where('id', $this->email_log_id)->update([
+                    'status' => 'sent'
+                ]);
+            }
+
+            // Update booking item flags
+            if ($this->email_type == 'booking') {
+                $this->booking_item->update(['is_booking_request' => true]);
+            } elseif ($this->email_type == 'expense') {
+                $this->booking_item->update(['is_expense_email_sent' => true]);
+            }
+
+            Log::info('Reservation notify email sent successfully', [
+                'email_log_id' => $this->email_log_id,
+                'booking_item_id' => $this->booking_item->id,
+                'recipients' => $this->getMails(),
+                'email_type' => $this->email_type
+            ]);
+
+        } catch (Exception $e) {
+            // Update email log with failure details
+            if ($this->email_log_id) {
+                EmailLog::where('id', $this->email_log_id)->update([
+                    'status' => 'failed',
+                    'plain_body' => ($this->attempts() >= $this->tries)
+                        ? strip_tags($this->mail_body) . '\n\nFAIL REASON: ' . $e->getMessage()
+                        : strip_tags($this->mail_body) . '\n\nRETRY ATTEMPT: ' . $this->attempts() . '/' . $this->tries
+                ]);
+            }
+
+            Log::error('Reservation notify email failed', [
+                'email_log_id' => $this->email_log_id,
+                'booking_item_id' => $this->booking_item->id,
+                'recipients' => $this->getMails(),
+                'email_type' => $this->email_type,
+                'attempt' => $this->attempts(),
+                'max_attempts' => $this->tries,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // If we haven't reached max attempts, re-throw to trigger retry
+            if ($this->attempts() < $this->tries) {
+                throw $e;
+            }
         }
     }
 
@@ -89,5 +151,27 @@ class SendReservationNotifyEmailJob implements ShouldQueue
         }
 
         return $mails;
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(Exception $exception): void
+    {
+        // Update email log with permanent failure
+        if ($this->email_log_id) {
+            EmailLog::where('id', $this->email_log_id)->update([
+                'status' => 'permanently_failed',
+                'plain_body' => strip_tags($this->mail_body) . '\n\nPERMANENT FAILURE AFTER ' . $this->tries . ' ATTEMPTS: ' . $exception->getMessage()
+            ]);
+        }
+
+        Log::error('Reservation notify email permanently failed', [
+            'email_log_id' => $this->email_log_id,
+            'booking_item_id' => $this->booking_item->id,
+            'recipients' => $this->getMails(),
+            'email_type' => $this->email_type,
+            'final_error' => $exception->getMessage()
+        ]);
     }
 }

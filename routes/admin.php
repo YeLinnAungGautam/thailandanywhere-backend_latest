@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerDocumentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
+use App\Http\Controllers\Admin\EmailStatusController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
@@ -569,4 +570,15 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::patch('gmail/emails/archive', [GmailInboxController::class, 'archive']);
     Route::delete('gmail/emails', [GmailInboxController::class, 'delete']);
     Route::post('gmail/sync', [GmailInboxController::class, 'syncFromGmail']);
+    # Email Logs
+    Route::apiResource('email-logs', EmailLogController::class);
+    Route::patch('email-logs/{email_log}/mark-read', [EmailLogController::class, 'markAsRead']);
+    Route::post('email-logs/bulk-mark-read', [EmailLogController::class, 'bulkMarkAsRead']);
+
+    # Email Status Management
+    Route::get('email-status/dashboard', [EmailStatusController::class, 'dashboard']);
+    Route::get('email-status/failed', [EmailStatusController::class, 'getFailedEmails']);
+    Route::post('email-status/{email_log}/retry', [EmailStatusController::class, 'retryEmail']);
+    Route::post('email-status/bulk-retry', [EmailStatusController::class, 'bulkRetryEmails']);
+    Route::get('email-status/stats', [EmailStatusController::class, 'getEmailStatistics']);
 });
