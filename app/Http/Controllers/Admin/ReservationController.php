@@ -728,7 +728,18 @@ class ReservationController extends Controller
                 $emailLogs[] = $emailLog->id;
 
                 // Dispatch job with email log ID for tracking
-                dispatch(new SendReservationNotifyEmailJob(
+                // dispatch(new SendReservationNotifyEmailJob(
+                //     $mail_to,
+                //     $request->mail_subject,
+                //     $request->sent_to_default,
+                //     $request->mail_body,
+                //     $booking_item,
+                //     $attachments,
+                //     $ccEmail,
+                //     $request->email_type,
+                //     $emailLog->id
+                // ));
+                SendReservationNotifyEmailJob::dispatchSync(
                     $mail_to,
                     $request->mail_subject,
                     $request->sent_to_default,
@@ -738,7 +749,7 @@ class ReservationController extends Controller
                     $ccEmail,
                     $request->email_type,
                     $emailLog->id
-                ));
+                );
             }
 
             $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';

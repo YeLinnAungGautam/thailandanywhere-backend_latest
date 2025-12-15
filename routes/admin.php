@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerDocumentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
+use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\EmailStatusController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
