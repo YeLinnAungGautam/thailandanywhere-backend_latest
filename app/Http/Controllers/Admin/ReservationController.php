@@ -754,10 +754,7 @@ class ReservationController extends Controller
 
             $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';
 
-            return $this->success([
-                'email_logs' => $emailLogs,
-                'total_recipients' => count($users)
-            ], $messageType . ' notify emails queued for sending.', 200);
+            return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error('SendNotifyEmail Error: ' . $e->getMessage(), [
                 'booking_item_id' => $booking_item->id,
