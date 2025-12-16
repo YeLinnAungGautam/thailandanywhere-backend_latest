@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerDocumentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DestinationController;
+use App\Http\Controllers\Admin\EmailStatusController;
 use App\Http\Controllers\Admin\EntranceTicketController;
 use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
@@ -374,7 +375,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Booking Report by sale date
     Route::get('sale-report-by-date', [DashboardController::class, 'saleReportByDate']);
-    Route::get('dashboard-sale-summary',[DashboardController::class, 'getDashBoardSummary']);
+    Route::get('dashboard-sale-summary', [DashboardController::class, 'getDashBoardSummary']);
 
     # Admin Meta
     Route::get('admin-metas/sale-targets', [AdminMetaController::class, 'index']);
@@ -548,4 +549,16 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('settings/hotels/discount', HotelDiscountController::class);
     Route::apiResource('settings/entrance-tickets/discount', EntranceTicketDiscountController::class);
     Route::apiResource('settings/private-van-tours/discount', SettingPrivateVanTourController::class);
+
+    # Email Logs
+    Route::apiResource('email-logs', EmailLogController::class);
+    Route::patch('email-logs/{email_log}/mark-read', [EmailLogController::class, 'markAsRead']);
+    Route::post('email-logs/bulk-mark-read', [EmailLogController::class, 'bulkMarkAsRead']);
+
+    # Email Status Management
+    Route::get('email-status/dashboard', [EmailStatusController::class, 'dashboard']);
+    Route::get('email-status/failed', [EmailStatusController::class, 'getFailedEmails']);
+    Route::post('email-status/{email_log}/retry', [EmailStatusController::class, 'retryEmail']);
+    Route::post('email-status/bulk-retry', [EmailStatusController::class, 'bulkRetryEmails']);
+    Route::get('email-status/stats', [EmailStatusController::class, 'getEmailStatistics']);
 });
