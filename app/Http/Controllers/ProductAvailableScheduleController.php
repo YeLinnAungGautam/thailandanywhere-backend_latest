@@ -88,6 +88,7 @@ class ProductAvailableScheduleController extends Controller
             $data = [
                 'quantity' => $request->quantity,
                 'status' => $request->status,
+                'res_comment' => $request->res_comment,
                 'updated_by' => auth()->id(),
             ];
 
