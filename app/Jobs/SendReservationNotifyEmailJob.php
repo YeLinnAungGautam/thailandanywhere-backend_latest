@@ -20,7 +20,7 @@ class SendReservationNotifyEmailJob implements ShouldQueue
 
     // Retry configuration
     public $tries = 3;
-    public $maxExceptions = 3;
+    public $maxExceptions = 10;
     public $backoff = [60, 300, 900]; // 1min, 5min, 15min
 
     protected $default_email = 'negyi.partnership@thanywhere.com';

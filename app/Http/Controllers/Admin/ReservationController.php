@@ -728,7 +728,18 @@ class ReservationController extends Controller
                 $emailLogs[] = $emailLog->id;
 
                 // Dispatch job with email log ID for tracking
-                dispatch(new SendReservationNotifyEmailJob(
+                // dispatch(new SendReservationNotifyEmailJob(
+                //     $mail_to,
+                //     $request->mail_subject,
+                //     $request->sent_to_default,
+                //     $request->mail_body,
+                //     $booking_item,
+                //     $attachments,
+                //     $ccEmail,
+                //     $request->email_type,
+                //     $emailLog->id
+                // ));
+                SendReservationNotifyEmailJob::dispatchSync(
                     $mail_to,
                     $request->mail_subject,
                     $request->sent_to_default,
@@ -738,15 +749,12 @@ class ReservationController extends Controller
                     $ccEmail,
                     $request->email_type,
                     $emailLog->id
-                ));
+                );
             }
 
             $messageType = $request->email_type === 'booking' ? 'Booking' : 'Expense';
 
-            return $this->success([
-                'email_logs' => $emailLogs,
-                'total_recipients' => count($users)
-            ], $messageType . ' notify emails queued for sending.', 200);
+            return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error('SendNotifyEmail Error: ' . $e->getMessage(), [
                 'booking_item_id' => $booking_item->id,
