@@ -54,6 +54,7 @@ class ProductAvailableScheduleController extends Controller
                     'variable_id' => $variation['variable_id'],
                     'variable_type' => ProductDataService::getVariationByProductType($request->product_type),
                     'quantity' => $variation['quantity'],
+                    'child_qty' => $variation['child_qty'] ?? 0,
                     'checkin_date' => $variation['checkin_date'] ?? null,
                     'checkout_date' => $variation['checkout_date'] ?? null,
                     'date' => $variation['date'] ?? null,
