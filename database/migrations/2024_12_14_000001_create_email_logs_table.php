@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->json('attachments')->nullable(); // File attachments info
 
             // Status tracking
-            $table->enum('status', ['pending', 'sent', 'delivered', 'read', 'failed'])->default('pending')->index();
+            $table->string('status')->default('pending')->index();
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
             $table->timestamp('read_at')->nullable();

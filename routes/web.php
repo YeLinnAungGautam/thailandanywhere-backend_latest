@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GmailController;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
@@ -17,3 +18,10 @@ Route::get('/', function () {
 
 //     return 'success';
 // });
+
+Route::get('/google/connect', [GmailController::class, 'redirectToGoogle'])->name('google.connect');
+Route::get('/gmail/oauth/callback', [GmailController::class, 'handleGoogleCallback'])->name('google.callback');
+
+Route::get('/gmail/inbox', [GmailController::class, 'inbox'])->name('gmail.inbox');
+Route::get('/gmail/thread/{threadId}', [GmailController::class, 'thread'])->name('gmail.thread');
+Route::post('/gmail/reply', [GmailController::class, 'reply'])->name('gmail.reply');
