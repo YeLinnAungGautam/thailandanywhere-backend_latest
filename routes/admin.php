@@ -246,6 +246,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Customer
     Route::apiResource('customers', CustomerController::class);
     Route::get('customers/{id}/sales', [CustomerController::class, 'getSales']);
+    Route::post('customers/createBookingCustomer', [CustomerController::class, 'createBookingCustomer']);
 
     Route::apiResource('bookings', BookingController::class);
 
@@ -371,7 +372,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::delete('reservation-transactions/{reservation_id}/{transaction_id}', [ReservationTransactionController::class, 'deleteTransaction']);
 
     # Product Available Schedule
+    Route::put('product-available-schedules/bulk/change-status', [ProductAvailableScheduleController::class, 'changeStatus']);
     Route::apiResource('product-available-schedules', ProductAvailableScheduleController::class);
+
 
     # Attraction Activities
     Route::apiResource('attraction-activities', AttractionActivityController::class);

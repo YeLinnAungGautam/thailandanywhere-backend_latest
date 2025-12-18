@@ -55,6 +55,8 @@ class ProductAvailableScheduleController extends Controller
                     'variable_type' => ProductDataService::getVariationByProductType($request->product_type),
                     'quantity' => $variation['quantity'],
                     'child_qty' => $variation['child_qty'] ?? 0,
+                    'customer_name' => $variation['customer_name'] ?? null,
+                    'customer_phnumber' => $variation['customer_phnumber'] ?? null,
                     'checkin_date' => $variation['checkin_date'] ?? null,
                     'checkout_date' => $variation['checkout_date'] ?? null,
                     'date' => $variation['date'] ?? null,
@@ -117,6 +119,47 @@ class ProductAvailableScheduleController extends Controller
         } catch (Exception $e) {
             Log::error($e);
 
+            return fail($e->getMessage());
+        }
+    }
+
+    public function changeStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'ids' => 'required|string',
+            ]);
+
+            // Convert comma-separated string to array
+            $ids = explode(',', $request->ids);
+
+            // Remove any empty values and trim whitespace
+            $ids = array_filter(array_map('trim', $ids));
+
+            if (empty($ids)) {
+                throw new Exception('No valid IDs provided');
+            }
+
+            // Update all schedules with the given IDs
+            $updated = ProductAvailableSchedule::whereIn('id', $ids)
+                ->update([
+                    'finish_booking' => 1,
+                ]);
+
+            if ($updated === 0) {
+                throw new Exception('No schedules found with the provided IDs');
+            }
+
+            // Get the updated schedules to return
+            $schedules = ProductAvailableSchedule::whereIn('id', $ids)->get();
+
+            return success(
+                ProductAvailableScheduleResource::collection($schedules),
+                "{$updated} schedule(s) updated successfully"
+            );
+
+        } catch (Exception $e) {
+            Log::error($e);
             return fail($e->getMessage());
         }
     }
