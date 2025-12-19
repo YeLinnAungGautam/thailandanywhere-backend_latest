@@ -88,6 +88,28 @@ class CustomerController extends Controller
         return $this->success(new CustomerResource($find), 'Customer Detail');
     }
 
+    public function createBookingCustomer(Request $request)
+    {
+        // Search for existing customer by name AND phone number
+        $customer = Customer::where('name', $request->name)
+                           ->where('phone_number', $request->phone_number)
+                           ->first();
+
+        // If customer exists, return existing customer
+        if ($customer) {
+            return $this->success(new CustomerResource($customer), 'Customer found');
+        }
+
+        // If customer doesn't exist, create new customer
+        $data = [
+            'name' => $request->name,
+            'phone_number' => $request->phone_number,
+        ];
+
+        $customer = Customer::create($data);
+
+        return $this->success(new CustomerResource($customer), 'Customer created successfully');
+    }
 
     /**
      * Update the specified resource in storage.

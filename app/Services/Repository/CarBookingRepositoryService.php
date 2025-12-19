@@ -105,7 +105,9 @@ class CarBookingRepositoryService
             'quantity' => $booking_item->quantity,
             'cost_price' => $booking_item->cost_price,
             'total_cost_price' => $booking_item->total_cost_price,
-            'contact_number' => $booking_item->contact_number,
+            'contact_number' => $booking_item->contact_number
+            ?? $booking_item->booking?->customer?->phone_number
+            ?? null,
             'total_pax' => $booking_item->total_pax,
             'collect_comment' => $booking_item->collect_comment,
 
