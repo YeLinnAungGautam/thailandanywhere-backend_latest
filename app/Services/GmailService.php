@@ -13,9 +13,9 @@ class GmailService
     public function __construct(?array $accessToken = null)
     {
         $client = new GoogleClient();
-        $client->setClientId(config('services.google.client_id') ?? env('GOOGLE_CLIENT_ID'));
-        $client->setClientSecret(config('services.google.client_secret') ?? env('GOOGLE_CLIENT_SECRET'));
-        $client->setRedirectUri(config('services.google.redirect') ?? env('GOOGLE_REDIRECT_URL'));
+        $client->setClientId(config('services.google_gmail.client_id') ?? env('GOOGLE_GMAIL_CLIENT_ID'));
+        $client->setClientSecret(config('services.google_gmail.client_secret') ?? env('GOOGLE_GMAIL_CLIENT_SECRET'));
+        $client->setRedirectUri(config('services.google_gmail.redirect') ?? env('GOOGLE_GMAIL_REDIRECT_URL'));
         $client->setScopes([
             Gmail::MAIL_GOOGLE_COM,
             'https://www.googleapis.com/auth/gmail.modify',

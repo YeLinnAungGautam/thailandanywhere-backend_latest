@@ -409,9 +409,9 @@ All endpoints return consistent error responses:
 
 2. **Configure Environment Variables:**
    ```env
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   GOOGLE_REDIRECT_URL=your_redirect_url
+   GOOGLE_GMAIL_CLIENT_ID=your_google_client_id
+   GOOGLE_GMAIL_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_GMAIL_REDIRECT_URL=your_redirect_url
    ```
 
 3. **Run Migrations:**

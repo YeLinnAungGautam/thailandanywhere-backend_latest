@@ -37,4 +37,10 @@ return [
         // 'redirect' => 'https://api-blog.thanywhere.com/api/oauth/google/callback',
         'redirect' => env('GOOGLE_REDIRECT_URL'),
     ],
+
+    'google_gmail' => [
+        'client_id' => env('GOOGLE_GMAIL_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_GMAIL_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_GMAIL_REDIRECT_URL'),
+    ],
 ];
