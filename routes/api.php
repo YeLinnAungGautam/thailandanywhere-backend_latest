@@ -75,3 +75,8 @@ Route::group([
 # Socialite Login
 Route::post('oauth/{driver}/redirect', [SocialiteLoginController::class, 'redirect']);
 Route::get('oauth/{driver}/callback', [SocialiteLoginController::class, 'callback'])->name('oauth.callback');
+
+
+Route::get('api-test', function () {
+    return response()->json(['message' => 'API is working from new server']);
+});
