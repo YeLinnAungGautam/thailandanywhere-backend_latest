@@ -24,6 +24,7 @@ class BookingItemGroupListResource extends JsonResource
             'reservation_count' => $this->bookingItems->count(),
             'booking_crm_id' => $this->booking->crm_id ?? null,
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
+            'product_id' => $this->bookingItems->first()->product->id ?? 'N/A',
             'customer_name' => $this->booking->customer->name ?? 'N/A',
             'have_tax_receipt' => $this->taxReceipts()->count() > 0 ? true : false,
             'sent_booking_request' => $this->sent_booking_request,
@@ -70,6 +71,7 @@ class BookingItemGroupListResource extends JsonResource
                 'booking_status' => $this->booking->payment_status ?? 'not_paid',
                 'service_date' => Carbon::parse($item->service_date)->format('M d') ?? 'N/A',
                 'quantity' => $item->quantity,
+                'discount' => $item->discount,
                 'is_allowment_have' => $item->is_allowment_have,
             ];
 
