@@ -351,6 +351,12 @@ class BookingItemGroupController extends Controller
             if($request->invoice_mail_sent_date){
                 $data['invoice_mail_sent_date'] = $request->invoice_mail_sent_date;
             }
+            if($request->comment_sale){
+                $data['comment_sale'] = $request->comment_sale;
+            }
+            if($request->comment_res){
+                $data['comment_res'] = $request->comment_res;
+            }
 
             $booking_item_group->update($data);
             return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');

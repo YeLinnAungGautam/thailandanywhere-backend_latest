@@ -35,7 +35,7 @@ class BookingItemGroupListResource extends JsonResource
             'firstest_service_date' => Carbon::parse($this->bookingItems->min('service_date'))->format('M d, Y') ?? 'N/A',
 
             'customer_payment_status' => $this->booking->payment_status ?? 'not_paid',
-            'expense_status' => $this->calculateGroupExpenseStatus(),
+            'expense_status' => $this->expense_status ?? $this->calculateGroupExpenseStatus(),
 
             'items' => $this->transformedItems(),
             'has_booking_confirm_letter' => $this->hasBookingConfirmLetter(),
@@ -50,6 +50,9 @@ class BookingItemGroupListResource extends JsonResource
             'invoice_mail_sent_date' => $this->invoice_mail_sent_date,
             'have_invoice_mail' => $this->have_invoice_mail,
             'invoice_mail_proof' => $this->haveInvoiceMailProof(),
+
+            'comment_sale' => $this->comment_sale,
+            'comment_res' => $this->comment_res,
         ];
 
         return $result;
@@ -63,7 +66,7 @@ class BookingItemGroupListResource extends JsonResource
                 'product_name' => $item->product->name ?? 'N/A',
                 'variant_name' => $item->acsr_variation_name ?? 'N/A',
                 'reservation_status' => $item->reservation_status,
-                'expense_status' => $item->payment_status,
+                'expense_status' => $item->expense_status,
                 'booking_status' => $this->booking->payment_status ?? 'not_paid',
                 'service_date' => Carbon::parse($item->service_date)->format('M d') ?? 'N/A',
                 'quantity' => $item->quantity,
@@ -95,16 +98,19 @@ class BookingItemGroupListResource extends JsonResource
     protected function calculateGroupExpenseStatus()
     {
         $hasFullyPaid = $this->bookingItems->contains('payment_status', 'fully_paid');
-
         $hasNotPaid = $this->bookingItems->contains('payment_status', 'not_paid');
 
+        // Case 1: Has both fully_paid AND not_paid → partially_paid ✅
         if ($hasFullyPaid && $hasNotPaid) {
             return 'partially_paid';
         }
+
+        // Case 2: Has only not_paid → not_paid ✅
         if ($hasNotPaid && !$hasFullyPaid) {
             return 'not_paid';
         }
 
+        // Case 3: Everything else (all fully_paid) → fully_paid ✅
         return 'fully_paid';
     }
 
