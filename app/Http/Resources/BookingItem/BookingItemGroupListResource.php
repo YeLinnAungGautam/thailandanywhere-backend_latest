@@ -73,6 +73,7 @@ class BookingItemGroupListResource extends JsonResource
                 'quantity' => $item->quantity,
                 'discount' => $item->discount,
                 'is_allowment_have' => $item->is_allowment_have,
+                'variation' => $item->room,
             ];
 
             $individualPricing = $item->individual_pricing ?
