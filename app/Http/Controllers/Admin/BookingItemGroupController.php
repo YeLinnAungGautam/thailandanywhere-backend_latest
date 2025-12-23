@@ -181,6 +181,15 @@ class BookingItemGroupController extends Controller
                             }
                         });
                     })
+                    // NEW: Deadline filter
+                    ->when($request->deadline_date && $request->deadline_days, function ($query) use ($request) {
+                        $query->whereHas('bookingItems', function ($q) use ($request) {
+                            $q->whereRaw('DATE_SUB(service_date, INTERVAL ? DAY) = ?', [
+                                $request->deadline_days,
+                                $request->deadline_date
+                            ]);
+                        });
+                    })
                     ->when(!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor']), function ($query) {
                         $query->whereHas('booking', function ($q) {
                             $q->where('created_by', Auth::id())
