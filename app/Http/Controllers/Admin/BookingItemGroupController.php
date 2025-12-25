@@ -205,6 +205,88 @@ class BookingItemGroupController extends Controller
                 })
                 ->sum('total_cost_price');
 
+            // Count expense fully paid (service date today or next 3 days) - NOT FILTERED
+            $expenseFullyPaid = DB::table('booking_item_groups')
+                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->where('expense_status', 'fully_paid')
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(3)->endOfDay()
+                        ]);
+                })
+                ->count();
+
+            $expenseMailSent = DB::table('booking_item_groups')
+            ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+            ->where('sent_expense_mail', '1')
+            ->whereExists(function($query) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                    ->whereBetween('booking_items.service_date', [
+                        now()->startOfDay(),
+                        now()->addDays(3)->endOfDay()
+                    ]);
+            })
+            ->count();
+
+            $customerFullyPaid = DB::table('booking_item_groups')
+            ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+            ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+            ->where('bookings.payment_status', 'fully_paid')
+            ->whereExists(function($query) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                    ->whereBetween('booking_items.service_date', [
+                        now()->startOfDay(),
+                        now()->addDays(3)->endOfDay()
+                    ]);
+            })
+            ->count();
+
+            // Count with booking confirmation letter (service date today or next 3 days) - NOT FILTERED
+            $withConfirmationLetter = DB::table('booking_item_groups as big')
+                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('customer_documents')
+                        ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
+                        ->where('customer_documents.type', 'booking_confirm_letter');
+                })
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'big.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(3)->endOfDay()
+                        ]);
+                })
+                ->count();
+
+            // Total next 3 days booking item groups count - NOT FILTERED
+            $totalNext3Days = DB::table('booking_item_groups')
+                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(3)->endOfDay()
+                        ]);
+                })
+                ->count();
+
+
+            // Total filtered groups for ratio calculation
+            $totalFilteredGroups = $buildBaseQuery()->count();
+
             // Build main query for pagination with relationships
             $main_query = $buildBaseQuery()
                 ->with([
@@ -290,6 +372,12 @@ class BookingItemGroupController extends Controller
                     'meta' => [
                         'total_page' => (int)ceil($groups->total() / $groups->perPage()),
                         'total_cost_price_sum' => $totalCostPriceSum,
+                        'expense_not_fully_paid' => $expenseFullyPaid,
+                        'without_confirmation_letter' => $withConfirmationLetter,
+                        'total_filtered_groups' => $totalFilteredGroups,
+                        'expense_mail_sent' => $expenseMailSent,
+                        'customer_fully_paid' => $customerFullyPaid,
+                        'total_next_7_days' => $totalNext3Days,
                     ],
                 ])
                 ->response()
