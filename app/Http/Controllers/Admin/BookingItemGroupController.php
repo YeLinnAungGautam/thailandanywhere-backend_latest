@@ -147,11 +147,35 @@ class BookingItemGroupController extends Controller
                         }
                     })
                     ->when($request->expense_item_status, function ($query) use ($request) {
-                        $query->whereIn('id', function ($q) use ($request) {
-                            $q->select('group_id')
-                                ->from('booking_items')
-                                ->where('payment_status', $request->expense_item_status);
-                        });
+                        // $operator = $request->expense_item_status == 'not_fully_paid' ? '!=' : '=';
+                        // $status = $request->expense_item_status == 'not_fully_paid' ? 'fully_paid' : $request->expense_item_status;
+
+                        // $query->whereIn('id', function ($q) use ($operator, $status) {
+                        //     $q->select('group_id')
+                        //         ->from('booking_items')
+                        //         ->where('payment_status', $operator, $status);
+                        // });
+                        if($request->expense_item_status == 'not_fully_paid') {
+                            $query->whereIn('id', function ($q)  {
+                                $q->select('group_id')
+                                    ->from('booking_items')
+                                    ->where('payment_status','not_paid')
+                                    ->orWhere('payment_status',  'partially_paid')
+                                    ->orWhere('payment_status',  '')
+                                    ->orWhereNull('payment_status');
+                            });
+                        }else if($request->expense_item_status != 'not_fully_paid') {
+                            // $query->whereNotIn('id', function ($q)  {
+                            //     $q->select('group_id')
+                            //         ->from('booking_items')
+                            //         ->where('payment_status', $request->expense_item_status);
+                            // });
+                            $query->whereNotIn('id', function ($q) use ($request) {
+                                $q->select('group_id')
+                                    ->from('booking_items')
+                                    ->where('payment_status', $request->expense_item_status);
+                            });
+                        }
                     })
                     ->when($request->customer_name, function ($query) use ($request) {
                         $query->whereHas('booking.customer', function ($q) use ($request) {
@@ -165,8 +189,11 @@ class BookingItemGroupController extends Controller
                         });
                     })
                     ->when($request->payment_status, function ($query) use ($request) {
-                        $query->whereHas('booking', function ($q) use ($request) {
-                            $q->where('payment_status', $request->payment_status);
+                        $operator = $request->payment_status == 'not_fully_paid' ? '!=' : '=';
+                        $status = $request->payment_status == 'not_fully_paid' ? 'fully_paid' : $request->payment_status;
+
+                        $query->whereHas('booking', function ($q) use ($operator, $status) {
+                            $q->where('payment_status', $operator, $status);
                         });
                     })
                     ->when($request->booking_daterange, function ($query) use ($request) {
@@ -208,7 +235,7 @@ class BookingItemGroupController extends Controller
             // Count expense fully paid (service date today or next 3 days) - NOT FILTERED
             $expenseFullyPaid = DB::table('booking_item_groups')
                 ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->where('expense_status', 'fully_paid')
+                ->where('expense_status','fully_paid')
                 ->whereExists(function($query) {
                     $query->select(DB::raw(1))
                         ->from('booking_items')
@@ -244,7 +271,7 @@ class BookingItemGroupController extends Controller
                     ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
                     ->whereBetween('booking_items.service_date', [
                         now()->startOfDay(),
-                        now()->addDays(3)->endOfDay()
+                        now()->addDays(2)->endOfDay()
                     ]);
             })
             ->count();
@@ -264,7 +291,7 @@ class BookingItemGroupController extends Controller
                         ->whereColumn('booking_items.group_id', 'big.id')
                         ->whereBetween('booking_items.service_date', [
                             now()->startOfDay(),
-                            now()->addDays(3)->endOfDay()
+                            now()->addDays(7)->endOfDay()
                         ]);
                 })
                 ->count();
@@ -279,6 +306,32 @@ class BookingItemGroupController extends Controller
                         ->whereBetween('booking_items.service_date', [
                             now()->startOfDay(),
                             now()->addDays(3)->endOfDay()
+                        ]);
+                })
+                ->count();
+            // Total next 3 days booking item groups count - NOT FILTERED
+            $totalNext7Days = DB::table('booking_item_groups')
+                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(7)->endOfDay()
+                        ]);
+                })
+                ->count();
+            // Total next 3 days booking item groups count - NOT FILTERED
+            $totalNext2Days = DB::table('booking_item_groups')
+                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(2)->endOfDay()
                         ]);
                 })
                 ->count();
@@ -377,7 +430,9 @@ class BookingItemGroupController extends Controller
                         'total_filtered_groups' => $totalFilteredGroups,
                         'expense_mail_sent' => $expenseMailSent,
                         'customer_fully_paid' => $customerFullyPaid,
-                        'total_next_7_days' => $totalNext3Days,
+                        'total_next_3_days' => $totalNext3Days,
+                        'total_next_7_days' => $totalNext7Days,
+                        'total_next_2_days' => $totalNext2Days,
                     ],
                 ])
                 ->response()
