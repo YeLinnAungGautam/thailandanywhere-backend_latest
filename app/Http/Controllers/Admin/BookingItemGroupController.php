@@ -147,14 +147,7 @@ class BookingItemGroupController extends Controller
                         }
                     })
                     ->when($request->expense_item_status, function ($query) use ($request) {
-                        // $operator = $request->expense_item_status == 'not_fully_paid' ? '!=' : '=';
-                        // $status = $request->expense_item_status == 'not_fully_paid' ? 'fully_paid' : $request->expense_item_status;
 
-                        // $query->whereIn('id', function ($q) use ($operator, $status) {
-                        //     $q->select('group_id')
-                        //         ->from('booking_items')
-                        //         ->where('payment_status', $operator, $status);
-                        // });
                         if($request->expense_item_status == 'not_fully_paid') {
                             $query->whereIn('id', function ($q)  {
                                 $q->select('group_id')
@@ -165,12 +158,8 @@ class BookingItemGroupController extends Controller
                                     ->orWhereNull('payment_status');
                             });
                         }else if($request->expense_item_status != 'not_fully_paid') {
-                            // $query->whereNotIn('id', function ($q)  {
-                            //     $q->select('group_id')
-                            //         ->from('booking_items')
-                            //         ->where('payment_status', $request->expense_item_status);
-                            // });
-                            $query->whereNotIn('id', function ($q) use ($request) {
+
+                            $query->whereIn('id', function ($q) use ($request) {
                                 $q->select('group_id')
                                     ->from('booking_items')
                                     ->where('payment_status', $request->expense_item_status);
