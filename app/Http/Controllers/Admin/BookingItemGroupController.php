@@ -185,16 +185,35 @@ class BookingItemGroupController extends Controller
                             $q->where('payment_status', $operator, $status);
                         });
                     })
+                    // ->when($request->booking_daterange, function ($query) use ($request) {
+                    //     $dates = explode(',', $request->booking_daterange);
+                    //     $dates = array_map('trim', $dates);
+
+                    //     $query->whereHas('bookingItems', function ($q) use ($dates, $request) {
+                    //         if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
+                    //             $q->where('service_date', $dates[0]);
+                    //         } else {
+                    //             $q->whereBetween('service_date', $dates);
+                    //         }
+                    //     });
+                    // })
                     ->when($request->booking_daterange, function ($query) use ($request) {
                         $dates = explode(',', $request->booking_daterange);
                         $dates = array_map('trim', $dates);
 
-                        $query->whereHas('bookingItems', function ($q) use ($dates, $request) {
+                        // Join with subquery to get earliest service date per group
+                        $query->whereIn('id', function ($q) use ($dates, $request) {
+                            $subQuery = DB::table('booking_items')
+                                ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->groupBy('group_id');
+
                             if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
-                                $q->where('service_date', $dates[0]);
+                                $subQuery->havingRaw('MIN(service_date) = ?', [$dates[0]]);
                             } else {
-                                $q->whereBetween('service_date', $dates);
+                                $subQuery->havingRaw('MIN(service_date) BETWEEN ? AND ?', $dates);
                             }
+
+                            $q->select('group_id')->fromSub($subQuery, 'filtered_dates');
                         });
                     })
                     // NEW: Deadline filter
@@ -339,6 +358,75 @@ class BookingItemGroupController extends Controller
                 ]);
 
             // Sorting Logic
+            // if ($request->sorting) {
+            //     $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
+
+            //     if ($request->sorting_type == 'product_name') {
+            //         // Sort by product name
+            //         $main_query->joinSub(
+            //             DB::table('booking_items as bi_sort')
+            //                 ->select(
+            //                     'bi_sort.group_id',
+            //                     DB::raw('MIN(CASE
+            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\Hotel" THEN hotels_sort.name
+            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\PrivateVanTour" THEN private_van_tours_sort.name
+            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\GroupTour" THEN group_tours_sort.name
+            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\EntranceTicket" THEN entrance_tickets_sort.name
+            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\Airline" THEN airlines_sort.name
+            //                         ELSE "ZZZ"
+            //                     END) as sort_product_name')
+            //                 )
+            //                 ->leftJoin('hotels as hotels_sort', function($join) {
+            //                     $join->on('bi_sort.product_id', '=', 'hotels_sort.id')
+            //                         ->where('bi_sort.product_type', 'App\Models\Hotel');
+            //                 })
+            //                 ->leftJoin('private_van_tours as private_van_tours_sort', function($join) {
+            //                     $join->on('bi_sort.product_id', '=', 'private_van_tours_sort.id')
+            //                         ->where('bi_sort.product_type', 'App\Models\PrivateVanTour');
+            //                 })
+            //                 ->leftJoin('group_tours as group_tours_sort', function($join) {
+            //                     $join->on('bi_sort.product_id', '=', 'group_tours_sort.id')
+            //                         ->where('bi_sort.product_type', 'App\Models\GroupTour');
+            //                 })
+            //                 ->leftJoin('entrance_tickets as entrance_tickets_sort', function($join) {
+            //                     $join->on('bi_sort.product_id', '=', 'entrance_tickets_sort.id')
+            //                         ->where('bi_sort.product_type', 'App\Models\EntranceTicket');
+            //                 })
+            //                 ->leftJoin('airlines as airlines_sort', function($join) {
+            //                     $join->on('bi_sort.product_id', '=', 'airlines_sort.id')
+            //                         ->where('bi_sort.product_type', 'App\Models\Airline');
+            //                 })
+            //                 ->groupBy('bi_sort.group_id'),
+            //             'product_names_for_sorting',
+            //             function($join) {
+            //                 $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id');
+            //             }
+            //         )
+            //         ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
+            //         ->orderBy('booking_item_groups.id', $sorting);
+            //     } elseif ($request->sorting_type == 'service_date') {
+            //         // Sort by earliest service date
+            //         $main_query->joinSub(
+            //             DB::table('booking_items')
+            //                 ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+            //                 ->groupBy('group_id'),
+            //             'earliest_service_dates',
+            //             function($join) {
+            //                 $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
+            //             }
+            //         )
+            //         ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
+            //         ->orderBy('booking_item_groups.id', $sorting);
+            //     } else {
+            //         // Default sorting by ID
+            //         $main_query->orderBy('booking_item_groups.id', $sorting);
+            //     }
+            // } else {
+            //     // Default sorting when no sorting parameter is provided
+            //     $main_query->orderBy('booking_item_groups.id', 'desc');
+            // }
+
+            // Sorting Logic
             if ($request->sorting) {
                 $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
 
@@ -385,8 +473,8 @@ class BookingItemGroupController extends Controller
                     )
                     ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
                     ->orderBy('booking_item_groups.id', $sorting);
-                } elseif ($request->sorting_type == 'service_date') {
-                    // Sort by earliest service date
+                } elseif ($request->sorting_type == 'service_date' || $request->sorting_type == 'firstest_service_date') {
+                    // Sort by earliest (firstest) service date
                     $main_query->joinSub(
                         DB::table('booking_items')
                             ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
