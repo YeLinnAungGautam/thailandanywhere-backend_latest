@@ -292,7 +292,7 @@ class OrderController extends Controller
                     ->whereIn('id', $cartIdsToDelete)
                     ->delete();
 
-                Log::info('Cart cleaned', ['deleted_count' => count($cartIdsToDelete)]);
+                // Log::info('Cart cleaned', ['deleted_count' => count($cartIdsToDelete)]);
             } catch (\Exception $e) {
                 Log::error('Failed to delete cart items', [
                     'error' => $e->getMessage(),
