@@ -23,6 +23,8 @@ class BookingItemGroupListResource extends JsonResource
             'total_cost_price' => $this->totalExpenseAmount(),
             'reservation_count' => $this->bookingItems->count(),
             'booking_crm_id' => $this->booking->crm_id ?? null,
+            'booking_sale_amount' => $this->booking->grand_total,
+            'booking_balance_due' => $this->booking->balance_due,
             'booking_id' => $this->booking->id ?? null,
             'product_name' => $this->bookingItems->first()->product->name ?? 'N/A',
             'account_name' => $this->bookingItems->first()->product->account_name ?? 'N/A',

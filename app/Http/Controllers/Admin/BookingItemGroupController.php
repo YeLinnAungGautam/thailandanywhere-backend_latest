@@ -249,7 +249,7 @@ class BookingItemGroupController extends Controller
                         ->from('booking_items')
                         ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
                         ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
+                            now()->addDays(1)->startOfDay(),
                             now()->addDays(2)->endOfDay()
                         ]);
                 })
