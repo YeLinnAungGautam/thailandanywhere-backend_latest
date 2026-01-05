@@ -250,7 +250,7 @@ class BookingItemGroupController extends Controller
                         ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
                         ->whereBetween('booking_items.service_date', [
                             now()->startOfDay(),
-                            now()->addDays(3)->endOfDay()
+                            now()->addDays(2)->endOfDay()
                         ]);
                 })
                 ->count();
@@ -585,6 +585,12 @@ class BookingItemGroupController extends Controller
             }
             if($request->comment_res){
                 $data['comment_res'] = $request->comment_res;
+            }
+            if($request->fill_comment){
+                $data['fill_comment'] = $request->fill_comment;
+            }
+            if($request->fill_status){
+                $data['fill_status'] = $request->fill_status;
             }
 
             $booking_item_group->update($data);
