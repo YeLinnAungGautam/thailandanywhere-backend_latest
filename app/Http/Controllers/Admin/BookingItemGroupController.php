@@ -122,6 +122,27 @@ class BookingItemGroupController extends Controller
                             });
                         }
                     })
+                    ->when($request->passportFilter, function ($query) use ($request) {
+                        if ($request->passportFilter == 'not_have') {
+                            $query->whereDoesntHave('customerDocuments', function ($q) {
+                                $q->where('type', 'passport');
+                            });
+                        } else if ($request->passportFilter == 'have') {
+                            $query->whereHas('customerDocuments', function ($q) {
+                                $q->where('type', 'passport');
+                            });
+                        }
+                    })
+                    ->when($request->commentFilter, function ($query) use ($request) {
+                        if($request->commentFilter == 'pending') {
+                            $query->where(function($q) {
+                                $q->whereNull('fill_status')
+                                  ->orWhere('fill_status', 'pending');
+                            });
+                        } else {
+                            $query->where('fill_status', $request->commentFilter);
+                        }
+                    })
 
                     ->when($request->vantour_payment_details, function ($query) use ($request) {
                         if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
@@ -284,6 +305,42 @@ class BookingItemGroupController extends Controller
             })
             ->count();
 
+            // Count passport have within next 2 days
+            $passportHave2Days = DB::table('booking_item_groups as big')
+                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('customer_documents')
+                        ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
+                        ->where('customer_documents.type', 'passport');
+                })
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'big.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(2)->endOfDay()
+                        ]);
+                })
+                ->count();
+
+            // Count fill_status not null and not pending within next 2 days
+            $fillStatusNotPending2Days = DB::table('booking_item_groups as big')
+                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereNotNull('big.fill_status')
+                ->where('big.fill_status', '!=', 'pending')
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'big.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->startOfDay(),
+                            now()->addDays(2)->endOfDay()
+                        ]);
+                })
+                ->count();
+
             // Count with booking confirmation letter (service date today or next 3 days) - NOT FILTERED
             $withConfirmationLetter = DB::table('booking_item_groups as big')
                 ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
@@ -317,6 +374,20 @@ class BookingItemGroupController extends Controller
                         ]);
                 })
                 ->count();
+
+            // total next 3 days not include today
+            $totalNext3DaysNotIncludeToday = DB::table('booking_item_groups')
+                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [
+                            now()->addDays(1)->startOfDay(),
+                            now()->addDays(3)->endOfDay()
+                        ]);
+                })->count();
+
             // Total next 3 days booking item groups count - NOT FILTERED
             $totalNext7Days = DB::table('booking_item_groups')
                 ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
@@ -357,74 +428,7 @@ class BookingItemGroupController extends Controller
                     'taxReceipts'
                 ]);
 
-            // Sorting Logic
-            // if ($request->sorting) {
-            //     $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
 
-            //     if ($request->sorting_type == 'product_name') {
-            //         // Sort by product name
-            //         $main_query->joinSub(
-            //             DB::table('booking_items as bi_sort')
-            //                 ->select(
-            //                     'bi_sort.group_id',
-            //                     DB::raw('MIN(CASE
-            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\Hotel" THEN hotels_sort.name
-            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\PrivateVanTour" THEN private_van_tours_sort.name
-            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\GroupTour" THEN group_tours_sort.name
-            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\EntranceTicket" THEN entrance_tickets_sort.name
-            //                         WHEN bi_sort.product_type = "App\\\\Models\\\\Airline" THEN airlines_sort.name
-            //                         ELSE "ZZZ"
-            //                     END) as sort_product_name')
-            //                 )
-            //                 ->leftJoin('hotels as hotels_sort', function($join) {
-            //                     $join->on('bi_sort.product_id', '=', 'hotels_sort.id')
-            //                         ->where('bi_sort.product_type', 'App\Models\Hotel');
-            //                 })
-            //                 ->leftJoin('private_van_tours as private_van_tours_sort', function($join) {
-            //                     $join->on('bi_sort.product_id', '=', 'private_van_tours_sort.id')
-            //                         ->where('bi_sort.product_type', 'App\Models\PrivateVanTour');
-            //                 })
-            //                 ->leftJoin('group_tours as group_tours_sort', function($join) {
-            //                     $join->on('bi_sort.product_id', '=', 'group_tours_sort.id')
-            //                         ->where('bi_sort.product_type', 'App\Models\GroupTour');
-            //                 })
-            //                 ->leftJoin('entrance_tickets as entrance_tickets_sort', function($join) {
-            //                     $join->on('bi_sort.product_id', '=', 'entrance_tickets_sort.id')
-            //                         ->where('bi_sort.product_type', 'App\Models\EntranceTicket');
-            //                 })
-            //                 ->leftJoin('airlines as airlines_sort', function($join) {
-            //                     $join->on('bi_sort.product_id', '=', 'airlines_sort.id')
-            //                         ->where('bi_sort.product_type', 'App\Models\Airline');
-            //                 })
-            //                 ->groupBy('bi_sort.group_id'),
-            //             'product_names_for_sorting',
-            //             function($join) {
-            //                 $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id');
-            //             }
-            //         )
-            //         ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
-            //         ->orderBy('booking_item_groups.id', $sorting);
-            //     } elseif ($request->sorting_type == 'service_date') {
-            //         // Sort by earliest service date
-            //         $main_query->joinSub(
-            //             DB::table('booking_items')
-            //                 ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-            //                 ->groupBy('group_id'),
-            //             'earliest_service_dates',
-            //             function($join) {
-            //                 $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
-            //             }
-            //         )
-            //         ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
-            //         ->orderBy('booking_item_groups.id', $sorting);
-            //     } else {
-            //         // Default sorting by ID
-            //         $main_query->orderBy('booking_item_groups.id', $sorting);
-            //     }
-            // } else {
-            //     // Default sorting when no sorting parameter is provided
-            //     $main_query->orderBy('booking_item_groups.id', 'desc');
-            // }
 
             // Sorting Logic
             if ($request->sorting) {
@@ -508,8 +512,11 @@ class BookingItemGroupController extends Controller
                         'expense_mail_sent' => $expenseMailSent,
                         'customer_fully_paid' => $customerFullyPaid,
                         'total_next_3_days' => $totalNext3Days,
+                        'total_next_3_days_not_today' => $totalNext3DaysNotIncludeToday,
                         'total_next_7_days' => $totalNext7Days,
                         'total_next_2_days' => $totalNext2Days,
+                        'passport_have_2_days' => $passportHave2Days,
+                        'fill_status_not_pending_2_days' => $fillStatusNotPending2Days,
                     ],
                 ])
                 ->response()
