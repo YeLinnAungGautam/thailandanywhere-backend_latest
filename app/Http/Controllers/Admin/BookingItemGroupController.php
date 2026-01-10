@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -18,139 +19,88 @@ class BookingItemGroupController extends Controller
 
     public function index(Request $request)
     {
-        $request->validate((['product_type' => 'required|in:attraction,hotel,private_van_tour']));
+        $request->validate(['product_type' => 'required|in:attraction,hotel,private_van_tour']);
 
         try {
+            $productType = (new BookingItemGroupService)->getModelBy($request->product_type);
+
             // Create base query function to avoid code duplication
-            $buildBaseQuery = function() use ($request) {
+            $buildBaseQuery = function() use ($request, $productType) {
                 return BookingItemGroup::query()
                     ->has('bookingItems')
-                    ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
+                    ->where('booking_item_groups.product_type', $productType)
                     ->when($request->crm_id, function ($query) use ($request) {
-                        $query->whereHas('booking', function ($q) use ($request) {
-                            $q->where('crm_id', $request->crm_id);
-                        });
+                        $query->whereHas('booking', fn($q) => $q->where('crm_id', $request->crm_id));
                     })
                     ->when($request->product_name, function ($query) use ($request) {
                         $query->whereIn('id', function ($q) use ($request) {
                             $q->select('group_id')
                                 ->from('booking_items')
                                 ->whereIn('product_id', function ($subQuery) use ($request) {
-                                    if ($request->product_type == 'attraction') {
-                                        $subQuery->select('id')
-                                            ->from('entrance_tickets')
-                                            ->where('name', 'like', '%' . $request->product_name . '%');
-                                    } elseif ($request->product_type == 'hotel') {
-                                        $subQuery->select('id')
-                                            ->from('hotels')
-                                            ->where('name', 'like', '%' . $request->product_name . '%');
-                                    } elseif ($request->product_type == 'private_van_tour') {
-                                        $subQuery->select('id')
-                                            ->from('private_van_tours')
-                                            ->where('name', 'like', '%' . $request->product_name . '%');
-                                    }
+                                    $table = match($request->product_type) {
+                                        'attraction' => 'entrance_tickets',
+                                        'hotel' => 'hotels',
+                                        'private_van_tour' => 'private_van_tours',
+                                    };
+                                    $subQuery->select('id')
+                                        ->from($table)
+                                        ->where('name', 'like', '%' . $request->product_name . '%');
                                 });
                         });
                     })
                     ->when($request->is_allowment_have, function ($query) {
-                        $query->whereHas('bookingItems', function ($q) {
-                            $q->where('is_allowment_have', 1);
-                        });
+                        $query->whereHas('bookingItems', fn($q) => $q->where('is_allowment_have', 1));
                     })
-                    ->when($request->sent_booking_request,function ($q) use ($request) {
-                        if($request->sent_booking_request == 'sent') {
-                            $q->where('sent_booking_request', 1);
-                        }else if($request->sent_booking_request == 'not_sent') {
-                            $q->where('sent_booking_request', 0);
-                        }
+                    ->when($request->sent_booking_request, function ($q) use ($request) {
+                        $q->where('sent_booking_request', $request->sent_booking_request === 'sent' ? 1 : 0);
                     })
                     ->when($request->booking_request_proof, function ($query) use ($request) {
-                        if ($request->booking_request_proof == 'not_proved') {
-                            $query->whereDoesntHave('customerDocuments', function ($q) {
-                                $q->where('type', 'booking_request_proof');
-                            });
-                        }else if ($request->booking_request_proof == 'proved') {
-                            $query->whereHas('customerDocuments', function ($q) {
-                                $q->where('type', 'booking_request_proof');
-                            });
-                        }
+                        $hasProof = $request->booking_request_proof === 'proved';
+                        $query->{$hasProof ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {
+                            $q->where('type', 'booking_request_proof');
+                        });
                     })
-                    ->when($request->sent_expense_mail,function ($q) use ($request) {
-                        if($request->sent_expense_mail == 'sent') {
-                            $q->where('sent_expense_mail', 1);
-                        }else if($request->sent_expense_mail == 'not_sent') {
-                            $q->where('sent_expense_mail', 0);
-                        }
+                    ->when($request->sent_expense_mail, function ($q) use ($request) {
+                        $q->where('sent_expense_mail', $request->sent_expense_mail === 'sent' ? 1 : 0);
                     })
                     ->when($request->expense_mail_proof, function ($query) use ($request) {
-                        if ($request->expense_mail_proof == 'not_proved') {
-                            $query->whereDoesntHave('customerDocuments', function ($q) {
-                                $q->where('type', 'expense_mail_proof');
-                            });
-                        }else if ($request->expense_mail_proof == 'proved') {
-                            $query->whereHas('customerDocuments', function ($q) {
-                                $q->where('type', 'expense_mail_proof');
-                            });
-                        }
+                        $hasProof = $request->expense_mail_proof === 'proved';
+                        $query->{$hasProof ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {
+                            $q->where('type', 'expense_mail_proof');
+                        });
                     })
-                    ->when($request->have_invoice_mail,function ($q) use ($request) {
-                        if($request->have_invoice_mail == 'sent') {
-                            $q->where('have_invoice_mail', 1);
-                        }else if($request->have_invoice_mail == 'not_sent') {
-                            $q->where('have_invoice_mail', 0);
-                        }
+                    ->when($request->have_invoice_mail, function ($q) use ($request) {
+                        $q->where('have_invoice_mail', $request->have_invoice_mail === 'sent' ? 1 : 0);
                     })
                     ->when($request->invoice_mail_proof, function ($query) use ($request) {
-                        if ($request->invoice_mail_proof == 'not_proved') {
-                            $query->whereDoesntHave('customerDocuments', function ($q) {
-                                $q->where('type', 'invoice_mail_proof');
-                            });
-                        }else if ($request->invoice_mail_proof == 'proved') {
-                            $query->whereHas('customerDocuments', function ($q) {
-                                $q->where('type', 'invoice_mail_proof');
-                            });
-                        }
+                        $hasProof = $request->invoice_mail_proof === 'proved';
+                        $query->{$hasProof ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {
+                            $q->where('type', 'invoice_mail_proof');
+                        });
                     })
                     ->when($request->invoice_status, function ($query) use ($request) {
-                        if ($request->invoice_status == 'not_receive') {
-                            $query->whereDoesntHave('customerDocuments', function ($q) {
-                                $q->where('type', 'booking_confirm_letter');
-                            });
-                        } else if ($request->invoice_status == 'receive') {
-                            $query->whereHas('customerDocuments', function ($q) {
-                                $q->where('type', 'booking_confirm_letter');
-                            });
-                        }
+                        $hasInvoice = $request->invoice_status === 'receive';
+                        $query->{$hasInvoice ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {
+                            $q->where('type', 'booking_confirm_letter');
+                        });
                     })
                     ->when($request->passportFilter, function ($query) use ($request) {
-                        if ($request->passportFilter == 'not_have') {
-                            $query->whereDoesntHave('customerDocuments', function ($q) {
-                                $q->where('type', 'passport');
-                            });
-                        } else if ($request->passportFilter == 'have') {
-                            $query->whereHas('customerDocuments', function ($q) {
-                                $q->where('type', 'passport');
-                            });
-                        }
+                        $hasPassport = $request->passportFilter === 'have';
+                        $query->{$hasPassport ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {
+                            $q->where('type', 'passport');
+                        });
                     })
                     ->when($request->commentFilter, function ($query) use ($request) {
-                        if($request->commentFilter == 'pending') {
-                            $query->where(function($q) {
-                                $q->whereNull('fill_status')
-                                  ->orWhere('fill_status', 'pending');
-                            });
+                        if ($request->commentFilter === 'pending') {
+                            $query->where(fn($q) => $q->whereNull('fill_status')->orWhere('fill_status', 'pending'));
                         } else {
                             $query->where('fill_status', $request->commentFilter);
                         }
                     })
-
-                    ->when($request->vantour_payment_details, function ($query) use ($request) {
-                        if ($request->vantour_payment_details == 'not_have' && $request->product_type == 'private_van_tour') {
-                            $query->whereHas('bookingItems', function ($q) {
-                                $q->whereNull('is_driver_collect');
-                            });
-                        }
+                    ->when($request->vantour_payment_details === 'not_have' && $request->product_type === 'private_van_tour', function ($query) {
+                        $query->whereHas('bookingItems', fn($q) => $q->whereNull('is_driver_collect'));
                     })
+                    // OPTIMIZED: Fixed the performance issue
                     ->when($request->assigned, function ($query) use ($request) {
                         if ($request->assigned == 'not_have' && $request->product_type == 'private_van_tour') {
                             $query->whereHas('bookingItems.reservationCarInfo', function ($q) {
@@ -159,27 +109,67 @@ class BookingItemGroupController extends Controller
                             });
                         }
                     })
-                    ->when($request->findTaxReceipt, function ($query) use ($request) {
-                        if ($request->findTaxReceipt == "not_have_tax") {
-                            $query->whereDoesntHave('taxReceipts');
-                        }
-                        if ($request->findTaxReceipt == "have_tax") {
-                            $query->whereHas('taxReceipts');
+                    ->when($request->filled_status && $request->product_type === 'private_van_tour', function ($query) use ($request) {
+                        $isUnfilled = $request->filled_status === 'unfilled';
+
+                        if ($isUnfilled) {
+                            // Has AT LEAST ONE unfilled item
+                            $query->whereExists(function($q) {
+                                $q->select(DB::raw(1))
+                                    ->from('booking_items')
+                                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                                    ->where(function($subQ) {
+                                        $subQ->whereNull('booking_items.pickup_time')
+                                            ->orWhereNull('booking_items.pickup_location')
+                                            ->orWhereNull('booking_items.route_plan')
+                                            ->orWhereNull('booking_items.contact_number')
+                                            ->orWhere('booking_items.pickup_time', '')
+                                            ->orWhere('booking_items.pickup_location', '')
+                                            ->orWhere('booking_items.route_plan', '')
+                                            ->orWhere('booking_items.contact_number', '');
+                                    });
+                            });
+                        } else {
+                            // ALL items must be filled
+                            $query->whereNotExists(function($q) {
+                                $q->select(DB::raw(1))
+                                    ->from('booking_items')
+                                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                                    ->where(function($subQ) {
+                                        $subQ->whereNull('booking_items.pickup_time')
+                                            ->orWhereNull('booking_items.pickup_location')
+                                            ->orWhereNull('booking_items.route_plan')
+                                            ->orWhereNull('booking_items.contact_number')
+                                            ->orWhere('booking_items.pickup_time', '')
+                                            ->orWhere('booking_items.pickup_location', '')
+                                            ->orWhere('booking_items.route_plan', '')
+                                            ->orWhere('booking_items.contact_number', '');
+                                    });
+                            })
+                            ->whereExists(function($q) {
+                                $q->select(DB::raw(1))
+                                    ->from('booking_items')
+                                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id');
+                            });
                         }
                     })
+                    ->when($request->findTaxReceipt, function ($query) use ($request) {
+                        $hasTax = $request->findTaxReceipt === 'have_tax';
+                        $query->{$hasTax ? 'whereHas' : 'whereDoesntHave'}('taxReceipts');
+                    })
                     ->when($request->expense_item_status, function ($query) use ($request) {
-
-                        if($request->expense_item_status == 'not_fully_paid') {
-                            $query->whereIn('id', function ($q)  {
+                        if ($request->expense_item_status === 'not_fully_paid') {
+                            $query->whereIn('id', function ($q) {
                                 $q->select('group_id')
                                     ->from('booking_items')
-                                    ->where('payment_status','not_paid')
-                                    ->orWhere('payment_status',  'partially_paid')
-                                    ->orWhere('payment_status',  '')
-                                    ->orWhereNull('payment_status');
+                                    ->where(function($subQ) {
+                                        $subQ->where('payment_status', 'not_paid')
+                                            ->orWhere('payment_status', 'partially_paid')
+                                            ->orWhere('payment_status', '')
+                                            ->orWhereNull('payment_status');
+                                    });
                             });
-                        }else if($request->expense_item_status != 'not_fully_paid') {
-
+                        } else {
                             $query->whereIn('id', function ($q) use ($request) {
                                 $q->select('group_id')
                                     ->from('booking_items')
@@ -188,9 +178,7 @@ class BookingItemGroupController extends Controller
                         }
                     })
                     ->when($request->customer_name, function ($query) use ($request) {
-                        $query->whereHas('booking.customer', function ($q) use ($request) {
-                            $q->where('name', 'like', '%' . $request->customer_name . '%');
-                        });
+                        $query->whereHas('booking.customer', fn($q) => $q->where('name', 'like', '%' . $request->customer_name . '%'));
                     })
                     ->when($request->user_id, function ($query) use ($request) {
                         $query->whereHas('booking', function ($q) use ($request) {
@@ -199,36 +187,28 @@ class BookingItemGroupController extends Controller
                         });
                     })
                     ->when($request->payment_status, function ($query) use ($request) {
-                        $operator = $request->payment_status == 'not_fully_paid' ? '!=' : '=';
-                        $status = $request->payment_status == 'not_fully_paid' ? 'fully_paid' : $request->payment_status;
-
-                        $query->whereHas('booking', function ($q) use ($operator, $status) {
-                            $q->where('payment_status', $operator, $status);
-                        });
+                        if ($request->payment_status === 'not_fully_paid') {
+                            // Not fully paid means any status except 'fully_paid'
+                            $query->whereHas('booking', function($q) {
+                                $q->where(function($subQ) {
+                                    $subQ->where('payment_status', '!=', 'fully_paid')
+                                        ->orWhereNull('payment_status');
+                                });
+                            });
+                        } else {
+                            // For specific statuses
+                            $query->whereHas('booking', fn($q) => $q->where('payment_status', $request->payment_status));
+                        }
                     })
-                    // ->when($request->booking_daterange, function ($query) use ($request) {
-                    //     $dates = explode(',', $request->booking_daterange);
-                    //     $dates = array_map('trim', $dates);
-
-                    //     $query->whereHas('bookingItems', function ($q) use ($dates, $request) {
-                    //         if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
-                    //             $q->where('service_date', $dates[0]);
-                    //         } else {
-                    //             $q->whereBetween('service_date', $dates);
-                    //         }
-                    //     });
-                    // })
                     ->when($request->booking_daterange, function ($query) use ($request) {
-                        $dates = explode(',', $request->booking_daterange);
-                        $dates = array_map('trim', $dates);
+                        $dates = array_map('trim', explode(',', $request->booking_daterange));
 
-                        // Join with subquery to get earliest service date per group
                         $query->whereIn('id', function ($q) use ($dates, $request) {
                             $subQuery = DB::table('booking_items')
                                 ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
                                 ->groupBy('group_id');
 
-                            if ($request->product_type === 'private_van_tour' && count($dates) == 1) {
+                            if ($request->product_type === 'private_van_tour' && count($dates) === 1) {
                                 $subQuery->havingRaw('MIN(service_date) = ?', [$dates[0]]);
                             } else {
                                 $subQuery->havingRaw('MIN(service_date) BETWEEN ? AND ?', $dates);
@@ -237,7 +217,6 @@ class BookingItemGroupController extends Controller
                             $q->select('group_id')->fromSub($subQuery, 'filtered_dates');
                         });
                     })
-                    // NEW: Deadline filter
                     ->when($request->deadline_date && $request->deadline_days, function ($query) use ($request) {
                         $query->whereHas('bookingItems', function ($q) use ($request) {
                             $q->whereRaw('DATE_SUB(service_date, INTERVAL ? DAY) = ?', [
@@ -247,285 +226,314 @@ class BookingItemGroupController extends Controller
                         });
                     })
                     ->when(!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor']), function ($query) {
-                        $query->whereHas('booking', function ($q) {
-                            $q->where('created_by', Auth::id())
-                                ->orWhere('past_user_id', Auth::id());
-                        });
+                        $query->whereHas('booking', fn($q) => $q->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id()));
                     });
             };
 
-            // Calculate total sum of all booking items (not paginated)
-            $totalCostPriceSum = DB::table('booking_items')
-                ->whereIn('group_id', function($query) use ($buildBaseQuery) {
-                    $query->select('id')->fromSub($buildBaseQuery(), 'filtered_groups');
-                })
-                ->sum('total_cost_price');
+            // Calculate statistics
+            $stats = $this->calculateStatistics($buildBaseQuery, $productType);
 
-            // Count expense fully paid (service date today or next 3 days) - NOT FILTERED
-            $expenseFullyPaid = DB::table('booking_item_groups')
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->where('expense_status','fully_paid')
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->addDays(1)->startOfDay(),
-                            now()->addDays(2)->endOfDay()
-                        ]);
-                })
-                ->count();
+            // Build main query with relationships
+            $main_query = $buildBaseQuery()->with(['booking', 'bookingItems', 'cashImages', 'taxReceipts']);
 
-            $expenseMailSent = DB::table('booking_item_groups')
-            ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-            ->where('sent_expense_mail', '1')
-            ->whereExists(function($query) {
-                $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                    ->whereBetween('booking_items.service_date', [
-                        now()->startOfDay(),
-                        now()->addDays(3)->endOfDay()
-                    ]);
-            })
-            ->count();
-
-            $customerFullyPaid = DB::table('booking_item_groups')
-            ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-            ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-            ->where('bookings.payment_status', 'fully_paid')
-            ->whereExists(function($query) {
-                $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                    ->whereBetween('booking_items.service_date', [
-                        now()->startOfDay(),
-                        now()->addDays(2)->endOfDay()
-                    ]);
-            })
-            ->count();
-
-            // Count passport have within next 2 days
-            $passportHave2Days = DB::table('booking_item_groups as big')
-                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('customer_documents')
-                        ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
-                        ->where('customer_documents.type', 'passport');
-                })
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'big.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(2)->endOfDay()
-                        ]);
-                })
-                ->count();
-
-            // Count fill_status not null and not pending within next 2 days
-            $fillStatusNotPending2Days = DB::table('booking_item_groups as big')
-                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereNotNull('big.fill_status')
-                ->where('big.fill_status', '!=', 'pending')
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'big.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(2)->endOfDay()
-                        ]);
-                })
-                ->count();
-
-            // Count with booking confirmation letter (service date today or next 3 days) - NOT FILTERED
-            $withConfirmationLetter = DB::table('booking_item_groups as big')
-                ->where('big.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('customer_documents')
-                        ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
-                        ->where('customer_documents.type', 'booking_confirm_letter');
-                })
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'big.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(7)->endOfDay()
-                        ]);
-                })
-                ->count();
-
-            // Total next 3 days booking item groups count - NOT FILTERED
-            $totalNext3Days = DB::table('booking_item_groups')
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(3)->endOfDay()
-                        ]);
-                })
-                ->count();
-
-            // total next 3 days not include today
-            $totalNext3DaysNotIncludeToday = DB::table('booking_item_groups')
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->addDays(1)->startOfDay(),
-                            now()->addDays(3)->endOfDay()
-                        ]);
-                })->count();
-
-            // Total next 3 days booking item groups count - NOT FILTERED
-            $totalNext7Days = DB::table('booking_item_groups')
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(7)->endOfDay()
-                        ]);
-                })
-                ->count();
-            // Total next 3 days booking item groups count - NOT FILTERED
-            $totalNext2Days = DB::table('booking_item_groups')
-                ->where('booking_item_groups.product_type', (new BookingItemGroupService)->getModelBy($request->product_type))
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [
-                            now()->startOfDay(),
-                            now()->addDays(2)->endOfDay()
-                        ]);
-                })
-                ->count();
-
-
-            // Total filtered groups for ratio calculation
-            $totalFilteredGroups = $buildBaseQuery()->count();
-
-            // Build main query for pagination with relationships
-            $main_query = $buildBaseQuery()
-                ->with([
-                    'booking',
-                    'bookingItems',
-                    'cashImages',
-                    'taxReceipts'
-                ]);
-
-
-
-            // Sorting Logic
-            if ($request->sorting) {
-                $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
-
-                if ($request->sorting_type == 'product_name') {
-                    // Sort by product name
-                    $main_query->joinSub(
-                        DB::table('booking_items as bi_sort')
-                            ->select(
-                                'bi_sort.group_id',
-                                DB::raw('MIN(CASE
-                                    WHEN bi_sort.product_type = "App\\\\Models\\\\Hotel" THEN hotels_sort.name
-                                    WHEN bi_sort.product_type = "App\\\\Models\\\\PrivateVanTour" THEN private_van_tours_sort.name
-                                    WHEN bi_sort.product_type = "App\\\\Models\\\\GroupTour" THEN group_tours_sort.name
-                                    WHEN bi_sort.product_type = "App\\\\Models\\\\EntranceTicket" THEN entrance_tickets_sort.name
-                                    WHEN bi_sort.product_type = "App\\\\Models\\\\Airline" THEN airlines_sort.name
-                                    ELSE "ZZZ"
-                                END) as sort_product_name')
-                            )
-                            ->leftJoin('hotels as hotels_sort', function($join) {
-                                $join->on('bi_sort.product_id', '=', 'hotels_sort.id')
-                                    ->where('bi_sort.product_type', 'App\Models\Hotel');
-                            })
-                            ->leftJoin('private_van_tours as private_van_tours_sort', function($join) {
-                                $join->on('bi_sort.product_id', '=', 'private_van_tours_sort.id')
-                                    ->where('bi_sort.product_type', 'App\Models\PrivateVanTour');
-                            })
-                            ->leftJoin('group_tours as group_tours_sort', function($join) {
-                                $join->on('bi_sort.product_id', '=', 'group_tours_sort.id')
-                                    ->where('bi_sort.product_type', 'App\Models\GroupTour');
-                            })
-                            ->leftJoin('entrance_tickets as entrance_tickets_sort', function($join) {
-                                $join->on('bi_sort.product_id', '=', 'entrance_tickets_sort.id')
-                                    ->where('bi_sort.product_type', 'App\Models\EntranceTicket');
-                            })
-                            ->leftJoin('airlines as airlines_sort', function($join) {
-                                $join->on('bi_sort.product_id', '=', 'airlines_sort.id')
-                                    ->where('bi_sort.product_type', 'App\Models\Airline');
-                            })
-                            ->groupBy('bi_sort.group_id'),
-                        'product_names_for_sorting',
-                        function($join) {
-                            $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id');
-                        }
-                    )
-                    ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
-                    ->orderBy('booking_item_groups.id', $sorting);
-                } elseif ($request->sorting_type == 'service_date' || $request->sorting_type == 'firstest_service_date') {
-                    // Sort by earliest (firstest) service date
-                    $main_query->joinSub(
-                        DB::table('booking_items')
-                            ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                            ->groupBy('group_id'),
-                        'earliest_service_dates',
-                        function($join) {
-                            $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id');
-                        }
-                    )
-                    ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
-                    ->orderBy('booking_item_groups.id', $sorting);
-                } else {
-                    // Default sorting by ID
-                    $main_query->orderBy('booking_item_groups.id', $sorting);
-                }
-            } else {
-                // Default sorting when no sorting parameter is provided
-                $main_query->orderBy('booking_item_groups.id', 'desc');
-            }
+            // Apply sorting
+            $this->applySorting($main_query, $request);
 
             $groups = $main_query->paginate($request->get('per_page', 5));
 
-            return $this->success(BookingItemGroupListResource::collection($groups)
-                ->additional([
-                    'meta' => [
-                        'total_page' => (int)ceil($groups->total() / $groups->perPage()),
-                        'total_cost_price_sum' => $totalCostPriceSum,
-                        'expense_not_fully_paid' => $expenseFullyPaid,
-                        'without_confirmation_letter' => $withConfirmationLetter,
-                        'total_filtered_groups' => $totalFilteredGroups,
-                        'expense_mail_sent' => $expenseMailSent,
-                        'customer_fully_paid' => $customerFullyPaid,
-                        'total_next_3_days' => $totalNext3Days,
-                        'total_next_3_days_not_today' => $totalNext3DaysNotIncludeToday,
-                        'total_next_7_days' => $totalNext7Days,
-                        'total_next_2_days' => $totalNext2Days,
-                        'passport_have_2_days' => $passportHave2Days,
-                        'fill_status_not_pending_2_days' => $fillStatusNotPending2Days,
-                    ],
-                ])
-                ->response()
-                ->getData(), 'Group List');
+            return $this->success(
+                BookingItemGroupListResource::collection($groups)
+                    ->additional(['meta' => array_merge($stats, ['total_page' => (int)ceil($groups->total() / $groups->perPage())])])
+                    ->response()
+                    ->getData(),
+                'Group List'
+            );
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage());
         }
     }
 
+    // ... rest of your methods remain the same
+    private function calculateStatistics($buildBaseQuery, $productType)
+    {
+        // Total cost price sum of filtered results
+        $totalCostPriceSum = DB::table('booking_items')
+            ->whereIn('group_id', function($query) use ($buildBaseQuery) {
+                $query->select('id')->fromSub($buildBaseQuery(), 'filtered_groups');
+            })
+            ->sum('total_cost_price');
+
+        // Define common date ranges
+        $today = now()->startOfDay();
+        $next2Days = now()->addDays(2)->endOfDay();
+        $next3Days = now()->addDays(3)->endOfDay();
+        $next7Days = now()->addDays(7)->endOfDay();
+        $next30Days = now()->addDays(30)->endOfDay();
+        $tomorrowStart = now()->addDays(1)->startOfDay();
+
+        // Base query for counting with date ranges
+        $baseCountQuery = function($dateStart, $dateEnd) use ($productType) {
+            return DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->whereExists(function($query) use ($dateStart, $dateEnd) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+                });
+        };
+
+        // Combine multiple counts into fewer queries where possible
+        $stats = [
+            'total_cost_price_sum' => $totalCostPriceSum,
+            'total_filtered_groups' => $buildBaseQuery()->count(),
+
+            // Expense related (tomorrow to day after)
+            'expense_not_fully_paid' => (clone $baseCountQuery($tomorrowStart, $next2Days))
+                ->where('expense_status', 'fully_paid')
+                ->count(),
+
+            // Mail sent counts (today to next 3 days)
+            'expense_mail_sent' => (clone $baseCountQuery($today, $next3Days))
+                ->where('sent_expense_mail', 1)
+                ->count(),
+
+            // Customer payment (today to next 2 days)
+            'customer_fully_paid' => DB::table('booking_item_groups')
+                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                ->where('booking_item_groups.product_type', $productType)
+                ->where('bookings.payment_status', 'fully_paid')
+                ->whereExists(function($query) use ($today, $next2Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next2Days]);
+                })
+                ->count(),
+
+            // Document counts (next 2 days)
+            'passport_have_2_days' => $this->countWithDocument($productType, 'passport', $today, $next2Days),
+
+            'fill_status_not_pending_2_days' => DB::table('booking_item_groups as big')
+                ->where('big.product_type', $productType)
+                ->whereNotNull('big.fill_status')
+                ->where('big.fill_status', '!=', 'pending')
+                ->whereExists(function($query) use ($today, $next2Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'big.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next2Days]);
+                })
+                ->count(),
+
+            // 1. Prove Booking Sent (checks sent_booking_request = 1)
+            'prove_booking_sent_next_30_days' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->where('sent_booking_request', 1)
+                ->whereExists(function($query) use ($today, $next30Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next30Days]);
+                })
+                ->count(),
+
+            // 2. Invoice Mail Sent (checks have_invoice_mail = 1, not the proof document)
+            'invoice_mail_sent_next_7_days' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->where('have_invoice_mail', 1)
+                ->whereExists(function($query) use ($today, $next7Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                })
+                ->count(),
+
+            // 3. Invoice Confirmed (checks for booking_confirm_letter document)
+            'invoice_confirmed_next_7_days' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->whereExists(function($query) {
+                    $query->select(DB::raw(1))
+                        ->from('customer_documents')
+                        ->whereColumn('customer_documents.booking_item_group_id', 'booking_item_groups.id')
+                        ->where('customer_documents.type', 'booking_confirm_letter');
+                })
+                ->whereExists(function($query) use ($today, $next7Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                })
+                ->count(),
+
+            // 4. Expense Mail Sent (checks sent_expense_mail = 1)
+            'expense_mail_sent_next_7_days' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->where('sent_expense_mail', 1)
+                ->whereExists(function($query) use ($today, $next7Days) {
+                    $query->select(DB::raw(1))
+                        ->from('booking_items')
+                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
+                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                })
+                ->count(),
+
+
+            // Confirmation letter (next 7 days)
+            'without_confirmation_letter' => $this->countWithDocument($productType, 'booking_confirm_letter', $today, $next7Days),
+
+            // Total counts for different date ranges
+            'total_next_2_days' => $baseCountQuery($today, $next2Days)->count(),
+            'total_next_3_days' => $baseCountQuery($today, $next3Days)->count(),
+            'total_next_3_days_not_today' => $baseCountQuery($tomorrowStart, $next3Days)->count(),
+            'total_next_7_days' => $baseCountQuery($today, $next7Days)->count(),
+            'total_next_30_days' => $baseCountQuery($today, $next30Days)->count(),
+
+            // Filled and Assigned counts
+            'filled_next_2_days' => $this->countFilledItems($productType, $today, $next2Days),
+            'assigned_driver_next_2_days' => $this->countAssignedDrivers($productType, $today, $next2Days),
+        ];
+
+        return $stats;
+    }
+
+    private function countWithDocument($productType, $documentType, $dateStart, $dateEnd)
+    {
+        return DB::table('booking_item_groups as big')
+            ->where('big.product_type', $productType)
+            ->whereExists(function($query) use ($documentType) {
+                $query->select(DB::raw(1))
+                    ->from('customer_documents')
+                    ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
+                    ->where('customer_documents.type', $documentType);
+            })
+            ->whereExists(function($query) use ($dateStart, $dateEnd) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'big.id')
+                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+            })
+            ->count();
+    }
+
+    private function countFilledItems($productType, $dateStart, $dateEnd)
+    {
+        return DB::table('booking_item_groups as big')
+            ->where('big.product_type', $productType)
+            ->whereNotExists(function($query) use ($dateStart, $dateEnd) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'big.id')
+                    ->where(function($q) {
+                        $q->whereNull('booking_items.pickup_time')
+                            ->orWhereNull('booking_items.pickup_location')
+                            ->orWhereNull('booking_items.route_plan')
+                            ->orWhereNull('booking_items.contact_number')
+                            ->orWhere('booking_items.pickup_time', '')
+                            ->orWhere('booking_items.pickup_location', '')
+                            ->orWhere('booking_items.route_plan', '')
+                            ->orWhere('booking_items.contact_number', '');
+                    })
+                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+            })
+            ->whereExists(function($query) use ($dateStart, $dateEnd) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'big.id')
+                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+            })
+            ->count();
+    }
+
+    private function countAssignedDrivers($productType, $dateStart, $dateEnd)
+    {
+        return DB::table('booking_item_groups as big')
+            ->where('big.product_type', $productType)
+            ->whereNotExists(function($query) use ($dateStart, $dateEnd) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items as bi')
+                    ->whereColumn('bi.group_id', 'big.id')
+                    ->leftJoin('reservation_car_infos as rci', 'rci.booking_item_id', '=', 'bi.id')
+                    ->where(function($q) {
+                        $q->whereNull('rci.id')
+                            ->orWhereNull('rci.supplier_id')
+                            ->orWhereNull('rci.driver_id');
+                    })
+                    ->whereBetween('bi.service_date', [$dateStart, $dateEnd]);
+            })
+            ->whereExists(function($query) use ($dateStart, $dateEnd) {
+                $query->select(DB::raw(1))
+                    ->from('booking_items')
+                    ->whereColumn('booking_items.group_id', 'big.id')
+                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+            })
+            ->count();
+    }
+
+    private function applySorting($query, $request)
+    {
+        if (!$request->sorting) {
+            $query->orderBy('booking_item_groups.id', 'desc');
+            return;
+        }
+
+        $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
+
+        if ($request->sorting_type === 'product_name') {
+            $query->joinSub(
+                DB::table('booking_items as bi_sort')
+                    ->select(
+                        'bi_sort.group_id',
+                        DB::raw('MIN(CASE
+                            WHEN bi_sort.product_type = "App\\\\Models\\\\Hotel" THEN hotels_sort.name
+                            WHEN bi_sort.product_type = "App\\\\Models\\\\PrivateVanTour" THEN private_van_tours_sort.name
+                            WHEN bi_sort.product_type = "App\\\\Models\\\\GroupTour" THEN group_tours_sort.name
+                            WHEN bi_sort.product_type = "App\\\\Models\\\\EntranceTicket" THEN entrance_tickets_sort.name
+                            WHEN bi_sort.product_type = "App\\\\Models\\\\Airline" THEN airlines_sort.name
+                            ELSE "ZZZ"
+                        END) as sort_product_name')
+                    )
+                    ->leftJoin('hotels as hotels_sort', fn($join) =>
+                        $join->on('bi_sort.product_id', '=', 'hotels_sort.id')
+                            ->where('bi_sort.product_type', 'App\Models\Hotel')
+                    )
+                    ->leftJoin('private_van_tours as private_van_tours_sort', fn($join) =>
+                        $join->on('bi_sort.product_id', '=', 'private_van_tours_sort.id')
+                            ->where('bi_sort.product_type', 'App\Models\PrivateVanTour')
+                    )
+                    ->leftJoin('group_tours as group_tours_sort', fn($join) =>
+                        $join->on('bi_sort.product_id', '=', 'group_tours_sort.id')
+                            ->where('bi_sort.product_type', 'App\Models\GroupTour')
+                    )
+                    ->leftJoin('entrance_tickets as entrance_tickets_sort', fn($join) =>
+                        $join->on('bi_sort.product_id', '=', 'entrance_tickets_sort.id')
+                            ->where('bi_sort.product_type', 'App\Models\EntranceTicket')
+                    )
+                    ->leftJoin('airlines as airlines_sort', fn($join) =>
+                        $join->on('bi_sort.product_id', '=', 'airlines_sort.id')
+                            ->where('bi_sort.product_type', 'App\Models\Airline')
+                    )
+                    ->groupBy('bi_sort.group_id'),
+                'product_names_for_sorting',
+                fn($join) => $join->on('booking_item_groups.id', '=', 'product_names_for_sorting.group_id')
+            )
+            ->orderBy('product_names_for_sorting.sort_product_name', $sorting)
+            ->orderBy('booking_item_groups.id', $sorting);
+        } elseif (in_array($request->sorting_type, ['service_date', 'firstest_service_date'])) {
+            $query->joinSub(
+                DB::table('booking_items')
+                    ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                    ->groupBy('group_id'),
+                'earliest_service_dates',
+                fn($join) => $join->on('booking_item_groups.id', '=', 'earliest_service_dates.group_id')
+            )
+            ->orderBy('earliest_service_dates.earliest_service_date', $sorting)
+            ->orderBy('booking_item_groups.id', $sorting);
+        } else {
+            $query->orderBy('booking_item_groups.id', $sorting);
+        }
+    }
 
     public function detail(BookingItemGroup $booking_item_group)
     {
@@ -544,108 +552,28 @@ class BookingItemGroupController extends Controller
         }
     }
 
-    public function update(Request $request,BookingItemGroup $booking_item_group){
+    public function update(Request $request, BookingItemGroup $booking_item_group)
+    {
         try {
-            $data = [];
-            if($request->sent_booking_request){
-                $data['sent_booking_request'] = $request->sent_booking_request;
-            }
-            if($request->sent_expense_mail){
-                $data['sent_expense_mail'] = $request->sent_expense_mail;
-            }
-            if($request->booking_email_sent_date){
-                $data['booking_email_sent_date'] = $request->booking_email_sent_date;
-            }
+            $allowedFields = [
+                'sent_booking_request', 'sent_expense_mail', 'booking_email_sent_date',
+                'expense_email_sent_date', 'expense_method', 'expense_status',
+                'expense_bank_name', 'expense_bank_account', 'expense_total_amount',
+                'confirmation_status', 'confirmation_code', 'have_invoice_mail',
+                'invoice_mail_sent_date', 'comment_sale', 'comment_res',
+                'fill_comment', 'fill_status'
+            ];
 
-            if($request->expense_email_sent_date){
-                $data['expense_email_sent_date'] = $request->expense_email_sent_date;
-            }
-            if($request->expense_method){
-                $data['expense_method'] = $request->expense_method;
-            }
-            if($request->expense_status){
-                $data['expense_status'] = $request->expense_status;
-            }
-            if($request->expense_bank_name){
-                $data['expense_bank_name'] = $request->expense_bank_name;
-            }
-            if($request->expense_bank_account){
-                $data['expense_bank_account'] = $request->expense_bank_account;
-            }
-            if($request->expense_total_amount){
-                $data['expense_total_amount'] = $request->expense_total_amount;
-            }
-            if($request->confirmation_status){
-                $data['confirmation_status'] = $request->confirmation_status;
-            }
-            if($request->confirmation_code){
-                $data['confirmation_code'] = $request->confirmation_code;
-            }
-            if($request->have_invoice_mail){
-                $data['have_invoice_mail'] = $request->have_invoice_mail;
-            }
-            if($request->invoice_mail_sent_date){
-                $data['invoice_mail_sent_date'] = $request->invoice_mail_sent_date;
-            }
-            if($request->comment_sale){
-                $data['comment_sale'] = $request->comment_sale;
-            }
-            if($request->comment_res){
-                $data['comment_res'] = $request->comment_res;
-            }
-            if($request->fill_comment){
-                $data['fill_comment'] = $request->fill_comment;
-            }
-            if($request->fill_status){
-                $data['fill_status'] = $request->fill_status;
-            }
+            $data = $request->only($allowedFields);
 
             $booking_item_group->update($data);
-            return $this->success(new BookingItemGroupDetailResource($booking_item_group), 'Booking Item Group Detail');
+
+            return $this->success(
+                new BookingItemGroupDetailResource($booking_item_group),
+                'Booking Item Group Updated Successfully'
+            );
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
-    }
-
-    // Alternative approach - Add this method to your controller
-
-    private function applySorting($query, $request)
-    {
-        if (!$request->sorting) {
-            return $query->latest();
-        }
-
-        $sorting = $request->sorting === 'asc' ? 'asc' : 'desc';
-
-        if ($request->sort_type == 'az') {
-            // Get product table name
-            $productTable = $this->getProductTableName($request->product_type);
-
-            // Add a subquery to get the first product name for each group
-            $query->addSelect([
-                'first_product_name' => function ($subQuery) use ($productTable) {
-                    $subQuery->select($productTable . '.name')
-                        ->from('booking_items')
-                        ->join($productTable, 'booking_items.product_id', '=', $productTable . '.id')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->orderBy('booking_items.id')
-                        ->limit(1);
-                }
-            ])
-            ->orderBy('first_product_name', $sorting);
-
-        } else {
-            // Sort by earliest service date
-            $query->addSelect([
-                'earliest_service_date' => function ($subQuery) {
-                    $subQuery->selectRaw('MIN(service_date)')
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id');
-                }
-            ])
-            ->orderBy('earliest_service_date', $sorting);
-        }
-
-        return $query;
     }
 }

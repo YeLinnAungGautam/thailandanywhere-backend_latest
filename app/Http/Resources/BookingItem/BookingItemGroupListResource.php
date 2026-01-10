@@ -61,6 +61,7 @@ class BookingItemGroupListResource extends JsonResource
 
             'fill_comment' => $this->fill_comment,
             'fill_status' => $this->fill_status,
+            'is_fully_filled' => $this->isFullyFilled(),
         ];
 
         return $result;
@@ -161,6 +162,33 @@ class BookingItemGroupListResource extends JsonResource
             }
         }
 
+        return true;
+    }
+
+    private function isFullyFilled()
+    {
+        if ($this->product_type !== 'App\Models\PrivateVanTour') {
+            return null; // Not applicable for other product types
+        }
+
+        // Check if group has any booking items
+        if ($this->bookingItems->isEmpty()) {
+            return false;
+        }
+
+        // Check ALL items - if ANY item is unfilled, return false
+        foreach ($this->bookingItems as $item) {
+            if (
+                empty($item->pickup_time) ||
+                empty($item->pickup_location) ||
+                empty($item->route_plan) ||
+                empty($item->contact_number)
+            ) {
+                return false; // Even ONE unfilled item makes the group unfilled
+            }
+        }
+
+        // All items are filled
         return true;
     }
 
