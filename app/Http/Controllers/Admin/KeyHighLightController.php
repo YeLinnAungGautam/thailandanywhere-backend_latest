@@ -24,8 +24,8 @@ class KeyHighLightController extends Controller
         $validator = Validator::make($request->all(), [
             'highlights' => 'required|array|min:1|max:5',
             'highlights.*.title' => 'required|string|max:255',
-            'highlights.*.highlight_type' => 'required|string',
-            'highlights.*.highlight_id' => 'required|integer',
+            'highlights.*.highlightable_type' => 'required|string',
+            'highlights.*.highlightable_id' => 'required|integer',
             'highlights.*.description_mm' => 'required|string',
             'highlights.*.description_en' => 'required|string',
             'highlights.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -47,8 +47,8 @@ class KeyHighLightController extends Controller
                     'title' => $highlightData['title'],
                     'description_mm' => $highlightData['description_mm'],
                     'description_en' => $highlightData['description_en'],
-                    'highlight_type' => $highlightData['highlight_type'],
-                    'highlight_id' => $highlightData['highlight_id'],
+                    'highlightable_type' => $highlightData['highlightable_type'],
+                    'highlightable_id' => $highlightData['highlightable_id'],
                     'order' => $highlightData['order'] ?? null,
                     'is_active' => $highlightData['is_active'] ?? true,
                 ];
@@ -93,8 +93,8 @@ class KeyHighLightController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'description_mm' => 'sometimes|required|string',
             'description_en' => 'sometimes|required|string',
-            'highlight_type' => 'required|string',
-            'highlight_id' => 'required|integer',
+            'highlightable_type' => 'sometimes|required|string',
+            'highlightable_id' => 'sometimes|required|integer',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
@@ -105,7 +105,9 @@ class KeyHighLightController extends Controller
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $data = $request->only(['title', 'description_mm', 'description_en', 'order', 'is_active', 'highlight_type', 'highlight_id']);
+        $data = $request->only(['title', 'description_mm', 'description_en', 'order', 'is_active', 'highlightable_type', 'highlightable_id']);
+
+
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -122,7 +124,7 @@ class KeyHighLightController extends Controller
         $highlight->update($data);
 
 
-        return $this->success('Key highlight updated successfully', $highlight);
+        return $this->success('Key highlight updated successfully', $highlight,201);
     }
 
     public function destroy($id)
@@ -149,7 +151,7 @@ class KeyHighLightController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|integer|exists:good_to_knows,id',
+            'items.*.id' => 'required|integer|exists:key_highlights,id',
             'items.*.order' => 'required|integer',
         ]);
 

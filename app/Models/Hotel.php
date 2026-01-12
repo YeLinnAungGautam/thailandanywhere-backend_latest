@@ -83,19 +83,22 @@ class Hotel extends Model
     public function keyHighlights()
     {
         return $this->morphMany(KeyHighlight::class, 'highlightable')
-            ->ordered(); // order အတိုင်း sort လုပ်ပြီး ပြမယ်
+            ->where('is_active', true)
+            ->orderBy('order', 'asc');
     }
 
     public function goodToKnows()
     {
         return $this->morphMany(GoodToKnow::class, 'knowable')
-            ->ordered();
+            ->where('is_active', true)
+            ->orderBy('order', 'asc');
     }
 
-    public function NearByPlace()
+    public function nearByPlaces() // Changed from NearByPlace to nearByPlaces for consistency
     {
         return $this->morphMany(NearByPlace::class, 'placeable')
-            ->ordered();
+            ->where('is_active', true)
+            ->orderBy('order', 'asc');
     }
 
 }

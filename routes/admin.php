@@ -39,10 +39,13 @@ use App\Http\Controllers\Admin\EntranceTicketVariationController;
 use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\GmailAuthController;
 use App\Http\Controllers\Admin\GmailInboxController;
+use App\Http\Controllers\Admin\GoodToKnowController;
 use App\Http\Controllers\Admin\GroupTourController;
 use App\Http\Controllers\Admin\HotelCategoryController;
 use App\Http\Controllers\Admin\InclusiveController;
 use App\Http\Controllers\Admin\InternalTransferController;
+use App\Http\Controllers\Admin\KeyHighLightController;
+use App\Http\Controllers\Admin\NearByPlaceController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PartnerController;
 use App\Http\Controllers\Admin\PlaceController;
@@ -589,5 +592,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('email-status/bulk-retry', [EmailStatusController::class, 'bulkRetryEmails']);
     Route::get('email-status/stats', [EmailStatusController::class, 'getEmailStatistics']);
 
-
+    # Hotel & Attraction of GoodtoKnow , KeyHighlight & Nearby place
+    Route::apiResource('/good-to-knows', GoodToKnowController::class);
+    Route::put('bluck/good-to-knows/orders', [GoodToKnowController::class, 'updateOrder']);
+    Route::apiResource('/key-highlights', KeyHighLightController::class);
+    Route::put('bluck/key-highlights/orders', [KeyHighLightController::class, 'updateOrder']);
+    Route::apiResource('/nearby-places', NearByPlaceController::class);
+    Route::put('bluck/nearby-places/orders', [NearByPlaceController::class, 'updateOrder']);
 });

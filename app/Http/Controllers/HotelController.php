@@ -222,7 +222,10 @@ class HotelController extends Controller
             'city',
             'contracts',
             'images',
-            'rooms.images'
+            'rooms.images',
+            'keyHighlights',
+            'goodToKnows',
+            'nearByPlaces'
         );
 
         return $this->success(new HotelResource($hotel), 'Hotel Detail', 200);
