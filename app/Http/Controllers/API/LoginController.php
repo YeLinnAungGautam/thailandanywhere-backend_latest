@@ -98,6 +98,35 @@ class LoginController extends Controller
     }
 
     /**
+     * Verify token for Node.js Chat Server
+     */
+    public function verifyToken(Request $request)
+    {
+        try {
+            // Get the authenticated user via Sanctum
+            $query = User::query();
+            $query->where('id', Auth::id());
+            $user = $query->first();
+
+            if (!$user) {
+                return $this->error('', 'Invalid token', 401);
+            }
+
+            // Return user info for Node.js chat
+            return success([
+                'id' => (string) $user->id,
+                'type' => 'user',
+                'name' => $user->name,
+                'email' => $user->email,
+                'profile' => $user->profile ?? null,
+            ], 'Token verified successfully');
+
+        } catch (Exception $e) {
+            return $this->error('', 'Token verification failed: ' . $e->getMessage(), 401);
+        }
+    }
+
+    /**
      * Verify reset token
      */
     public function verifyResetToken(Request $request)

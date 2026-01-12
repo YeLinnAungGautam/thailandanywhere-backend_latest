@@ -63,6 +63,9 @@ class BookingItemGroupController extends Controller
                     ->when($request->sent_expense_mail, function ($q) use ($request) {
                         $q->where('sent_expense_mail', $request->sent_expense_mail === 'sent' ? 1 : 0);
                     })
+                    ->when($request->over_expense_amount, function ($q) use ($request) {
+                        $q->where('total_cost_price', '>', $request->over_expense_amount);
+                    })
                     ->when($request->expense_mail_proof, function ($query) use ($request) {
                         $hasProof = $request->expense_mail_proof === 'proved';
                         $query->{$hasProof ? 'whereHas' : 'whereDoesntHave'}('customerDocuments', function ($q) {

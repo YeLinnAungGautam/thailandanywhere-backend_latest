@@ -101,6 +101,7 @@ use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+
 Route::get('/bookings/{id}/receipt', [BookingController::class, 'printReceipt']);
 // for cedit
 Route::get('/bookings/{id}/credit', [BookingController::class, 'printCredit']);
@@ -131,6 +132,8 @@ Route::get('/super', function () {
 
 
 Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
+    // for nodejs verify token
+    Route::post('/verify-token', [AuthController::class, 'verifyToken']);
     # Dashboard
     Route::get('/sales-report', [ReportController::class, 'salesAmount']);
     Route::get('/sales-count', [ReportController::class, 'salesCount']);
@@ -585,4 +588,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('email-status/{email_log}/retry', [EmailStatusController::class, 'retryEmail']);
     Route::post('email-status/bulk-retry', [EmailStatusController::class, 'bulkRetryEmails']);
     Route::get('email-status/stats', [EmailStatusController::class, 'getEmailStatistics']);
+
+
 });
