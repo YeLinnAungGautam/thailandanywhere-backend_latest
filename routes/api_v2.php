@@ -106,6 +106,8 @@ Route::group([], function () {
     Route::post('login', [LoginController::class, 'login']);
     // Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
 
+
+
     # Reset password
     Route::post('forgot-password', [LoginController::class, 'forgetPassword']);
     Route::post('reset-password', [LoginController::class, 'resetPassword']);
@@ -115,6 +117,8 @@ Route::group([], function () {
     Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
 
     Route::middleware(['auth:sanctum'])->group(function () {
+        // for nodejs verify token
+        Route::post('/verify-token', [LoginController::class, 'verifyToken']);
         Route::post('logout', [LoginController::class, 'logout']);
 
         Route::get('profile', [ProfileController::class, 'show']);

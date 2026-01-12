@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
@@ -71,4 +72,43 @@ class AuthController extends Controller
 
         return $this->success(null, 'Successfully logout for all accounts');
     }
+
+    /**
+     * Verify token for Node.js Chat Server
+     */
+    public function verifyToken(Request $request)
+    {
+        try {
+            // Get the authenticated admin via Sanctum
+            $query = Admin::query();
+            $query->where('id', Auth::id());
+            $admin = $query->first();
+
+            if (!$admin) {
+                return $this->error('', 'Invalid token', 401);
+            }
+
+            // Return admin info for Node.js chat
+            return $this->success([
+                'id' => (string) $admin->id,
+                'type' => 'admin',
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'role' => $admin->role,
+                'first_name' => $admin->first_name,
+                'last_name' => $admin->last_name,
+                'profile' => $admin->profile_picture, // Add this
+                'is_active' => $admin->is_active ?? true,
+            ], 'Token verified successfully');
+
+        } catch (\Exception $e) {
+            Log::error('Token verification failed', [
+                'error' => $e->getMessage(),
+                'token' => $request->bearerToken(),
+            ]);
+
+            return $this->error('', 'Token verification failed', 401);
+        }
+    }
+
 }
