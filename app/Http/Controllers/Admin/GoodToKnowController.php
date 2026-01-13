@@ -130,45 +130,13 @@ class GoodToKnowController extends Controller
     }
 
     /**
-     * Bulk delete good to know items.
-     */
-    public function bulkDestroy(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'required|integer|exists:good_to_knows,id',
-        ]);
-
-        if ($validator->fails()) {
-
-            return $this->error($validator->errors()->first(), 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            GoodToKnow::whereIn('id', $request->ids)->delete();
-
-            DB::commit();
-
-
-            return $this->success('Good to know items deleted successfully', null, 200, count($request->ids));
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-
-            return $this->error('Failed to delete good to know items', 500);
-        }
-    }
-
-    /**
      * Update order of good to know items.
      */
     public function updateOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|integer|exists:good_to_knows,id',
+            'items.*.id' => 'required|integer',
             'items.*.order' => 'required|integer',
         ]);
 

@@ -91,9 +91,15 @@ class HotelResource extends JsonResource
             'latitude' => $this->latitude ?? null,
             'longitude' => $this->longitude ?? null,
 
-            // 'key_hightlight' => $this->keyHighlights(),
-            // 'good_to_know' => $this->goodToKnow(),
-            // 'near_by_places' => $this->NearByPlace(),
+            'key_highlights' => $this->whenLoaded('keyHighlights', function () {
+                return KeyHighLightResource::collection($this->keyHighlights);
+            }),
+            'good_to_knows' => $this->whenLoaded('goodToKnows', function () {
+                return GoodToKnowResource::collection($this->goodToKnows);
+            }),
+            'near_by_places' => $this->whenLoaded('nearByPlaces', function () {
+                return NearByPlaceResource::collection($this->nearByPlaces);
+            }),
         ];
     }
 
