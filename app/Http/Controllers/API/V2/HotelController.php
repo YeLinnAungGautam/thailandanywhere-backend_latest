@@ -106,6 +106,9 @@ class HotelController extends Controller
                 'contracts',
                 'images',
                 'facilities',
+            'keyHighlights',
+            'goodToKnows',
+            'nearByPlaces'
             );
 
             return success(new HotelResource($hotel));
