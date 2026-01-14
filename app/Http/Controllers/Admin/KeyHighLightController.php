@@ -22,7 +22,7 @@ class KeyHighLightController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'highlights' => 'required|array|min:1|max:5',
+            'highlights' => 'required|array|min:1|max:10',
             'highlights.*.title' => 'required|string|max:255',
             'highlights.*.highlightable_type' => 'required|string',
             'highlights.*.highlightable_id' => 'required|integer',
