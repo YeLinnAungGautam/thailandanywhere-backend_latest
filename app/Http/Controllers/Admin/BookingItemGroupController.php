@@ -161,6 +161,7 @@ class BookingItemGroupController extends Controller
                         $query->{$hasTax ? 'whereHas' : 'whereDoesntHave'}('taxReceipts');
                     })
                     ->when($request->expense_item_status, function ($query) use ($request) {
+
                         if ($request->expense_item_status === 'not_fully_paid') {
                             $query->whereIn('id', function ($q) {
                                 $q->select('group_id')
@@ -274,47 +275,77 @@ class BookingItemGroupController extends Controller
         $next30Days = now()->addDays(30)->endOfDay();
         $tomorrowStart = now()->addDays(1)->startOfDay();
 
-        // Base query for counting with date ranges
-        $baseCountQuery = function($dateStart, $dateEnd) use ($productType) {
+        // Helper function to count groups by date range (using MIN service_date)
+        $countGroupsByDateRange = function($dateStart, $dateEnd) use ($productType) {
             return DB::table('booking_item_groups')
                 ->where('product_type', $productType)
                 ->whereExists(function($query) use ($dateStart, $dateEnd) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
-                });
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
+                })
+                ->count();
         };
 
-        // Combine multiple counts into fewer queries where possible
         $stats = [
             'total_cost_price_sum' => $totalCostPriceSum,
             'total_filtered_groups' => $buildBaseQuery()->count(),
 
-            // Expense related (tomorrow to day after)
-            'expense_not_fully_paid' => (clone $baseCountQuery($tomorrowStart, $next2Days))
-                ->where('expense_status', 'fully_paid')
+            // Expense related (tomorrow to day after) - using MIN service_date
+            'expense_not_fully_paid' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
+                ->where('expense_status', '!=', 'fully_paid')
+                ->whereExists(function($query) use ($tomorrowStart, $next2Days) {
+                    $query->select(DB::raw(1))
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$tomorrowStart, $next2Days]);
+                })
                 ->count(),
 
-            // Mail sent counts (today to next 3 days)
-            'expense_mail_sent' => (clone $baseCountQuery($today, $next3Days))
+            // Mail sent counts (today to next 3 days) - using MIN service_date
+            'expense_mail_sent' => DB::table('booking_item_groups')
+                ->where('product_type', $productType)
                 ->where('sent_expense_mail', 1)
+                ->whereExists(function($query) use ($today, $next3Days) {
+                    $query->select(DB::raw(1))
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next3Days]);
+                })
                 ->count(),
 
-            // Customer payment (today to next 2 days)
+            // Customer payment (today to next 2 days) - using MIN service_date
             'customer_fully_paid' => DB::table('booking_item_groups')
                 ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
                 ->where('booking_item_groups.product_type', $productType)
                 ->where('bookings.payment_status', 'fully_paid')
                 ->whereExists(function($query) use ($today, $next2Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next2Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next2Days]);
                 })
                 ->count(),
 
-            // Document counts (next 2 days)
+            // Document counts (next 2 days) - using MIN service_date
             'passport_have_2_days' => $this->countWithDocument($productType, 'passport', $today, $next2Days),
 
             'fill_status_not_pending_2_days' => DB::table('booking_item_groups as big')
@@ -323,37 +354,49 @@ class BookingItemGroupController extends Controller
                 ->where('big.fill_status', '!=', 'pending')
                 ->whereExists(function($query) use ($today, $next2Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'big.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next2Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'big.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next2Days]);
                 })
                 ->count(),
 
-            // 1. Prove Booking Sent (checks sent_booking_request = 1)
+            // Prove Booking Sent (using MIN service_date)
             'prove_booking_sent_next_30_days' => DB::table('booking_item_groups')
                 ->where('product_type', $productType)
                 ->where('sent_booking_request', 1)
                 ->whereExists(function($query) use ($today, $next30Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next30Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next30Days]);
                 })
                 ->count(),
 
-            // 2. Invoice Mail Sent (checks have_invoice_mail = 1, not the proof document)
+            // Invoice Mail Sent (using MIN service_date)
             'invoice_mail_sent_next_7_days' => DB::table('booking_item_groups')
                 ->where('product_type', $productType)
                 ->where('have_invoice_mail', 1)
                 ->whereExists(function($query) use ($today, $next7Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
                 })
                 ->count(),
 
-            // 3. Invoice Confirmed (checks for booking_confirm_letter document)
+            // Invoice Confirmed (using MIN service_date)
             'invoice_confirmed_next_7_days' => DB::table('booking_item_groups')
                 ->where('product_type', $productType)
                 ->whereExists(function($query) {
@@ -364,34 +407,41 @@ class BookingItemGroupController extends Controller
                 })
                 ->whereExists(function($query) use ($today, $next7Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
                 })
                 ->count(),
 
-            // 4. Expense Mail Sent (checks sent_expense_mail = 1)
+            // Expense Mail Sent (using MIN service_date)
             'expense_mail_sent_next_7_days' => DB::table('booking_item_groups')
                 ->where('product_type', $productType)
                 ->where('sent_expense_mail', 1)
                 ->whereExists(function($query) use ($today, $next7Days) {
                     $query->select(DB::raw(1))
-                        ->from('booking_items')
-                        ->whereColumn('booking_items.group_id', 'booking_item_groups.id')
-                        ->whereBetween('booking_items.service_date', [$today, $next7Days]);
+                        ->from(function($subQuery) {
+                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                                ->from('booking_items')
+                                ->groupBy('group_id');
+                        }, 'earliest_dates')
+                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
+                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
                 })
                 ->count(),
-
 
             // Confirmation letter (next 7 days)
             'without_confirmation_letter' => $this->countWithDocument($productType, 'booking_confirm_letter', $today, $next7Days),
 
-            // Total counts for different date ranges
-            'total_next_2_days' => $baseCountQuery($today, $next2Days)->count(),
-            'total_next_3_days' => $baseCountQuery($today, $next3Days)->count(),
-            'total_next_3_days_not_today' => $baseCountQuery($tomorrowStart, $next3Days)->count(),
-            'total_next_7_days' => $baseCountQuery($today, $next7Days)->count(),
-            'total_next_30_days' => $baseCountQuery($today, $next30Days)->count(),
+            // Total counts for different date ranges (using MIN service_date)
+            'total_next_2_days' => $countGroupsByDateRange($today, $next2Days),
+            'total_next_3_days' => $countGroupsByDateRange($today, $next3Days),
+            'total_next_3_days_not_today' => $countGroupsByDateRange($tomorrowStart, $next3Days),
+            'total_next_7_days' => $countGroupsByDateRange($today, $next7Days),
+            'total_next_30_days' => $countGroupsByDateRange($today, $next30Days),
 
             // Filled and Assigned counts
             'filled_next_2_days' => $this->countFilledItems($productType, $today, $next2Days),
@@ -413,9 +463,13 @@ class BookingItemGroupController extends Controller
             })
             ->whereExists(function($query) use ($dateStart, $dateEnd) {
                 $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'big.id')
-                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+                    ->from(function($subQuery) {
+                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                            ->from('booking_items')
+                            ->groupBy('group_id');
+                    }, 'earliest_dates')
+                    ->whereColumn('earliest_dates.group_id', 'big.id')
+                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
             })
             ->count();
     }
@@ -437,14 +491,17 @@ class BookingItemGroupController extends Controller
                             ->orWhere('booking_items.pickup_location', '')
                             ->orWhere('booking_items.route_plan', '')
                             ->orWhere('booking_items.contact_number', '');
-                    })
-                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+                    });
             })
             ->whereExists(function($query) use ($dateStart, $dateEnd) {
                 $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'big.id')
-                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+                    ->from(function($subQuery) {
+                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                            ->from('booking_items')
+                            ->groupBy('group_id');
+                    }, 'earliest_dates')
+                    ->whereColumn('earliest_dates.group_id', 'big.id')
+                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
             })
             ->count();
     }
@@ -453,7 +510,7 @@ class BookingItemGroupController extends Controller
     {
         return DB::table('booking_item_groups as big')
             ->where('big.product_type', $productType)
-            ->whereNotExists(function($query) use ($dateStart, $dateEnd) {
+            ->whereNotExists(function($query) {
                 $query->select(DB::raw(1))
                     ->from('booking_items as bi')
                     ->whereColumn('bi.group_id', 'big.id')
@@ -462,14 +519,17 @@ class BookingItemGroupController extends Controller
                         $q->whereNull('rci.id')
                             ->orWhereNull('rci.supplier_id')
                             ->orWhereNull('rci.driver_id');
-                    })
-                    ->whereBetween('bi.service_date', [$dateStart, $dateEnd]);
+                    });
             })
             ->whereExists(function($query) use ($dateStart, $dateEnd) {
                 $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'big.id')
-                    ->whereBetween('booking_items.service_date', [$dateStart, $dateEnd]);
+                    ->from(function($subQuery) {
+                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                            ->from('booking_items')
+                            ->groupBy('group_id');
+                    }, 'earliest_dates')
+                    ->whereColumn('earliest_dates.group_id', 'big.id')
+                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
             })
             ->count();
     }
@@ -564,7 +624,7 @@ class BookingItemGroupController extends Controller
                 'expense_bank_name', 'expense_bank_account', 'expense_total_amount',
                 'confirmation_status', 'confirmation_code', 'have_invoice_mail',
                 'invoice_mail_sent_date', 'comment_sale', 'comment_res',
-                'fill_comment', 'fill_status'
+                'fill_comment', 'fill_status', 'comment_reserve'
             ];
 
             $data = $request->only($allowedFields);

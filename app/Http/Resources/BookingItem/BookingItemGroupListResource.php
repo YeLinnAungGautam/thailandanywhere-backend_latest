@@ -58,6 +58,7 @@ class BookingItemGroupListResource extends JsonResource
 
             'comment_sale' => $this->comment_sale,
             'comment_res' => $this->comment_res,
+            'comment_reserve' => $this->comment_reserve,
 
             'fill_comment' => $this->fill_comment,
             'fill_status' => $this->fill_status,
