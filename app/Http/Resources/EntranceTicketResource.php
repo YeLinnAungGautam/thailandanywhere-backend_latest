@@ -59,6 +59,13 @@ class EntranceTicketResource extends JsonResource
 
             'created_at' => $this->created_at ? $this->created_at->format('d-m-Y H:i:s') : null,
             'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
+
+            'key_highlights' => $this->whenLoaded('keyHighlights', function () {
+                return KeyHighLightResource::collection($this->keyHighlights);
+            }),
+            'good_to_knows' => $this->whenLoaded('goodToKnows', function () {
+                return GoodToKnowResource::collection($this->goodToKnows);
+            }),
         ];
     }
 

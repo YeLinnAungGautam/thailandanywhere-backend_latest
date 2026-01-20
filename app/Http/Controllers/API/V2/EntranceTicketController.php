@@ -61,7 +61,8 @@ class EntranceTicketController extends Controller
             return notFoundMessage();
         }
 
-        $entrance_ticket->load('tags', 'cities', 'categories', 'images', 'contracts', 'variations');
+        $entrance_ticket->load('tags', 'cities', 'categories', 'images', 'contracts', 'variations','keyHighlights',
+        'goodToKnows');
 
         return success(new EntranceTicketResource($entrance_ticket));
     }
