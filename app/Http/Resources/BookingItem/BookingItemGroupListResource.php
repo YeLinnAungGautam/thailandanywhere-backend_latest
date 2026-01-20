@@ -68,6 +68,7 @@ class BookingItemGroupListResource extends JsonResource
         return $result;
     }
 
+
     private function transformedItems()
     {
         return $this->bookingItems->map(function ($item) {
