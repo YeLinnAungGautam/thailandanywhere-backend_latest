@@ -160,7 +160,8 @@ class EntranceTicketController extends Controller
      */
     public function show(string $id)
     {
-        $find = EntranceTicket::find($id);
+        $find = EntranceTicket::with(['keyHighlights',
+        'goodToKnows'])->where('id', $id)->first();
         if (!$find) {
             return $this->error(null, 'Data not found', 404);
         }
