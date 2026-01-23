@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProductAvailableScheduleRequest;
 use App\Http\Resources\ProductAvailableScheduleResource;
+use App\Models\Admin;
 use App\Models\EntranceTicket;
 use App\Models\Hotel;
 use App\Models\ProductAvailableSchedule;
@@ -54,24 +55,20 @@ class ProductAvailableScheduleController extends Controller
             $query = ProductAvailableSchedule::query()
                 ->select(
                     'created_by',
-                    DB::raw('COUNT(*) as total_bookings'),
-                    DB::raw('SUM(quantity) as total_quantity'),
-                    DB::raw('SUM(child_qty) as total_child_qty')
+                    'ownerable_type',
+                    DB::raw('COUNT(*) as count')
                 )
-                ->with('createdBy:id,name,email')
                 ->whereNotNull('created_by');
 
             if ($request->period_type === 'day') {
-                // Filter by specific day
                 $query->whereDate('created_at', $request->date);
             } elseif ($request->period_type === 'month') {
-                // Filter by month and year from the provided date
                 $date = \Carbon\Carbon::parse($request->date);
                 $query->whereYear('created_at', $date->year)
                       ->whereMonth('created_at', $date->month);
             }
 
-            // Optional filters
+            // Optional filter by specific product type
             if ($request->has('product_type')) {
                 if ($request->product_type === 'hotel') {
                     $query->where('ownerable_type', Hotel::class);
@@ -80,23 +77,58 @@ class ProductAvailableScheduleController extends Controller
                 }
             }
 
-            if ($request->has('status')) {
-                $query->where('status', $request->status);
+            $results = $query->groupBy('created_by', 'ownerable_type')
+                ->orderBy('created_by')
+                ->get();
+
+            // Group by user and calculate totals
+            $userStats = [];
+
+            foreach ($results as $result) {
+                $userId = $result->created_by;
+
+                if (!isset($userStats[$userId])) {
+                    $userStats[$userId] = [
+                        'user_id' => $userId,
+                        'user' => null,
+                        'hotel_count' => 0,
+                        'entrance_ticket_count' => 0,
+                        'other_count' => 0,
+                        'total_count' => 0,
+                    ];
+                }
+
+                // Categorize by product type
+                if ($result->ownerable_type === 'App\\Models\\Hotel') {
+                    $userStats[$userId]['hotel_count'] = $result->count;
+                } elseif ($result->ownerable_type === 'App\\Models\\EntranceTicket') {
+                    $userStats[$userId]['entrance_ticket_count'] = $result->count;
+                } else {
+                    $userStats[$userId]['other_count'] += $result->count;
+                }
+
+                $userStats[$userId]['total_count'] += $result->count;
             }
 
-            $rankings = $query->groupBy('created_by')
-                ->orderByDesc('total_bookings')
-                ->get()
-                ->map(function ($item, $index) {
-                    return [
-                        'rank' => $index + 1,
-                        'user_id' => $item->created_by,
-                        'user_name' => $item->createdBy->name ?? 'Unknown',
-                        'user_email' => $item->createdBy->email ?? null,
-                        'total_bookings' => $item->total_bookings,
-                        'total_quantity' => $item->total_quantity,
-                        'total_child_qty' => $item->total_child_qty,
+            // Load user information
+            $userIds = array_keys($userStats);
+            $users = Admin::whereIn('id', $userIds)->get()->keyBy('id');
+
+            foreach ($userStats as $userId => &$stats) {
+                if (isset($users[$userId])) {
+                    $stats['user'] = [
+                        'name' => $users[$userId]->name,
+                        'email' => $users[$userId]->email,
                     ];
+                }
+            }
+
+            // Sort by total count and add rank
+            $rankings = collect($userStats)
+                ->sortByDesc('total_count')
+                ->values()
+                ->map(function ($item, $index) {
+                    return array_merge(['rank' => $index + 1], $item);
                 });
 
             return response()->json([
