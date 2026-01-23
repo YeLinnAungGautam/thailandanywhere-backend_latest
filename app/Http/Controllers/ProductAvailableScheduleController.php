@@ -43,6 +43,76 @@ class ProductAvailableScheduleController extends Controller
         return ProductAvailableScheduleResource::collection($schedules)->additional(['result' => 1, 'message' => 'success']);
     }
 
+    public function creatorRankings(Request $request)
+    {
+        try {
+            $request->validate([
+                'period_type' => 'required|in:day,month',
+                'date' => 'required|date',
+            ]);
+
+            $query = ProductAvailableSchedule::query()
+                ->select(
+                    'created_by',
+                    DB::raw('COUNT(*) as total_bookings'),
+                    DB::raw('SUM(quantity) as total_quantity'),
+                    DB::raw('SUM(child_qty) as total_child_qty')
+                )
+                ->with('createdBy:id,name,email')
+                ->whereNotNull('created_by');
+
+            if ($request->period_type === 'day') {
+                // Filter by specific day
+                $query->whereDate('created_at', $request->date);
+            } elseif ($request->period_type === 'month') {
+                // Filter by month and year from the provided date
+                $date = \Carbon\Carbon::parse($request->date);
+                $query->whereYear('created_at', $date->year)
+                      ->whereMonth('created_at', $date->month);
+            }
+
+            // Optional filters
+            if ($request->has('product_type')) {
+                if ($request->product_type === 'hotel') {
+                    $query->where('ownerable_type', Hotel::class);
+                } elseif ($request->product_type === 'entrance_ticket') {
+                    $query->where('ownerable_type', EntranceTicket::class);
+                }
+            }
+
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $rankings = $query->groupBy('created_by')
+                ->orderByDesc('total_bookings')
+                ->get()
+                ->map(function ($item, $index) {
+                    return [
+                        'rank' => $index + 1,
+                        'user_id' => $item->created_by,
+                        'user_name' => $item->createdBy->name ?? 'Unknown',
+                        'user_email' => $item->createdBy->email ?? null,
+                        'total_bookings' => $item->total_bookings,
+                        'total_quantity' => $item->total_quantity,
+                        'total_child_qty' => $item->total_child_qty,
+                    ];
+                });
+
+            return response()->json([
+                'result' => 1,
+                'message' => 'success',
+                'period_type' => $request->period_type,
+                'date' => $request->date,
+                'data' => $rankings
+            ]);
+
+        } catch (Exception $e) {
+            Log::error($e);
+            return fail($e->getMessage());
+        }
+    }
+
     public function store(ProductAvailableScheduleRequest $request)
     {
         try {

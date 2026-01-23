@@ -380,7 +380,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Product Available Schedule
     Route::put('product-available-schedules/bulk/change-status', [ProductAvailableScheduleController::class, 'changeStatus']);
     Route::apiResource('product-available-schedules', ProductAvailableScheduleController::class);
-
+    Route::get('product-schedules/creator-rankings', [ProductAvailableScheduleController::class, 'creatorRankings']);
 
     # Attraction Activities
     Route::apiResource('attraction-activities', AttractionActivityController::class);
