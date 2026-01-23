@@ -43,6 +43,17 @@ class HotelController extends Controller
                         ->where('room_price', '<=', $max_price);
                 });
             })
+            ->when($request->price_range, function ($q) use ($request) {
+                $prices = explode('-', $request->price_range);
+
+                $q->whereIn('id', function ($q1) use ($request, $prices) {
+                    $q1->select('hotel_id')
+                        ->from('rooms')
+                        ->where('is_extra', 0)
+                        ->groupBy('hotel_id')
+                        ->havingRaw('MIN(room_price) BETWEEN ? AND ?', $prices);
+                });
+            })
             ->when($city_id, function ($c_query) use ($city_id) {
                 $c_query->where('city_id', $city_id);
             })
@@ -68,11 +79,13 @@ class HotelController extends Controller
             ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
 
         $data = $query->paginate($limit);
+        $totalAllHotels = Hotel::count();
 
         return $this->success(HotelResource::collection($data)
             ->additional([
                 'meta' => [
                     'total_page' => (int) ceil($data->total() / $data->perPage()),
+                    'total_count' => $totalAllHotels
                 ],
             ])
             ->response()
