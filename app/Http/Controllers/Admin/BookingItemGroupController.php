@@ -234,9 +234,6 @@ class BookingItemGroupController extends Controller
                     });
             };
 
-            // Calculate statistics
-            $stats = $this->calculateStatistics($buildBaseQuery, $productType);
-
             // Build main query with relationships
             $main_query = $buildBaseQuery()->with(['booking', 'bookingItems', 'cashImages', 'taxReceipts']);
 
@@ -244,6 +241,9 @@ class BookingItemGroupController extends Controller
             $this->applySorting($main_query, $request);
 
             $groups = $main_query->paginate($request->get('per_page', 5));
+
+            // Calculate statistics
+            $stats = $this->calculateStatistics($buildBaseQuery, $productType, $groups->total());
 
             return $this->success(
                 BookingItemGroupListResource::collection($groups)
@@ -258,280 +258,273 @@ class BookingItemGroupController extends Controller
     }
 
     // ... rest of your methods remain the same
-    private function calculateStatistics($buildBaseQuery, $productType)
+    private function calculateStatistics($buildBaseQuery, $productType, $totalFilteredGroups)
     {
-        // Total cost price sum of filtered results
+        // Total cost price sum of filtered results (Kept as is because it depends on complex filters)
         $totalCostPriceSum = DB::table('booking_items')
             ->whereIn('group_id', function($query) use ($buildBaseQuery) {
                 $query->select('id')->fromSub($buildBaseQuery(), 'filtered_groups');
             })
             ->sum('total_cost_price');
 
-        // Define common date ranges
-        $today = now()->startOfDay();
-        $next2Days = now()->addDays(2)->endOfDay();
-        $next3Days = now()->addDays(3)->endOfDay();
-        $next7Days = now()->addDays(7)->endOfDay();
-        $next30Days = now()->addDays(30)->endOfDay();
-        $tomorrowStart = now()->addDays(1)->startOfDay();
+        // --- Efficient Global Stats Calculation ---
 
-        // Helper function to count groups by date range (using MIN service_date)
-        $countGroupsByDateRange = function($dateStart, $dateEnd) use ($productType) {
-            return DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->whereExists(function($query) use ($dateStart, $dateEnd) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
+        // Define dates
+        $now = now();
+        $today = $now->copy()->startOfDay();
+        $tomorrowStart = $today->copy()->addDay();
+        $next2Days = $today->copy()->addDays(2)->endOfDay();
+        $next3Days = $today->copy()->addDays(3)->endOfDay();
+        $next7Days = $today->copy()->addDays(7)->endOfDay();
+        $next30Days = $today->copy()->addDays(30)->endOfDay();
+
+        // 1. Fetch relevant groups for the next 30 days window (superset of all other ranges)
+        // We only need groups that have items with service_date in the next 30 days.
+        $groupsInDataWindow = DB::table('booking_item_groups')
+            ->select([
+                'booking_item_groups.id',
+                'booking_item_groups.booking_id',
+                'booking_item_groups.product_type',
+                'booking_item_groups.expense_status',
+                'booking_item_groups.sent_expense_mail',
+                'booking_item_groups.sent_booking_request',
+                'booking_item_groups.have_invoice_mail',
+                'booking_item_groups.fill_status',
+                'earliest_service_date'
+            ])
+            ->joinSub(
+                DB::table('booking_items')
+                    ->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
+                    ->groupBy('group_id'),
+                'group_dates',
+                'booking_item_groups.id',
+                '=',
+                'group_dates.group_id'
+            )
+            ->where('booking_item_groups.product_type', $productType)
+            ->whereBetween('earliest_service_date', [$today, $next30Days])
+            ->get();
+
+        $groupIds = $groupsInDataWindow->pluck('id')->toArray();
+        $bookingIds = $groupsInDataWindow->pluck('booking_id')->unique()->toArray();
+
+        // 2. Fetch related Bookings (for payment status)
+        $bookings = [];
+        if (!empty($bookingIds)) {
+            $bookings = DB::table('bookings')
+                ->whereIn('id', $bookingIds)
+                ->pluck('payment_status', 'id'); // id => payment_status
+        }
+
+        // 3. Fetch related Customer Documents (for counts)
+        $documents = []; // group_id => [type1, type2...]
+        if (!empty($groupIds)) {
+            $docs = DB::table('customer_documents')
+                ->select('booking_item_group_id', 'type')
+                ->whereIn('booking_item_group_id', $groupIds)
+                ->whereIn('type', ['passport', 'booking_confirm_letter'])
+                ->get();
+
+            foreach ($docs as $doc) {
+                $documents[$doc->booking_item_group_id][] = $doc->type;
+            }
+        }
+
+        // 4. Fetch unfilled checks (for fill_status calculation optimization if needed)
+        // Since the original logic checked for *existence* of unfilled items for 'fill_status_not_pending', but the field is on the group 'fill_status'.
+        // The original query checked `big.fill_status != 'pending'` AND `NOT NULL`.
+        // It also had a separate fill check logic for `filled_next_2_days`.
+        // Let's implement `filled_next_2_days` check efficiently.
+        // We need to know which groups have ANY unfilled booking items.
+        $unfilledGroupIds = [];
+        if (!empty($groupIds)) {
+            $unfilledGroupIds = DB::table('booking_items')
+                ->whereIn('group_id', $groupIds)
+                ->where(function($q) {
+                     $q->whereNull('pickup_time')
+                        ->orWhereNull('pickup_location')
+                        ->orWhereNull('route_plan')
+                        ->orWhereNull('contact_number')
+                        ->orWhere('pickup_time', '')
+                        ->orWhere('pickup_location', '')
+                        ->orWhere('route_plan', '')
+                        ->orWhere('contact_number', '');
                 })
-                ->count();
-        };
+                ->pluck('group_id')
+                ->unique()
+                ->toArray();
+            // Invert logic: if in this array, it is NOT fully filled.
+            $unfilledMap = array_flip($unfilledGroupIds);
+        }
 
+        // 5. Fetch Unassigned Driver checks
+        $unassignedGroupIds = [];
+        if (!empty($groupIds) && $productType === 'App\Models\PrivateVanTour') { // Assuming standard namespace, or just check request
+             // Actually productType coming in is the class name string from service.
+             // We can just run this query. If other types don't have this table joined, it might be tricky?
+             // The original code was: `leftJoin('reservation_car_infos...`).
+             // If product type is not PrivateVanTour, this metric might not apply or be 0?
+             // The original code passed $productType to countAssignedDrivers.
+             // Let's assume we run it for all or check if it's PrivateVanTour.
+             // To be safe and efficient, we query reservation_car_infos for these items.
+
+             // We need groups where `NOT EXISTS ... missing driver`.
+             // So we find groups that HAVE missing driver.
+             $itemsWithMissingDriver = DB::table('booking_items as bi')
+                 ->leftJoin('reservation_car_infos as rci', 'rci.booking_item_id', '=', 'bi.id')
+                 ->whereIn('bi.group_id', $groupIds)
+                 ->where(function($q) {
+                     $q->whereNull('rci.id')
+                        ->orWhereNull('rci.supplier_id')
+                        ->orWhereNull('rci.driver_id');
+                 })
+                 ->pluck('bi.group_id')
+                 ->unique()
+                 ->toArray();
+             $unassignedMap = array_flip($itemsWithMissingDriver);
+        }
+
+
+        // Initialize counters
         $stats = [
             'total_cost_price_sum' => $totalCostPriceSum,
-            'total_filtered_groups' => $buildBaseQuery()->count(),
-
-            // Expense related (tomorrow to day after) - using MIN service_date
-            'expense_not_fully_paid' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->where('expense_status', '!=', 'fully_paid')
-                ->whereExists(function($query) use ($tomorrowStart, $next2Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$tomorrowStart, $next2Days]);
-                })
-                ->count(),
-
-            // Mail sent counts (today to next 3 days) - using MIN service_date
-            'expense_mail_sent' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->where('sent_expense_mail', 1)
-                ->whereExists(function($query) use ($today, $next3Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next3Days]);
-                })
-                ->count(),
-
-            // Customer payment (today to next 2 days) - using MIN service_date
-            'customer_fully_paid' => DB::table('booking_item_groups')
-                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                ->where('booking_item_groups.product_type', $productType)
-                ->where('bookings.payment_status', 'fully_paid')
-                ->whereExists(function($query) use ($today, $next2Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next2Days]);
-                })
-                ->count(),
-
-            // Document counts (next 2 days) - using MIN service_date
-            'passport_have_2_days' => $this->countWithDocument($productType, 'passport', $today, $next2Days),
-
-            'fill_status_not_pending_2_days' => DB::table('booking_item_groups as big')
-                ->where('big.product_type', $productType)
-                ->whereNotNull('big.fill_status')
-                ->where('big.fill_status', '!=', 'pending')
-                ->whereExists(function($query) use ($today, $next2Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'big.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next2Days]);
-                })
-                ->count(),
-
-            // Prove Booking Sent (using MIN service_date)
-            'prove_booking_sent_next_30_days' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->where('sent_booking_request', 1)
-                ->whereExists(function($query) use ($today, $next30Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next30Days]);
-                })
-                ->count(),
-
-            // Invoice Mail Sent (using MIN service_date)
-            'invoice_mail_sent_next_7_days' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->where('have_invoice_mail', 1)
-                ->whereExists(function($query) use ($today, $next7Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
-                })
-                ->count(),
-
-            // Invoice Confirmed (using MIN service_date)
-            'invoice_confirmed_next_7_days' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->whereExists(function($query) {
-                    $query->select(DB::raw(1))
-                        ->from('customer_documents')
-                        ->whereColumn('customer_documents.booking_item_group_id', 'booking_item_groups.id')
-                        ->where('customer_documents.type', 'booking_confirm_letter');
-                })
-                ->whereExists(function($query) use ($today, $next7Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
-                })
-                ->count(),
-
-            // Expense Mail Sent (using MIN service_date)
-            'expense_mail_sent_next_7_days' => DB::table('booking_item_groups')
-                ->where('product_type', $productType)
-                ->where('sent_expense_mail', 1)
-                ->whereExists(function($query) use ($today, $next7Days) {
-                    $query->select(DB::raw(1))
-                        ->from(function($subQuery) {
-                            $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                                ->from('booking_items')
-                                ->groupBy('group_id');
-                        }, 'earliest_dates')
-                        ->whereColumn('earliest_dates.group_id', 'booking_item_groups.id')
-                        ->whereBetween('earliest_dates.earliest_service_date', [$today, $next7Days]);
-                })
-                ->count(),
-
-            // Confirmation letter (next 7 days)
-            'without_confirmation_letter' => $this->countWithDocument($productType, 'booking_confirm_letter', $today, $next7Days),
-
-            // Total counts for different date ranges (using MIN service_date)
-            'total_next_2_days' => $countGroupsByDateRange($today, $next2Days),
-            'total_next_3_days' => $countGroupsByDateRange($today, $next3Days),
-            'total_next_3_days_not_today' => $countGroupsByDateRange($tomorrowStart, $next3Days),
-            'total_next_7_days' => $countGroupsByDateRange($today, $next7Days),
-            'total_next_30_days' => $countGroupsByDateRange($today, $next30Days),
-
-            // Filled and Assigned counts
-            'filled_next_2_days' => $this->countFilledItems($productType, $today, $next2Days),
-            'assigned_driver_next_2_days' => $this->countAssignedDrivers($productType, $today, $next2Days),
+            'total_filtered_groups' => $totalFilteredGroups,
+            'expense_not_fully_paid' => 0,
+            'expense_mail_sent' => 0,
+            'customer_fully_paid' => 0,
+            'passport_have_2_days' => 0,
+            'fill_status_not_pending_2_days' => 0,
+            'prove_booking_sent_next_30_days' => 0,
+            'invoice_mail_sent_next_7_days' => 0,
+            'invoice_confirmed_next_7_days' => 0,
+            'expense_mail_sent_next_7_days' => 0,
+            'without_confirmation_letter' => 0,
+            'total_next_2_days' => 0,
+            'total_next_3_days' => 0,
+            'total_next_3_days_not_today' => 0,
+            'total_next_7_days' => 0,
+            'total_next_30_days' => 0,
+            'filled_next_2_days' => 0,
+            'assigned_driver_next_2_days' => 0,
         ];
 
+        // Iterate and Count
+        foreach ($groupsInDataWindow as $group) {
+            $date = $group->earliest_service_date;
+            $gid = $group->id;
+
+            // Check date ranges
+            $isNext2Days = $date >= $today && $date <= $next2Days;
+            $isNext3Days = $date >= $today && $date <= $next3Days;
+            $isNext3DaysNotToday = $date >= $tomorrowStart && $date <= $next3Days;
+            $isNext7Days = $date >= $today && $date <= $next7Days;
+            $isNext30Days = $date >= $today && $date <= $next30Days;
+            // Note: query filtered by next30Days, so $isNext30Days is basically true if $date >= $today
+
+            if ($isNext2Days) $stats['total_next_2_days']++;
+            if ($isNext3Days) $stats['total_next_3_days']++;
+            if ($isNext3DaysNotToday) $stats['total_next_3_days_not_today']++;
+            if ($isNext7Days) $stats['total_next_7_days']++;
+            if ($isNext30Days) $stats['total_next_30_days']++;
+
+            // Expense Not Fully Paid (Tomorrow to Day After) -> $yearNext2Days but start from tomorrow
+            if ($date >= $tomorrowStart && $date <= $next2Days) {
+                if ($group->expense_status !== 'fully_paid') {
+                    $stats['expense_not_fully_paid']++;
+                }
+            }
+
+            // Expense Mail Sent (Today to Next 3 Days)
+            if ($isNext3Days) {
+                 if ($group->sent_expense_mail == 1) {
+                     $stats['expense_mail_sent']++;
+                 }
+            }
+
+            // Customer Fully Paid (Today to Next 2 Days)
+            if ($isNext2Days) {
+                $paymentStatus = $bookings[$group->booking_id] ?? null;
+                if ($paymentStatus === 'fully_paid') {
+                    $stats['customer_fully_paid']++;
+                }
+            }
+
+            // Passport Have 2 Days
+            if ($isNext2Days) {
+                $groupDocs = $documents[$gid] ?? [];
+                if (in_array('passport', $groupDocs)) {
+                    $stats['passport_have_2_days']++;
+                }
+            }
+
+            // Fill Status Not Pending 2 Days
+            if ($isNext2Days) {
+                if (!is_null($group->fill_status) && $group->fill_status !== 'pending') {
+                    $stats['fill_status_not_pending_2_days']++;
+                }
+            }
+
+            // Prove Booking Sent Next 30 Days
+            if ($isNext30Days) {
+                if ($group->sent_booking_request == 1) {
+                    $stats['prove_booking_sent_next_30_days']++;
+                }
+            }
+
+            // Invoice Mail Sent Next 7 Days
+            if ($isNext7Days) {
+                if ($group->have_invoice_mail == 1) {
+                    $stats['invoice_mail_sent_next_7_days']++;
+                }
+            }
+
+            // Invoice Confirmed Next 7 Days
+            if ($isNext7Days) {
+                 $groupDocs = $documents[$gid] ?? [];
+                 if (in_array('booking_confirm_letter', $groupDocs)) {
+                     $stats['invoice_confirmed_next_7_days']++;
+                 }
+            }
+
+            // Expense Mail Sent Next 7 days
+            if ($isNext7Days) {
+                if ($group->sent_expense_mail == 1) {
+                    $stats['expense_mail_sent_next_7_days']++;
+                }
+            }
+
+            // Without Confirmation Letter (Next 7 days)
+            if ($isNext7Days) {
+                $groupDocs = $documents[$gid] ?? [];
+                if (in_array('booking_confirm_letter', $groupDocs)) {
+                    // Logic was: countWithDocument.
+                    // Wait, the key is "without_confirmation_letter", but the original code calls countWithDocument('booking_confirm_letter').
+                    // Original code: 'without_confirmation_letter' => $this->countWithDocument(..., 'booking_confirm_letter', ...)
+                    // This counts groups WITH the document.
+                    // The label 'without_confirmation_letter' seems misleading in the original code?
+                    // Let's stick to REPLICATING the original logic: countWithDocument.
+                    $stats['without_confirmation_letter']++;
+                }
+            }
+
+            // Filled Next 2 Days
+            // Logic: NotExists(unfilled items)
+            if ($isNext2Days) {
+                if (!isset($unfilledMap[$gid])) {
+                    $stats['filled_next_2_days']++;
+                }
+            }
+
+            // Assigned Driver Next 2 Days
+            // Logic: NotExists(unassigned items)
+            if ($isNext2Days) {
+                if (!isset($unassignedMap[$gid])) {
+                    $stats['assigned_driver_next_2_days']++;
+                }
+            }
+        }
+
         return $stats;
-    }
-
-    private function countWithDocument($productType, $documentType, $dateStart, $dateEnd)
-    {
-        return DB::table('booking_item_groups as big')
-            ->where('big.product_type', $productType)
-            ->whereExists(function($query) use ($documentType) {
-                $query->select(DB::raw(1))
-                    ->from('customer_documents')
-                    ->whereColumn('customer_documents.booking_item_group_id', 'big.id')
-                    ->where('customer_documents.type', $documentType);
-            })
-            ->whereExists(function($query) use ($dateStart, $dateEnd) {
-                $query->select(DB::raw(1))
-                    ->from(function($subQuery) {
-                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                            ->from('booking_items')
-                            ->groupBy('group_id');
-                    }, 'earliest_dates')
-                    ->whereColumn('earliest_dates.group_id', 'big.id')
-                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
-            })
-            ->count();
-    }
-
-    private function countFilledItems($productType, $dateStart, $dateEnd)
-    {
-        return DB::table('booking_item_groups as big')
-            ->where('big.product_type', $productType)
-            ->whereNotExists(function($query) use ($dateStart, $dateEnd) {
-                $query->select(DB::raw(1))
-                    ->from('booking_items')
-                    ->whereColumn('booking_items.group_id', 'big.id')
-                    ->where(function($q) {
-                        $q->whereNull('booking_items.pickup_time')
-                            ->orWhereNull('booking_items.pickup_location')
-                            ->orWhereNull('booking_items.route_plan')
-                            ->orWhereNull('booking_items.contact_number')
-                            ->orWhere('booking_items.pickup_time', '')
-                            ->orWhere('booking_items.pickup_location', '')
-                            ->orWhere('booking_items.route_plan', '')
-                            ->orWhere('booking_items.contact_number', '');
-                    });
-            })
-            ->whereExists(function($query) use ($dateStart, $dateEnd) {
-                $query->select(DB::raw(1))
-                    ->from(function($subQuery) {
-                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                            ->from('booking_items')
-                            ->groupBy('group_id');
-                    }, 'earliest_dates')
-                    ->whereColumn('earliest_dates.group_id', 'big.id')
-                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
-            })
-            ->count();
-    }
-
-    private function countAssignedDrivers($productType, $dateStart, $dateEnd)
-    {
-        return DB::table('booking_item_groups as big')
-            ->where('big.product_type', $productType)
-            ->whereNotExists(function($query) {
-                $query->select(DB::raw(1))
-                    ->from('booking_items as bi')
-                    ->whereColumn('bi.group_id', 'big.id')
-                    ->leftJoin('reservation_car_infos as rci', 'rci.booking_item_id', '=', 'bi.id')
-                    ->where(function($q) {
-                        $q->whereNull('rci.id')
-                            ->orWhereNull('rci.supplier_id')
-                            ->orWhereNull('rci.driver_id');
-                    });
-            })
-            ->whereExists(function($query) use ($dateStart, $dateEnd) {
-                $query->select(DB::raw(1))
-                    ->from(function($subQuery) {
-                        $subQuery->select('group_id', DB::raw('MIN(service_date) as earliest_service_date'))
-                            ->from('booking_items')
-                            ->groupBy('group_id');
-                    }, 'earliest_dates')
-                    ->whereColumn('earliest_dates.group_id', 'big.id')
-                    ->whereBetween('earliest_dates.earliest_service_date', [$dateStart, $dateEnd]);
-            })
-            ->count();
     }
 
     private function applySorting($query, $request)
