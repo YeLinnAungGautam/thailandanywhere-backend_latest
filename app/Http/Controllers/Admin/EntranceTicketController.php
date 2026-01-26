@@ -42,6 +42,11 @@ class EntranceTicketController extends Controller
                     $q->select('entrance_ticket_id')->from('entrance_ticket_cities')->where('city_id', $request->query('city_id'));
                 });
             })
+            ->when($request->category_id, function ($query) use ($request) {
+                $query->whereIn('id', function ($q) use ($request) {
+                    $q->select('entrance_ticket_id')->from('entrance_ticket_categories')->where('category_id', $request->category_id);
+                });
+            })
             ->when($request->activities, function ($query) use ($request) {
                 $query->whereIn('id', function ($q) use ($request) {
                     $q->select('entrance_ticket_id')
@@ -55,6 +60,15 @@ class EntranceTicketController extends Controller
                         ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%');
                 });
             })
+            ->when($request->price_range, function ($query) use ($request) {
+            $prices = explode('-', $request->price_range);
+            $query->whereIn('id', function ($subQuery) use ($prices) {
+                $subQuery->select('entrance_ticket_id')
+                    ->from('entrance_ticket_variations')
+                    ->groupBy('entrance_ticket_id')
+                    ->havingRaw('MIN(price) BETWEEN ? AND ?', $prices);
+            });
+        })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
@@ -63,6 +77,7 @@ class EntranceTicketController extends Controller
             ->additional([
                 'meta' => [
                     'total_page' => (int)ceil($data->total() / $data->perPage()),
+                    'total_count' => EntranceTicket::count(),
                 ],
             ])
             ->response()

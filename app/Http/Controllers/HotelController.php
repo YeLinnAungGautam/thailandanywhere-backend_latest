@@ -79,7 +79,7 @@ class HotelController extends Controller
             ->when($request->category_id, fn ($query) => $query->where('category_id', $request->category_id));
 
         $data = $query->paginate($limit);
-        $totalAllHotels = Hotel::count();
+        $totalAllHotels = Hotel::where('type',$request->type)->count();
 
         return $this->success(HotelResource::collection($data)
             ->additional([
