@@ -22,4 +22,13 @@ class City extends Model
     {
         return $this->hasMany(Hotel::class);
     }
+
+    /**
+     * Get the guides for the city through guide_areas pivot table.
+     */
+    public function guides()
+    {
+        return $this->belongsToMany(Guide::class, 'guide_areas', 'city_id', 'guide_id')
+                    ->withTimestamps();
+    }
 }
