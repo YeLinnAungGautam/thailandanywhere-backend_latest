@@ -84,6 +84,7 @@ use App\Http\Controllers\EntranceTicketExportImportController;
 use App\Http\Controllers\EntranceTicketVariationExportImportController;
 use App\Http\Controllers\File\FileController;
 use App\Http\Controllers\GroupTourExportImportController;
+use App\Http\Controllers\GuideController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelExportImportController;
 use App\Http\Controllers\HotelReportController;
@@ -599,4 +600,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::put('bluck/key-highlights/orders', [KeyHighLightController::class, 'updateOrder']);
     Route::apiResource('/nearby-places', NearByPlaceController::class);
     Route::put('bluck/nearby-places/orders', [NearByPlaceController::class, 'updateOrder']);
+
+    # Guide
+    Route::apiResource('guides', GuideController::class);
+    Route::patch('guides/{guide}/toggle-status', [GuideController::class, 'toggleStatus']);
+    Route::post('guides/{guide}/remove-area', [GuideController::class, 'removeArea']);
 });
