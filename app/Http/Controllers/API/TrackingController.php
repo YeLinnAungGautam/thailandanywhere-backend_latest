@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Services\SessionTracker;
+use Illuminate\Http\Request;
 
 class TrackingController extends Controller
 {
