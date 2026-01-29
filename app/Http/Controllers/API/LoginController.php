@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Mail\ResetPasswordEmail;
+use App\Services\SessionTracker;
 use App\Traits\HttpResponses;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,13 @@ use Exception;
 class LoginController extends Controller
 {
     use HttpResponses;
+
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
 
     public function login(Request $request)
     {
@@ -45,6 +53,12 @@ class LoginController extends Controller
             Auth::guard('user')->logout();
 
             return failedMessage('Please verify your email before logging in.');
+        }
+
+        // Link guest session to user
+        $sessionHash = $request->input('session_hash');
+        if ($sessionHash) {
+            $this->tracker->linkSessionToUser($sessionHash, $user->id);
         }
 
         $token = $user->createToken($user->name . '-AuthToken-' . now())->plainTextToken;
@@ -110,6 +124,12 @@ class LoginController extends Controller
 
             if (!$user) {
                 return $this->error('', 'Invalid token', 401);
+            }
+
+            // Link guest session to user
+            $sessionHash = $request->input('session_hash');
+            if ($sessionHash) {
+                $this->tracker->linkSessionToUser($sessionHash, $user->id);
             }
 
             // Return user info for Node.js chat

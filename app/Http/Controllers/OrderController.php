@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\OrderManager;
 use App\Services\PartnerRoomRateService;
+use App\Services\SessionTracker;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,6 +20,13 @@ use Illuminate\Support\Facades\Log;
 class OrderController extends Controller
 {
     use HttpResponses;
+
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
 
     /**
      * အော်ဒါစာရင်းပြခြင်း
@@ -130,6 +138,8 @@ class OrderController extends Controller
             // အော်ဒါဖန်တီးခြင်း
             $order = Order::create($orderData);
 
+
+
             // ပစ္စည်းများထည့်သွင်းခြင်း
             if ($request->has('items') && is_array($payload['items'])) {
                 $this->assignOrderItems($order, $payload['items'], $userType);
@@ -137,6 +147,23 @@ class OrderController extends Controller
 
             // ပြန်လည်ဆွဲယူခြင်း (refresh) ဖြင့် အချက်အလက်အားလုံးပါဝင်မှုကိုသေချာစေခြင်း
             $order = Order::with(['items', 'customer'])->find($order->id);
+
+            // ✅ Track go_checkout event FIRST
+            $sessionHash = $request->attributes->get('tracking_session');
+            if ($sessionHash) {
+                $this->tracker->trackEvent(
+                    $sessionHash,
+                    'go_checkout',
+                    null, // Mixed products
+                    null,
+                    [
+                        'value' => $payload['grand_total'] ?? 0,
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'item_count' => count($payload['items'] ?? []),
+                    ]
+                );
+            }
 
             // Response ပြန်ပို့ခြင်း
             return $this->success(new OrderResource($order), 'အော်ဒါအောင်မြင်စွာ ဖန်တီးပြီးပါပြီ။');

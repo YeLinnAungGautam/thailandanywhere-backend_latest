@@ -6,10 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\EntranceTicketListResource;
 use App\Http\Resources\EntranceTicketResource;
 use App\Models\EntranceTicket;
+use App\Services\SessionTracker;
 use Illuminate\Http\Request;
 
 class EntranceTicketController extends Controller
 {
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
+
     public function index(Request $request)
     {
         $query = EntranceTicket::query()
@@ -55,7 +63,7 @@ class EntranceTicketController extends Controller
         return EntranceTicketListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
 
-    public function show(string|int $entrance_ticket_id)
+    public function show(Request $request, string|int $entrance_ticket_id)
     {
         if (is_null($entrance_ticket = EntranceTicket::find($entrance_ticket_id))) {
             return notFoundMessage();
@@ -63,6 +71,17 @@ class EntranceTicketController extends Controller
 
         $entrance_ticket->load('tags', 'cities', 'categories', 'images', 'contracts', 'variations','keyHighlights',
         'goodToKnows');
+
+        // Auto-track view event
+        $sessionHash = $request->attributes->get('tracking_session');
+        if ($sessionHash) {
+            $this->tracker->trackEvent(
+                $sessionHash,
+                'view_detail',
+                'entrance_ticket',
+                $entrance_ticket->id
+            );
+        }
 
         return success(new EntranceTicketResource($entrance_ticket));
     }

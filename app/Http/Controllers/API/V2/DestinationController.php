@@ -7,10 +7,18 @@ use App\Http\Resources\DestinationResource;
 use App\Http\Resources\PrivateVanTourResource;
 use App\Models\Destination;
 use App\Models\PrivateVanTour;
+use App\Services\SessionTracker;
 use Illuminate\Http\Request;
 
 class DestinationController extends Controller
 {
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
+
     public function index(Request $request)
     {
         $query = Destination::query()
@@ -27,8 +35,19 @@ class DestinationController extends Controller
             ->additional(['result' => 1, 'message' => 'success']);
     }
 
-    public function show(Destination $destination)
+    public function show(Request $request, Destination $destination)
     {
+         // Auto-track view event
+        $sessionHash = $request->attributes->get('tracking_session');
+        if ($sessionHash) {
+            $this->tracker->trackEvent(
+                $sessionHash,
+                'view_detail',
+                'destination',
+                $destination->id
+            );
+        }
+
         return success(new DestinationResource($destination));
     }
 
