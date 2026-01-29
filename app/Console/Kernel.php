@@ -24,6 +24,8 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('app:delete-expired-cart-items')->daily();
 
+        $schedule->command('sessions:cleanup')->daily();
+
         $schedule->call(function () {
             (new OrderService)->cleanupExpiredOrders();
         })->hourly();

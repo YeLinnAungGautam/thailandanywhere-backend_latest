@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\RoomPeriodController;
 use App\Http\Controllers\API\LoginController;
 use App\Http\Controllers\API\RegisterController;
+use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\API\V2\AirlineController;
 use App\Http\Controllers\API\V2\AirlineTicketController;
 use App\Http\Controllers\API\V2\AttractionActivityController;
@@ -106,7 +107,10 @@ Route::group([], function () {
     Route::post('login', [LoginController::class, 'login']);
     // Route::get('all/receipts',[BookingReceiptController::class, 'getall']);
 
-
+    // Tracking
+    Route::post('/tracking/init', [TrackingController::class, 'init']);
+    Route::post('/tracking/event', [TrackingController::class, 'track']);
+    Route::post('/tracking/link-user', [TrackingController::class, 'identify']);
 
     # Reset password
     Route::post('forgot-password', [LoginController::class, 'forgetPassword']);

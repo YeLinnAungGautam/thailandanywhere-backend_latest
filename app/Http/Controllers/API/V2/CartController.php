@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CartResource;
 use App\Models\Cart;
 use App\Models\Hotel;
+use App\Services\SessionTracker;
 use App\Traits\HttpResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -15,6 +16,13 @@ use Illuminate\Validation\Rule;
 class CartController extends Controller
 {
     use HttpResponses;
+
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
 
     // List all cart items
     public function index(Request $request)
@@ -84,6 +92,21 @@ class CartController extends Controller
                 'owner_type' => get_class($owner),
                 ...$validated
             ]);
+
+            // ✅ Track add_to_cart event
+            $sessionHash = $request->attributes->get('tracking_session');
+            if ($sessionHash) {
+                $this->tracker->trackEvent(
+                    $sessionHash,
+                    'add_to_cart',
+                    $this->convertProductType($validated['product_type']),
+                    $validated['product_id'],
+                    [
+                        'value' => $validated['options']['total_selling_price'] ?? 0,
+                        'quantity' => $validated['quantity'],
+                    ]
+                );
+            }
 
             return $this->success(CartResource::make($cartItem->fresh()), 'Cart item added successfully');
         } catch (\Exception $e) {
@@ -188,5 +211,20 @@ class CartController extends Controller
         }
 
         return $validated;
+    }
+
+    /**
+     * ✅ Convert full namespace to short product type for tracking
+     */
+    private function convertProductType(string $fullNamespace): string
+    {
+        $mapping = [
+            'App\Models\Hotel' => 'hotel',
+            'App\Models\EntranceTicket' => 'attraction',
+            'App\Models\PrivateVanTour' => 'vantour',
+            'App\Models\Inclusive' => 'inclusive',
+        ];
+
+        return $mapping[$fullNamespace] ?? 'unknown';
     }
 }

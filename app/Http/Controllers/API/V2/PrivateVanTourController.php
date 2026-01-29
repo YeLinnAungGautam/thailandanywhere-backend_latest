@@ -6,10 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PrivateVanTourListResource;
 use App\Http\Resources\PrivateVanTourResource;
 use App\Models\PrivateVanTour;
+use App\Services\SessionTracker;
 use Illuminate\Http\Request;
 
 class PrivateVanTourController extends Controller
 {
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
+
     public function index(Request $request)
     {
         $query = PrivateVanTour::query()
@@ -77,13 +85,24 @@ class PrivateVanTourController extends Controller
         return PrivateVanTourListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
 
-    public function show(string|int $private_van_tour_id)
+    public function show(Request $request, string|int $private_van_tour_id)
     {
         if (is_null($private_van_tour = PrivateVanTour::find($private_van_tour_id))) {
             return notFoundMessage();
         }
 
         $private_van_tour->load('cars', 'cities', 'destinations', 'tags', 'images');
+
+         // Auto-track view event
+        $sessionHash = $request->attributes->get('tracking_session');
+        if ($sessionHash) {
+            $this->tracker->trackEvent(
+                $sessionHash,
+                'view_detail',
+                'private_van_tour',
+                $private_van_tour->id
+            );
+        }
 
         return success(new PrivateVanTourResource($private_van_tour));
     }

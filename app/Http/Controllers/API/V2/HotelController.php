@@ -7,12 +7,20 @@ use App\Http\Resources\HotelListResource;
 use App\Http\Resources\HotelMapResource;
 use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
+use App\Services\SessionTracker;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class HotelController extends Controller
 {
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
+
     public function index(Request $request)
     {
         $query = Hotel::query()
@@ -91,7 +99,7 @@ class HotelController extends Controller
 
 
 
-    public function show(string|int $hotel_id)
+    public function show(Request $request, string|int $hotel_id)
     {
         try {
             if (is_null($hotel = Hotel::find($hotel_id))) {
@@ -110,6 +118,17 @@ class HotelController extends Controller
             'goodToKnows',
             'nearByPlaces'
             );
+
+            // Auto-track view event
+            $sessionHash = $request->attributes->get('tracking_session');
+            if ($sessionHash) {
+                $this->tracker->trackEvent(
+                    $sessionHash,
+                    'view_detail',
+                    'hotel',
+                    $hotel->id
+                );
+            }
 
             return success(new HotelResource($hotel));
         } catch (Exception $e) {

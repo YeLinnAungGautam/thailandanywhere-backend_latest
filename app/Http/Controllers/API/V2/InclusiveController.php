@@ -6,10 +6,19 @@ use App\Http\Resources\InclusiveListResource;
 use App\Http\Resources\InclusiveProductListResource;
 use App\Http\Resources\InclusiveResource;
 use App\Models\Inclusive;
+use App\Services\SessionTracker;
 use Illuminate\Http\Request;
 
 class InclusiveController extends Controller
 {
+
+    protected $tracker;
+
+    public function __construct(SessionTracker $tracker)
+    {
+        $this->tracker = $tracker;
+    }
+
     public function index(Request $request)
     {
         $limit = $request->query('limit', 10);
@@ -46,12 +55,23 @@ class InclusiveController extends Controller
         return InclusiveProductListResource::collection($data)->additional(['result' => 1, 'message' => 'success']);
     }
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $find = Inclusive::find($id);
 
         if (!$find) {
             return failedMessage('Data not found');
+        }
+
+        // Auto-track view event
+        $sessionHash = $request->attributes->get('tracking_session');
+        if ($sessionHash) {
+            $this->tracker->trackEvent(
+                $sessionHash,
+                'view_detail',
+                'inclusive',
+                $find->id
+            );
         }
 
         return success(new InclusiveResource($find));

@@ -83,6 +83,7 @@ use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
 use App\Http\Controllers\EntranceTicketVariationExportImportController;
 use App\Http\Controllers\File\FileController;
+use App\Http\Controllers\FunnelEventController;
 use App\Http\Controllers\GroupTourExportImportController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\HotelController;
@@ -605,4 +606,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('guides', GuideController::class);
     Route::patch('guides/{guide}/toggle-status', [GuideController::class, 'toggleStatus']);
     Route::post('guides/{guide}/remove-area', [GuideController::class, 'removeArea']);
+
+    # Funnel Report
+
+    Route::get('/funnel-events', [FunnelEventController::class, 'index']);
+    Route::get('/funnel-events/product-type/{productType}', [FunnelEventController::class, 'getProductTypeFunnel']);
+
+    // In your routes/api.php
 });
