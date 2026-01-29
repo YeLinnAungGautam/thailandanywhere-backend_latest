@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\UserSession;
 use Illuminate\Console\Command;
 
 class CleanupExpiredSessions extends Command
