@@ -11,8 +11,28 @@ class Facility extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'order' => 'integer',
+    ];
+
+    // Relationship with hotels
     public function hotels()
     {
-        return $this->belongsToMany(Hotel::class);
+        return $this->belongsToMany(Hotel::class, 'facility_hotel')
+            ->withPivot('order') // ✅ Include pivot order
+            ->withTimestamps();
+    }
+
+    // Scope for active facilities
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // Scope for ordering
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('order', 'asc');
     }
 }

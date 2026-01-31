@@ -218,7 +218,8 @@ class HotelController extends Controller
         }
 
         if ($request->facilities) {
-            $save->facilities()->attach($request->facilities);
+            // $save->facilities()->attach($request->facilities);
+            $this->attachFacilitiesWithOrder($save, $request->facilities);
         }
 
         return $this->success(new HotelResource($save), 'Successfully created', 200);
@@ -339,9 +340,32 @@ class HotelController extends Controller
             };
         }
 
-        $hotel->facilities()->sync($request->facilities);
+        // $hotel->facilities()->sync($request->facilities);
+        // ✅ Sync facilities with order
+        if ($request->has('facilities')) {
+            $this->attachFacilitiesWithOrder($hotel, $request->facilities);
+        }
+
 
         return $this->success(new HotelResource($hotel), 'Successfully updated', 200);
+    }
+
+    private function attachFacilitiesWithOrder($hotel, $facilities)
+    {
+        // $facilities = [1, 2, 3, 4] or [['id' => 1], ['id' => 2]]
+
+        $syncData = [];
+
+        foreach ($facilities as $index => $facility) {
+            $facilityId = is_array($facility) ? $facility['id'] : $facility;
+
+            $syncData[$facilityId] = [
+                'order' => $index, // ✅ Use array index as order
+            ];
+        }
+
+        // Sync will remove old and add new
+        $hotel->facilities()->sync($syncData);
     }
 
     /**

@@ -246,7 +246,24 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('destinations/import/csv', [DestinationController::class, 'import']);
 
     # Facility
-    Route::apiResource('facilities', FacilityController::class);
+    // Route::apiResource('facilities', FacilityController::class);
+    // Facilities
+    Route::get('facilities', [FacilityController::class, 'index']);
+
+    // ✅ Simple list for dropdowns
+    Route::get('facilities/simple-list', [FacilityController::class, 'simpleList']);
+
+    // ✅ AI Generate endpoint (get or create, no duplicates)
+    Route::post('facilities/get-or-create-bulk', [FacilityController::class, 'getOrCreateBulk']);
+
+    Route::get('facilities/{id}', [FacilityController::class, 'show']);
+    Route::post('facilities', [FacilityController::class, 'store']);
+    Route::post('facilities/{id}', [FacilityController::class, 'update']); // For FormData with _method: PUT
+
+    // ✅ Toggle status
+    Route::patch('facilities/{id}/toggle-status', [FacilityController::class, 'toggleStatus']);
+
+    Route::delete('facilities/{id}', [FacilityController::class, 'destroy']);
 
     # Hotel Category
     Route::apiResource('hotel-categories', HotelCategoryController::class);
