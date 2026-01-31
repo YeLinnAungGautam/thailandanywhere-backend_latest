@@ -60,9 +60,13 @@ class Hotel extends Model
         return $query->where('type', self::TYPES['direct_booking']);
     }
 
+    // Relationship with facilities
     public function facilities()
     {
-        return $this->belongsToMany(Facility::class);
+        return $this->belongsToMany(Facility::class, 'facility_hotel')
+            ->withPivot('order') // ✅ Include pivot order
+            ->withTimestamps()
+            ->orderByPivot('order', 'asc'); // Order by pivot table order
     }
 
     public function scopeDirectBooking($query)
