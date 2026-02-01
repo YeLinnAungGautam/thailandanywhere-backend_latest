@@ -17,7 +17,8 @@ class Hotel extends Model
 
     protected $casts = [
         'slug' => 'array', // Cast JSON to array
-        'allowment' => 'boolean'
+        'allowment' => 'boolean',
+        'data_checked' => 'boolean',
     ];
 
     const TYPES = [

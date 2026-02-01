@@ -40,6 +40,7 @@ class HotelResource extends JsonResource
             'mobile_full_description' => strip_tags($this->full_description),
             'mobile_full_description_en' => strip_tags($this->full_description_en),
             'allowment' => $this->allowment,
+            'data_checked' => $this->data_checked,
             'type' => $this->type,
             'legal_name' => $this->legal_name,
             'account_name' => $this->account_name,
