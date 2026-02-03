@@ -89,36 +89,56 @@ class RoomController extends Controller
      */
     public function store(StoreRoomRequest $request)
     {
-        $save = Room::create([
-            'hotel_id' => $request->hotel_id,
-            'name' => $request->name,
-            'cost' => $request->cost,
-            'extra_price' => $request->extra_price,
-            'has_breakfast' => $request->has_breakfast,
-            'room_price' => $request->room_price,
-            'description' => $request->description,
-            'max_person' => $request->max_person,
-            'is_extra' => $request->is_extra ?? 0,
-            'agent_price' => $request->agent_price,
-            'owner_price' => $request->owner_price,
-            'amenities' => $request->amenities ? json_encode($request->amenities) : null,
-            'meta' => $request->meta ? json_encode($request->meta) : null,
-        ]);
+        DB::beginTransaction();
 
-        if ($request->file('images')) {
-            foreach ($request->file('images') as $image) {
-                $fileData = $this->uploads($image, 'images/');
-                RoomImage::create(['room_id' => $save->id, 'image' => $fileData['fileName']]);
-            };
-        }
+        try {
+            $save = Room::create([
+                'hotel_id' => $request->hotel_id,
+                'name' => $request->name,
+                'cost' => $request->cost,
+                'extra_price' => $request->extra_price,
+                'has_breakfast' => $request->has_breakfast,
+                'room_price' => $request->room_price,
+                'description' => $request->description,
+                'max_person' => $request->max_person,
+                'is_extra' => $request->is_extra ?? 0,
+                'agent_price' => $request->agent_price,
+                'owner_price' => $request->owner_price,
+                'amenities' => $request->amenities ? json_encode($request->amenities) : null,
+                'meta' => $request->meta ? json_encode($request->meta) : null,
+            ]);
 
-        if ($request->periods) {
-            foreach ($request->periods as $period) {
-                $save->periods()->create($period);
+            // Handle images
+            if ($request->file('images')) {
+                foreach ($request->file('images') as $image) {
+                    $fileData = $this->uploads($image, 'images/');
+                    RoomImage::create(['room_id' => $save->id, 'image' => $fileData['fileName']]);
+                }
             }
-        }
 
-        return $this->success(new RoomResource($save), 'Successfully created', 200);
+            // ✅ Handle periods - Create all new periods
+            if ($request->periods && is_array($request->periods)) {
+                foreach ($request->periods as $period) {
+                    $save->periods()->create([
+                        'period_name' => $period['period_name'],
+                        'start_date' => $period['start_date'],
+                        'end_date' => $period['end_date'],
+                        'sale_price' => $period['sale_price'],
+                        'cost_price' => $period['cost_price'] ?? null,
+                        'agent_price' => $period['agent_price'] ?? null,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return $this->success(new RoomResource($save), 'Successfully created', 200);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -154,75 +174,51 @@ class RoomController extends Controller
                 'meta' => $request->meta ? json_encode($request->meta) : $room->meta,
             ]);
 
+            // Handle images
             if ($request->file('images')) {
                 foreach ($request->file('images') as $image) {
                     $fileData = $this->uploads($image, 'images/');
                     RoomImage::create(['room_id' => $room->id, 'image' => $fileData['fileName']]);
-                };
+                }
             }
 
-            // if ($request->periods) {
-            //     $dates = collect($request->periods)->map(function ($period) {
-            //         return collect($period)->only(['start_date', 'end_date'])->all();
-            //     });
-
-            //     $overlap_dates = $this->checkIfOverlapped($dates);
-
-            //     $room_periods = [];
-            //     foreach ($request->periods as $period) {
-            //         $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
-            //         $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
-
-            //         if (!$sd_exists && !$ed_exists) {
-            //             $room_periods[] = $period;
-            //         }
-            //     }
-
-            //     $this->syncPeriods($room, $room_periods);
-            // }
-
-            // Handle periods - decode JSON if it's a string
+            // ✅ Handle periods - DELETE ALL OLD and CREATE NEW
             if ($request->has('periods')) {
                 $periods = $request->periods;
 
-                // If periods is a JSON string, decode it
+                // Decode JSON if string
                 if (is_string($periods)) {
                     $periods = json_decode($periods, true);
                 }
 
-                // If periods is empty, delete all
-                if (empty($periods)) {
-                    $room->periods()->delete();
-                } else {
-                    // Process periods normally
-                    $dates = collect($periods)->map(function ($period) {
-                        return collect($period)->only(['start_date', 'end_date'])->all();
-                    });
+                // 🔥 DELETE ALL existing periods first
+                $room->periods()->delete();
 
-                    $overlap_dates = $this->checkIfOverlapped($dates);
-
-                    $room_periods = [];
+                // ✅ CREATE new periods
+                if (!empty($periods) && is_array($periods)) {
                     foreach ($periods as $period) {
-                        $sd_exists = in_array($period['start_date'], array_column($overlap_dates, 'start_date'));
-                        $ed_exists = in_array($period['end_date'], array_column($overlap_dates, 'end_date'));
-
-                        if (!$sd_exists && !$ed_exists) {
-                            $room_periods[] = $period;
-                        }
+                        $room->periods()->create([
+                            'period_name' => $period['period_name'],
+                            'start_date' => $period['start_date'],
+                            'end_date' => $period['end_date'],
+                            'sale_price' => $period['sale_price'],
+                            'cost_price' => $period['cost_price'] ?? null,
+                            'agent_price' => $period['agent_price'] ?? null,
+                        ]);
                     }
-
-                    $this->syncPeriods($room, $room_periods);
                 }
             }
 
             DB::commit();
 
+            $room->load('periods', 'images', 'hotel');
+
             return $this->success(new RoomResource($room), 'Successfully updated', 200);
+
         } catch (Exception $e) {
             DB::rollBack();
             Log::error($e);
-
-            return $this->error(null, $e->getMessage(), 401);
+            return $this->error(null, $e->getMessage(), 500);
         }
     }
 
