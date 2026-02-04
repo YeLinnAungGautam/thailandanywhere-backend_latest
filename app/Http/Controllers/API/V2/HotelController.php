@@ -25,7 +25,7 @@ class HotelController extends Controller
     {
         $query = Hotel::query()
             ->withCount('bookingItems')
-            ->directBooking()
+            // ->directBooking()
             ->with(
                 'city',
                 'rooms',
@@ -38,6 +38,9 @@ class HotelController extends Controller
             // ->when($request->search, function ($s_query) use ($request) {
             //     $s_query->where('name', 'LIKE', "{$request->search}%");
             // })
+            ->when(!$request->showAll, function ($q) {
+                $q->directBooking();
+            })
             ->when($request->max_price, function ($q) use ($request) {
                 $q->whereIn('id', function ($q1) use ($request) {
                     $q1->select('hotel_id')
