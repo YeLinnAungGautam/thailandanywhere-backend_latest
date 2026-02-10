@@ -314,9 +314,6 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('hotels/export/csv', [HotelExportImportController::class, 'export']);
     Route::post('hotels/import/csv', [HotelExportImportController::class, 'import']);
 
-    # Room
-    Route::apiResource('rooms', RoomController::class);
-
     Route::get('rooms/{room}/price', [RoomPeriodController::class, 'index']);
 
     Route::patch('rooms/{id}/restore', [RoomController::class, 'restore']);
@@ -332,6 +329,16 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('rooms/{room}/facilities', [RoomController::class, 'getRoomFacilities']);
     Route::post('rooms/{room}/roitems', [RoomController::class, 'addRoitems']);
     Route::delete('rooms/{room}/roitems', [RoomController::class, 'removeRoitems']);
+
+    // Room visibility management
+    Route::post('/rooms/hide-all-by-hotel', [RoomController::class, 'hideAllRoomsByHotel']);
+
+    // Room image management
+    Route::post('/rooms/copy-images', [RoomController::class, 'copyRoomImages']);
+    Route::get('/rooms/with-images', [RoomController::class, 'getRoomsWithImages']);
+
+    # Room
+    Route::apiResource('rooms', RoomController::class);
 
     # Restaurant
     Route::apiResource('restaurants', RestaurantController::class);
