@@ -421,4 +421,135 @@ class RoomController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Hide all rooms for a specific hotel (set is_show_on to "0")
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function hideAllRoomsByHotel(Request $request)
+    {
+        $request->validate([
+            'hotel_id' => 'required|exists:hotels,id'
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $rooms = Room::where('hotel_id', $request->hotel_id)->get();
+
+            $updatedCount = 0;
+
+            foreach ($rooms as $room) {
+                $meta = $room->meta ? json_decode($room->meta, true) : [];
+
+                // Update is_show_on to "0"
+                $meta['is_show_on'] = "0";
+
+                $room->update([
+                    'meta' => json_encode($meta)
+                ]);
+
+                $updatedCount++;
+            }
+
+            DB::commit();
+
+            return $this->success([
+                'updated_count' => $updatedCount,
+                'hotel_id' => $request->hotel_id
+            ], "Successfully hidden {$updatedCount} rooms for hotel ID {$request->hotel_id}");
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Copy images from source room to target room (no images)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function copyRoomImages(Request $request)
+    {
+        $request->validate([
+            'source_room_id' => 'required|exists:rooms,id',
+            'target_room_id' => 'required|exists:rooms,id'
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $sourceRoom = Room::with('images')->findOrFail($request->source_room_id);
+            $targetRoom = Room::with('images')->findOrFail($request->target_room_id);
+
+            // Check if source room has images
+            if ($sourceRoom->images->isEmpty()) {
+                return $this->error(null, 'Source room has no images to copy', 400);
+            }
+
+            // Optional: Check if target room already has images
+            if ($targetRoom->images->isNotEmpty()) {
+                return $this->error(null, 'Target room already has images. Please remove them first.', 400);
+            }
+
+            $copiedImages = [];
+
+            foreach ($sourceRoom->images as $sourceImage) {
+                // Create new image record for target room with same image path
+                $newImage = RoomImage::create([
+                    'room_id' => $targetRoom->id,
+                    'image' => $sourceImage->image
+                ]);
+
+                $copiedImages[] = $newImage;
+            }
+
+            DB::commit();
+
+            // ✅ FIX: Calculate count outside the string
+            $imageCount = count($copiedImages);
+
+            return $this->success([
+                'source_room_id' => $sourceRoom->id,
+                'source_room_name' => $sourceRoom->name,
+                'target_room_id' => $targetRoom->id,
+                'target_room_name' => $targetRoom->name,
+                'copied_images_count' => $imageCount,
+                'images' => $copiedImages
+            ], "Successfully copied {$imageCount} images from {$sourceRoom->name} to {$targetRoom->name}");
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getRoomsWithImages(Request $request)
+    {
+        $request->validate([
+            'hotel_id' => 'required|exists:hotels,id'
+        ]);
+
+        try {
+            $roomsWithImages = Room::where('hotel_id', $request->hotel_id)
+                ->whereHas('images')
+                ->with(['images', 'hotel'])
+                ->get();
+
+            return $this->success([
+                'count' => $roomsWithImages->count(),
+                'rooms' => RoomResource::collection($roomsWithImages)
+            ], "Found {$roomsWithImages->count()} rooms with images");
+
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }
