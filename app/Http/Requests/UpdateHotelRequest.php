@@ -56,6 +56,7 @@ class UpdateHotelRequest extends FormRequest
             'check_in' => 'nullable',
             'check_out' => 'nullable',
             'cancellation_policy' => 'nullable|string',
+            'child_policy' => 'nullable|string',
             'official_address' => 'nullable|string',
             'official_phone_number' => 'nullable|string',
             'official_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
