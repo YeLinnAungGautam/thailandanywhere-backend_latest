@@ -272,7 +272,7 @@ class RoomController extends Controller
             return $this->error(null, 'This image is not belongs to the room', 404);
         }
 
-        Storage::delete('images/' . $room_image->image);
+        // Storage::delete('images/' . $room_image->image);
 
         $room_image->delete();
 
