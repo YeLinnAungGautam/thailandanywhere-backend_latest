@@ -70,6 +70,7 @@ class HotelResource extends JsonResource
             'check_in' => $this->check_in,
             'check_out' => $this->check_out,
             'cancellation_policy' => $this->cancellation_policy,
+            'child_policy' => $this->child_policy,
             'official_address' => $this->official_address,
             'official_logo' => $this->official_logo? Storage::url('images/'. $this->official_logo) : null,
             'official_phone_number' => $this->official_phone_number,
