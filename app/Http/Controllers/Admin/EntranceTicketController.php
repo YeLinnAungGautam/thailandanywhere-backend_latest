@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEntranceTicketRequest;
 use App\Http\Requests\UpdateEntranceTicketRequest;
 use App\Http\Resources\EntranceTicketResource;
+use App\Models\Destination;
 use App\Models\EntranceTicket;
 use App\Models\EntranceTicketContract;
 use App\Models\EntranceTicketImage;
@@ -369,5 +370,113 @@ class EntranceTicketController extends Controller
         $entrance_ticket_image->delete();
 
         return $this->success(null, 'Entrance ticket image is successfully deleted');
+    }
+
+    /**
+     * Get entrance tickets and destinations by multiple city IDs
+     */
+    public function getByMultipleCities(Request $request)
+    {
+        $request->validate([
+            'city_ids' => 'required|array',
+            'city_ids.*' => 'integer|exists:cities,id',
+            'search' => 'nullable|string',
+            'type' => 'nullable|in:entrance_ticket,destination,both',
+        ]);
+
+        $cityIds = $request->city_ids;
+        $search = $request->search;
+        $type = $request->type ?? 'both';
+
+        $result = [
+            'entrance_tickets' => [],
+            'destinations' => [],
+        ];
+
+        // Get Entrance Tickets if requested
+        if (in_array($type, ['entrance_ticket', 'both'])) {
+            $entranceTicketsQuery = EntranceTicket::query()
+                ->with(['variations' => function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('meta_data', 'LIKE', '%"is_show":1%')
+                          ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
+                          ->orWhereNull('meta_data');
+                    })
+                    ->where('is_add_on', 0)
+                    ->orderBy('price', 'asc');
+                }, 'cities'])
+                ->whereIn('id', function ($q) use ($cityIds) {
+                    $q->select('entrance_ticket_id')
+                        ->from('entrance_ticket_cities')
+                        ->whereIn('city_id', $cityIds);
+                })
+                ->where(function ($query) {
+                    $query->where('meta_data', 'LIKE', '%"is_show":1%')
+                          ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
+                          ->orWhereNull('meta_data');
+                });
+
+            if ($search) {
+                $entranceTicketsQuery->where('name', 'LIKE', "%{$search}%");
+            }
+
+            $entranceTickets = $entranceTicketsQuery->get();
+
+            $result['entrance_tickets'] = $entranceTickets->map(function ($ticket) {
+                return [
+                    'id' => $ticket->id,
+                    'type' => 'entrance_ticket',
+                    'name' => $ticket->name,
+                    'description' => $ticket->description,
+                    'cover_image' => $ticket->cover_image ? Storage::url('images/' . $ticket->cover_image) : null,
+                    'variations' => $ticket->variations->map(function ($variation) {
+                        $childInfo = $variation->child_info ? json_decode($variation->child_info, true) : null;
+
+                        return [
+                            'id' => $variation->id,
+                            'name' => $variation->name,
+                            'description' => $variation->description,
+                            'adult_price' => (float) ($variation->price ?? 0),
+                            'adult_cost_price' => (float) ($variation->cost_price ?? 0),
+                            'child_price' => $childInfo && isset($childInfo[0]['price']) ? (float) $childInfo[0]['price'] : 0,
+                            'child_cost_price' => $childInfo && isset($childInfo[0]['cost_price']) ? (float) $childInfo[0]['cost_price'] : 0,
+                            'price_name' => $variation->price_name,
+                            'adult_info' => $variation->adult_info,
+                            'child_info' => $childInfo,
+                        ];
+                    }),
+                    'cities' => $ticket->cities->pluck('name')->toArray(),
+                ];
+            });
+        }
+
+        // Get Destinations if requested
+        if (in_array($type, ['destination', 'both'])) {
+            $destinationsQuery = Destination::query()
+                ->with('city') // Load the single city relationship
+                ->whereIn('city_id', $cityIds); // Filter by city_id column
+
+            if ($search) {
+                $destinationsQuery->where('name', 'LIKE', "%{$search}%");
+            }
+
+            $destinations = $destinationsQuery->get();
+
+            $result['destinations'] = $destinations->map(function ($destination) {
+                return [
+                    'id' => $destination->id,
+                    'type' => 'destination',
+                    'name' => $destination->name,
+                    'description' => $destination->description,
+                    'feature_img' => $destination->feature_img ? Storage::url('images/destination/' . $destination->feature_img) : null,
+                    'cost_price' => (float) ($destination->cost_price ?? 0),
+                    'selling_price' => (float) ($destination->selling_price ?? 0),
+                    'city' => $destination->city ? $destination->city->name : null,
+                    'city_id' => $destination->city_id,
+                ];
+            });
+        }
+
+        return $this->success($result, 'Products retrieved successfully');
     }
 }

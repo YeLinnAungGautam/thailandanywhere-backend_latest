@@ -12,6 +12,7 @@ use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class PrivateVanTourController extends Controller
 {
@@ -326,5 +327,74 @@ class PrivateVanTourController extends Controller
         $find->update(['cover_image' => null]);
 
         return failedMessage('Successfully deleted');
+    }
+
+    public function getByMultipleCities(Request $request)
+    {
+        // ── 1. Validate ──────────────────────────────────────────────────────
+        $validator = Validator::make($request->all(), [
+            'city_ids'   => 'required|array|min:1',
+            'city_ids.*' => 'integer|exists:cities,id',
+            'search'     => 'nullable|string|max:255',
+            'limit'      => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 'Validation failed', 422);
+        }
+
+        $cityIds = $request->input('city_ids');
+        $search  = $request->input('search');
+        $limit   = $request->input('limit', 10);
+
+        // ── 2. Query — filter by city pivot, optional name search ────────────
+        $data = PrivateVanTour::query()
+            ->with(['cars', 'images'])          // only what the form needs
+            ->whereIn('id', function ($q) use ($cityIds) {
+                $q->select('private_van_tour_id')
+                  ->from('private_van_tour_cities')
+                  ->whereIn('city_id', $cityIds);
+            })
+            ->when($search, fn ($q) => $q->where('name', 'LIKE', "%{$search}%"))
+            ->orderBy('created_at', 'desc')
+            ->paginate($limit);
+
+        // ── 3. Slim response — only what VanTourForm needs ───────────────────
+        $vanTours = $data->getCollection()->map(function (PrivateVanTour $vt) {
+            return [
+                'id'          => $vt->id,
+                'name'        => $vt->name,
+                'type'        => $vt->type,
+                'cover_image' => $vt->cover_image
+                                    ? Storage::url('images/' . $vt->cover_image)
+                                    : null,
+                // Each car = one selectable "variation" in the form
+                // price     = selling price, cost = cost price
+                'cars' => $vt->cars->map(fn ($car) => [
+                    'car_id'      => $car->id,
+                    'name'        => $car->name,         // e.g. "Toyota Commuter (9 pax)"
+                    'capacity'    => $car->capacity ?? null,
+                    'price'       => (float) $car->pivot->price,        // selling
+                    'agent_price' => (float) $car->pivot->agent_price,  // agent selling
+                    'cost'        => (float) $car->pivot->cost,         // cost
+                ]),
+            ];
+        });
+
+        $data->setCollection(collect($vanTours));
+
+        // ── 4. Return ────────────────────────────────────────────────────────
+        return $this->success(
+            [
+                'data' => $data->items(),
+                'meta' => [
+                    'total_page'   => (int) ceil($data->total() / $data->perPage()),
+                    'total_count'  => $data->total(),
+                    'current_page' => $data->currentPage(),
+                    'per_page'     => $data->perPage(),
+                ],
+            ],
+            'Van Tour list by cities'
+        );
     }
 }

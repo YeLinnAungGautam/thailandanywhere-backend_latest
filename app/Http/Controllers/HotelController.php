@@ -9,6 +9,8 @@ use App\Http\Resources\HotelResource;
 use App\Models\Hotel;
 use App\Models\HotelContract;
 use App\Models\HotelImage;
+use App\Models\Room;
+use App\Services\RoomService;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
@@ -525,5 +527,100 @@ class HotelController extends Controller
         } catch (\Exception $e) {
             return $this->error(null, $e->getMessage(), 500);
         }
+    }
+
+    public function getByMultipleCities(Request $request)
+    {
+        // ── 1. Validate ──────────────────────────────────────────────────────
+        $validator = Validator::make($request->all(), [
+            'search'        => 'nullable|string|max:255',
+            'city_ids'      => 'nullable|array',
+            'city_ids.*'    => 'integer|exists:cities,id',
+            'checkin_date'  => 'nullable|date|required_with:checkout_date',
+            'checkout_date' => 'nullable|date|after:checkin_date|required_with:checkin_date',
+            'limit'         => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 'Validation failed', 422);
+        }
+
+        $limit        = $request->input('limit', 10);
+        $search       = $request->input('search');
+        $cityIds      = $request->input('city_ids');
+        $checkinDate  = $request->input('checkin_date');
+        $checkoutDate = $request->input('checkout_date');
+        $wantPricing  = $checkinDate && $checkoutDate;
+
+        // ── 2. Build hotel query ─────────────────────────────────────────────
+        $query = Hotel::query()
+            ->with(['rooms', 'images'])          // ✅ only load what we'll use
+            ->when($search,   fn ($q) => $q->where('name', 'LIKE', "%{$search}%"))
+            ->when($cityIds,  fn ($q) => $q->whereIn('city_id', $cityIds));
+
+        $paginated      = $query->paginate($limit);
+        $totalAllHotels = Hotel::count();
+
+        // ── 3. Build slim response ───────────────────────────────────────────
+        $hotels = $paginated->getCollection()->map(function (Hotel $hotel) use ($wantPricing, $checkinDate, $checkoutDate) {
+
+            // ✅ Only the fields HotelForm actually uses
+            $data = [
+                'id'     => $hotel->id,
+                'name'   => $hotel->name,
+                'rating' => $hotel->rating,
+                'images' => $hotel->images->map(fn ($img) => [
+                    'id'    => $img->id,
+                    'image' => $img->image,
+                ])->take(1),   // only the first image for the thumbnail
+            ];
+
+            if ($wantPricing) {
+                $roomsWithPricing = $hotel->rooms->map(function (Room $room) use ($checkinDate, $checkoutDate) {
+                    $roomService = new RoomService($room);
+                    $pricing     = $roomService->getDailyPricing($checkinDate, $checkoutDate);
+
+                    return [
+                        'id'                  => $room->id,
+                        'name'                => $room->name,
+                        'total_sale_price'    => $pricing['total_sale'],
+                        'total_cost_price'    => $pricing['total_cost'],
+                        'total_discount_price'=> $pricing['total_discount'],
+                        'total_selling_price' => $pricing['total_selling_price'],
+                        // 'daily_pricing'    => $pricing['daily'],  // uncomment if needed later
+                    ];
+                });
+
+                $cheapest = $roomsWithPricing->sortBy('total_selling_price')->first();
+
+                $data['rooms']          = $roomsWithPricing;
+                $data['period_summary'] = [
+                    'checkin_date'          => $checkinDate,
+                    'checkout_date'         => $checkoutDate,
+                    'nights'                => (int) now()->parse($checkinDate)->diffInDays(now()->parse($checkoutDate)),
+                    'cheapest_room_selling' => $cheapest['total_selling_price'] ?? null,
+                    'cheapest_room_cost'    => $cheapest['total_cost_price']    ?? null,
+                    'cheapest_room_name'    => $cheapest['name']                ?? null,
+                ];
+            }
+
+            return $data;
+        });
+
+        $paginated->setCollection(collect($hotels));
+
+        // ── 4. Return ────────────────────────────────────────────────────────
+        return $this->success(
+            [
+                'data' => $paginated->items(),
+                'meta' => [
+                    'total_page'   => (int) ceil($paginated->total() / $paginated->perPage()),
+                    'total_count'  => $totalAllHotels,
+                    'current_page' => $paginated->currentPage(),
+                    'per_page'     => $paginated->perPage(),
+                ],
+            ],
+            'Hotel search results'
+        );
     }
 }
