@@ -229,6 +229,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('entrance-tickets-variations/export/csv', [EntranceTicketVariationExportImportController::class, 'export']);
     Route::post('entrance-tickets-variations/import/csv', [EntranceTicketVariationExportImportController::class, 'import']);
 
+    Route::post('/entrance-tickets-multiple/by-cities', [EntranceTicketController::class, 'getByMultipleCities']);
+
     # Airport Pickup
     Route::apiResource('airport-pickups', AirportPickupController::class);
 
@@ -295,6 +297,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::patch('private-van-tours/{id}/restore', [PrivateVanTourController::class, 'restore']);
     Route::delete('private-van-tours/{id}/force', [PrivateVanTourController::class, 'hardDelete']);
+    Route::post('private-van-tours-mulitple', [PrivateVanTourController::class, 'getByMultipleCities']);
 
     Route::get('private-van-tours/export/csv', [PrivateVanTourExportImportController::class, 'export']);
     Route::post('private-van-tours/import/csv', [PrivateVanTourExportImportController::class, 'import']);
@@ -313,6 +316,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::delete('hotels/{hotel}/contracts/{hotel_contract}', [HotelController::class, 'deleteContract']);
     Route::get('hotels/export/csv', [HotelExportImportController::class, 'export']);
     Route::post('hotels/import/csv', [HotelExportImportController::class, 'import']);
+    Route::post('hotels-multiple/by-cities', [HotelController::class, 'getByMultipleCities']);
 
     Route::get('rooms/{room}/price', [RoomPeriodController::class, 'index']);
 
