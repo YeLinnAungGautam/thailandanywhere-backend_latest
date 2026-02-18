@@ -571,7 +571,7 @@ class HotelController extends Controller
                 'rating' => $hotel->rating,
                 'images' => $hotel->images->map(fn ($img) => [
                     'id'    => $img->id,
-                    'image' => $img->image,
+                    'image' => $img->image ? Storage::url('images/' . $img->image) : null,
                 ])->take(1),   // only the first image for the thumbnail
             ];
 
