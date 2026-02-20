@@ -89,6 +89,7 @@ use App\Http\Controllers\GuideController;
 use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelExportImportController;
 use App\Http\Controllers\HotelReportController;
+use App\Http\Controllers\InclusivePackageController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealExportImportController;
 use App\Http\Controllers\PrivateVanTourExportImportController;
@@ -639,6 +640,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     Route::get('/funnel-events', [FunnelEventController::class, 'index']);
     Route::get('/funnel-events/product-type/{productType}', [FunnelEventController::class, 'getProductTypeFunnel']);
+
+    # Inclusive generate
+    Route::apiResource('inclusive-packages', InclusivePackageController::class);
+
 
     // In your routes/api.php
 });

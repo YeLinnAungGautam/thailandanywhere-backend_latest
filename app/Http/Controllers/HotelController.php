@@ -534,6 +534,7 @@ class HotelController extends Controller
         // ── 1. Validate ──────────────────────────────────────────────────────
         $validator = Validator::make($request->all(), [
             'search'        => 'nullable|string|max:255',
+            'id'           => 'nullable',
             'city_ids'      => 'nullable|array',
             'city_ids.*'    => 'integer|exists:cities,id',
             'checkin_date'  => 'nullable|date|required_with:checkout_date',
@@ -547,6 +548,7 @@ class HotelController extends Controller
 
         $limit        = $request->input('limit', 10);
         $search       = $request->input('search');
+        $id           = $request->input('id');
         $cityIds      = $request->input('city_ids');
         $checkinDate  = $request->input('checkin_date');
         $checkoutDate = $request->input('checkout_date');
@@ -556,7 +558,8 @@ class HotelController extends Controller
         $query = Hotel::query()
             ->with(['rooms', 'images'])          // ✅ only load what we'll use
             ->when($search,   fn ($q) => $q->where('name', 'LIKE', "%{$search}%"))
-            ->when($cityIds,  fn ($q) => $q->whereIn('city_id', $cityIds));
+            ->when($cityIds,  fn ($q) => $q->whereIn('city_id', $cityIds))
+            ->when($id,       fn ($q) => $q->where('id', $id));
 
         $paginated      = $query->paginate($limit);
         $totalAllHotels = Hotel::count();
