@@ -43,6 +43,33 @@ class EntranceTicketController extends Controller
                         ->whereIn('attraction_activity_id', explode(',', $request->activities));
                 });
             })
+            ->when($request->price_range, function ($q) use ($request) {
+                $prices = explode('-', $request->price_range);
+
+                if (count($prices) !== 2) return;
+
+                $q->whereIn('id', function ($q1) use ($prices) {
+                    $q1->select('entrance_ticket_id')
+                        ->from('entrance_ticket_variations')
+                        ->where('is_add_on', 0)
+                        ->where('price', '>', 0)
+                        ->whereNull('deleted_at')
+                        ->where(function ($q2) {
+                            // No meta_data = include it
+                            // meta_data exists but no is_show key = include it
+                            // meta_data exists with is_show = 1 = include it
+                            $q2->whereNull('meta_data')
+                               ->orWhere('meta_data', 'NOT LIKE', '%is_show%')
+                               ->orWhere('meta_data', 'LIKE', '%"is_show":1%')
+                               ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%');
+                        })
+                        ->groupBy('entrance_ticket_id')
+                        ->havingRaw('MIN(CAST(price AS DECIMAL(10,2))) BETWEEN ? AND ?', [
+                            (float) $prices[0],
+                            (float) $prices[1],
+                        ]);
+                });
+            })
             ->when($request->show_only, function ($query) {
                 $query->where(function ($query) {
                     $query->where('meta_data', 'LIKE', '%"is_show":1%')
