@@ -429,6 +429,12 @@ class EntranceTicketController extends Controller
                     'name' => $ticket->name,
                     'description' => $ticket->description,
                     'cover_image' => $ticket->cover_image ? Storage::url('images/' . $ticket->cover_image) : null,
+                    'images' => $ticket->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image' => $image->image ? Storage::url('images/' . $image->image) : null,
+                        ];
+                    }),
                     'variations' => $ticket->variations->map(function ($variation) {
                         $childInfo = $variation->child_info ? json_decode($variation->child_info, true) : null;
 
@@ -469,6 +475,12 @@ class EntranceTicketController extends Controller
                     'name' => $destination->name,
                     'description' => $destination->description,
                     'feature_img' => $destination->feature_img ? Storage::url('images/destination/' . $destination->feature_img) : null,
+                    'images' => $destination->images->map(function ($image) {
+                        return [
+                            'id' => $image->id,
+                            'image' => $image->image ? Storage::url('images/destination/' . $image->image) : null,
+                        ];
+                    }),
                     'cost_price' => (float) ($destination->cost_price ?? 0),
                     'selling_price' => (float) ($destination->selling_price ?? 0),
                     'city' => $destination->city ? $destination->city->name : null,
