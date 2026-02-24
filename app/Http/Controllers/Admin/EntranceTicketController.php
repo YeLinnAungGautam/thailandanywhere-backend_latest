@@ -397,11 +397,7 @@ class EntranceTicketController extends Controller
         if (in_array($type, ['entrance_ticket', 'both'])) {
             $entranceTicketsQuery = EntranceTicket::query()
                 ->with(['variations' => function ($query) {
-                    $query->where(function ($q) {
-                        $q->where('meta_data', 'LIKE', '%"is_show":1%')
-                          ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
-                          ->orWhereNull('meta_data');
-                    })
+                    $query
                     ->where('is_add_on', 0)
                     ->orderBy('price', 'asc');
                 }, 'cities'])
@@ -409,12 +405,17 @@ class EntranceTicketController extends Controller
                     $q->select('entrance_ticket_id')
                         ->from('entrance_ticket_cities')
                         ->whereIn('city_id', $cityIds);
-                })
-                ->where(function ($query) {
-                    $query->where('meta_data', 'LIKE', '%"is_show":1%')
-                          ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
-                          ->orWhereNull('meta_data');
                 });
+                // ->where(function ($q) {
+                //     $q->where('meta_data', 'LIKE', '%"is_show":1%')
+                //       ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
+                //       ->orWhereNull('meta_data');
+                // })
+                // ->where(function ($query) {
+                //     $query->where('meta_data', 'LIKE', '%"is_show":1%')
+                //           ->orWhere('meta_data', 'LIKE', '%"is_show":"1"%')
+                //           ->orWhereNull('meta_data');
+                // });
 
             if ($search) {
                 $entranceTicketsQuery->where('name', 'LIKE', "%{$search}%");
@@ -481,8 +482,8 @@ class EntranceTicketController extends Controller
                             'image' => $image->image ? Storage::url('images/destination/' . $image->image) : null,
                         ];
                     }),
-                    'cost_price' => (float) ($destination->cost_price ?? 0),
-                    'selling_price' => (float) ($destination->selling_price ?? 0),
+                    'cost_price' => (float) ($destination->entry_fee ?? 0),
+                    'selling_price' => (float) ($destination->entry_fee ?? 0),
                     'city' => $destination->city ? $destination->city->name : null,
                     'city_id' => $destination->city_id,
                 ];
