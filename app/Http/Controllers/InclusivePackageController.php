@@ -60,6 +60,7 @@ class InclusivePackageController extends Controller
             'total_selling_price' => $request->total_selling_price ?? 0,
             'status'              => 'draft',
             'created_by'          => auth()->id(),
+            'rate_per_person'     => $request->rate_per_person ?? 0,
         ]);
 
         return response()->json(['success' => true, 'data' => $package], 201);
@@ -94,6 +95,8 @@ class InclusivePackageController extends Controller
             'descriptions'        => $request->descriptions ?? [],
             'total_cost_price'    => $request->total_cost_price ?? 0,
             'total_selling_price' => $request->total_selling_price ?? 0,
+            'rate_per_person'     => $request->rate_per_person ?? 0,
+            'status'              => $request->status ?? $package->status,
         ]);
 
         return response()->json(['success' => true, 'data' => $package]);

@@ -349,7 +349,7 @@ class PrivateVanTourController extends Controller
 
         // ── 2. Query — filter by city pivot, optional name search ────────────
         $data = PrivateVanTour::query()
-            ->with(['cars', 'images'])          // only what the form needs
+            ->with(['cars'])          // only what the form needs
             ->whereIn('id', function ($q) use ($cityIds) {
                 $q->select('private_van_tour_id')
                   ->from('private_van_tour_cities')
@@ -366,8 +366,8 @@ class PrivateVanTourController extends Controller
                 'name'        => $vt->name,
                 'type'        => $vt->type,
                 'cover_image' => $vt->cover_image
-                                    ? Storage::url('images/' . $vt->cover_image)
-                                    : null,
+                ? Storage::url('images/' . $vt->cover_image)
+                : null,
                 // Each car = one selectable "variation" in the form
                 // price     = selling price, cost = cost price
                 'cars' => $vt->cars->map(fn ($car) => [
