@@ -18,6 +18,7 @@ use App\Models\CashImage;
 use App\Models\InclusiveProduct;
 use App\Models\Order;
 use App\Models\ReservationBookingConfirmLetter;
+use App\Services\InclusivePackageCloneService;
 use App\Services\Manager\BookingManager;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -33,6 +34,10 @@ class BookingController extends Controller
 {
     use ImageManager;
     use HttpResponses;
+
+    public function __construct(
+        private readonly InclusivePackageCloneService $cloneService
+    ) {}
 
     public function index(Request $request)
     {
@@ -200,6 +205,26 @@ class BookingController extends Controller
         } catch (Exception $e) {
             return $this->error(null, $e->getMessage());
         }
+    }
+
+    public function clonePackage(Request $request, string $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        // Package ချိတ်ပြီးသားဆိုလျှင် မလုပ်တော့
+        if ($booking->inclusive_package_id) {
+            return $this->error(null, 'Package ချိတ်ပြီးသားဖြစ်သည်။', 422);
+        }
+
+        $clone = $this->cloneService->cloneAndLink(
+            $request->package_id,  // clone လုပ်မည့် original package id
+            $booking
+        );
+
+        return $this->success([
+            'clone_package_id' => $clone->id,
+            'package_name'     => $clone->package_name,
+        ], 'Package clone လုပ်ပြီး ချိတ်ဆက်ပြီးပါပြီ။');
     }
 
     public function show(string $id)
@@ -430,6 +455,7 @@ class BookingController extends Controller
                 $delete_item_ids = array_diff($booking_item_ids, $request_item_ids);
 
                 // Delete items that are no longer in the request
+                // ── ပြောင်းရမည့် code ──
                 foreach ($delete_item_ids as $delete_item) {
                     $d_item = BookingItem::find($delete_item);
 
@@ -437,10 +463,16 @@ class BookingController extends Controller
                         if ($d_item->receipt_image) {
                             Storage::delete('images/' . $d_item->receipt_image);
                         }
-
                         if ($d_item->confirmation_letter) {
                             Storage::delete('files/' . $d_item->confirmation_letter);
                         }
+
+                        // ✅ Delete မလုပ်ခင် package မှ ဖယ်သည်
+                        $this->cloneService->syncItemToPackage($find, [
+                            'id'           => $d_item->id,
+                            'product_id'   => $d_item->product_id,
+                            'product_type' => $d_item->product_type,
+                        ], 'remove');
 
                         $d_item->delete();
                     }
@@ -449,6 +481,8 @@ class BookingController extends Controller
                 $booking_items = collect($request->items)->whereNotNull('product_type')->toArray();
 
                 foreach ($booking_items as $key => $item) {
+                    $savedItem = null; // ✅ ဤကြောင်း ထည့်ရမည်
+                    $action    = null;
                     $data = [
                         'booking_id' => $find->id,
                         'crm_id' => $find->crm_id . '_' . str_pad($key + 1, 3, '0', STR_PAD_LEFT),
@@ -511,19 +545,35 @@ class BookingController extends Controller
                     }
 
                     // Fixed the check for new vs existing items
+                    // ── ပြောင်းရမည့် code ──
                     if (
                         empty($item['reservation_id']) ||
                         $item['reservation_id'] === 'undefined' ||
                         $item['reservation_id'] === 'null'
                     ) {
-                        // Create new item
-                        BookingItem::create($data);
+                        // ✅ create ပြီး $savedItem မှာ သိမ်းသည်
+                        $savedItem = BookingItem::create($data);
+                        $action = 'add';
                     } else {
-                        // Update existing item
                         $booking_item = BookingItem::find($item['reservation_id']);
                         if ($booking_item) {
                             $booking_item->update($data);
+                            // ✅ update ပြီး $savedItem မှာ သိမ်းသည်
+                            $savedItem = $booking_item;
                         }
+                        $action = 'update';
+                    }
+
+                    // ✅ Package sync — savedItem ရှိမှသာ လုပ်သည်
+                    if (isset($savedItem) && $savedItem) {
+                        $this->cloneService->syncItemToPackage(
+                            $find,
+                            array_merge($item, [
+                                'id'           => $savedItem->id,
+                                'product_name' => $savedItem->product->name ?? '',
+                            ]),
+                            $action
+                        );
                     }
                 }
             }

@@ -277,6 +277,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('customers/createBookingCustomer', [CustomerController::class, 'createBookingCustomer']);
 
     Route::apiResource('bookings', BookingController::class);
+    Route::post('/bookings/{id}/clone-package', [BookingController::class, 'clonePackage']);
 
     # Reservation
     Route::put('reservations/info/{id}', [ReservationController::class, 'updateInfo']);
