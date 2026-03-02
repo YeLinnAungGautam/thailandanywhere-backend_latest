@@ -483,9 +483,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::put('/booking/{id}/verify_status', [BookingItemVerifyController::class, 'updateVerifyStatus']);
 
     # Booking Item Group
+    Route::get('booking-item-groups-cost/cost-summary', [BookingItemGroupController::class, 'costSummaryByProductType']);
     Route::post('booking-item-groups', [BookingItemGroupController::class, 'index']);
     Route::get('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'detail']);
     Route::put('booking-item-groups/{booking_item_group}', [BookingItemGroupController::class, 'update']);
+
 
     # Customer Document
     Route::get('booking-item-groups/{booking_item_group}/documents', [CustomerDocumentController::class, 'index']);

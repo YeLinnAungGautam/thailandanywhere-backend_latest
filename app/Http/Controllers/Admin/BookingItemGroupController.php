@@ -640,4 +640,100 @@ class BookingItemGroupController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    public function costSummaryByProductType(Request $request)
+    {
+        $request->validate([
+            'start_date'           => 'required|date',
+            'end_date'             => 'required|date|after_or_equal:start_date',
+            'customer_fully_paid'  => 'nullable|boolean',
+            'expense_not_fully_paid' => 'nullable|boolean',
+        ]);
+
+        try {
+            $productTypeMap = [
+                'App\Models\EntranceTicket' => 'entrance_ticket',
+                'App\Models\Hotel'          => 'hotel',
+                'App\Models\PrivateVanTour' => 'private_van_tour',
+                'App\Models\GroupTour'      => 'group_tour',
+                'App\Models\Airline'        => 'airline',
+            ];
+
+            $query = DB::table('booking_items')
+                ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
+                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+                ->select(
+                    'booking_item_groups.product_type',
+                    DB::raw('SUM(booking_items.total_cost_price) as total_cost_price_sum'),
+                    DB::raw('COUNT(DISTINCT booking_item_groups.id) as total_groups')
+                )
+                // Filter by service date range (earliest service date per group)
+                ->whereIn('booking_item_groups.id', function ($sub) use ($request) {
+                    $sub->select('group_id')
+                        ->from('booking_items')
+                        ->groupBy('group_id')
+                        ->havingRaw('MIN(service_date) BETWEEN ? AND ?', [
+                            $request->start_date,
+                            $request->end_date,
+                        ]);
+                });
+
+            // Filter: customer fully paid
+            if ($request->filled('customer_fully_paid')) {
+                if ($request->boolean('customer_fully_paid')) {
+                    $query->where('bookings.payment_status', 'fully_paid');
+                } else {
+                    $query->where(function ($q) {
+                        $q->where('bookings.payment_status', '!=', 'fully_paid')
+                          ->orWhereNull('bookings.payment_status');
+                    });
+                }
+            }
+
+            // Filter: expense not fully paid
+            if ($request->filled('expense_not_fully_paid')) {
+                if ($request->boolean('expense_not_fully_paid')) {
+                    $query->where(function ($q) {
+                        $q->where('booking_item_groups.expense_status', '!=', 'fully_paid')
+                          ->orWhereNull('booking_item_groups.expense_status');
+                    });
+                } else {
+                    $query->where('booking_item_groups.expense_status', 'fully_paid');
+                }
+            }
+
+            // Role restriction (non-admin sees only own bookings)
+            if (!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor'])) {
+                $query->where(function ($q) {
+                    $q->where('bookings.created_by', Auth::id())
+                      ->orWhere('bookings.past_user_id', Auth::id());
+                });
+            }
+
+            $results = $query->groupBy('booking_item_groups.product_type')->get();
+
+            $summary = $results->map(function ($row) use ($productTypeMap) {
+                return [
+                    'product_type'         => $productTypeMap[$row->product_type] ?? $row->product_type,
+                    'total_cost_price_sum' => (float) $row->total_cost_price_sum,
+                    'total_groups'         => (int) $row->total_groups,
+                ];
+            });
+
+            // Grand total
+            $grandTotal = $summary->sum('total_cost_price_sum');
+
+            return $this->success([
+                'breakdown'   => $summary,
+                'grand_total' => $grandTotal,
+                'date_range'  => [
+                    'start_date' => $request->start_date,
+                    'end_date'   => $request->end_date,
+                ],
+            ], 'Cost Summary By Product Type');
+
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }
