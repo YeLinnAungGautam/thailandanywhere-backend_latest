@@ -654,29 +654,30 @@ class BookingItemGroupController extends Controller
             $productTypeMap = [
                 'App\Models\EntranceTicket' => 'entrance_ticket',
                 'App\Models\Hotel'          => 'hotel',
-                'App\Models\PrivateVanTour' => 'private_van_tour',
-                'App\Models\GroupTour'      => 'group_tour',
-                'App\Models\Airline'        => 'airline',
             ];
 
             $query = DB::table('booking_items')
-                ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
-                ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
-                ->select(
-                    'booking_item_groups.product_type',
-                    DB::raw('SUM(booking_items.total_cost_price) as total_cost_price_sum'),
-                    DB::raw('COUNT(DISTINCT booking_item_groups.id) as total_groups')
-                )
-                // Filter by service date range (earliest service date per group)
-                ->whereIn('booking_item_groups.id', function ($sub) use ($request) {
-                    $sub->select('group_id')
-                        ->from('booking_items')
-                        ->groupBy('group_id')
-                        ->havingRaw('MIN(service_date) BETWEEN ? AND ?', [
-                            $request->start_date,
-                            $request->end_date,
-                        ]);
-                });
+            ->join('booking_item_groups', 'booking_items.group_id', '=', 'booking_item_groups.id')
+            ->join('bookings', 'booking_item_groups.booking_id', '=', 'bookings.id')
+            ->select(
+                'booking_item_groups.product_type',
+                DB::raw('SUM(booking_items.total_cost_price) as total_cost_price_sum'),
+                DB::raw('COUNT(DISTINCT booking_item_groups.id) as total_groups')
+            )
+            // ✅ Only hotel and entrance ticket
+            ->whereIn('booking_item_groups.product_type', [
+                'App\Models\Hotel',
+                'App\Models\EntranceTicket',
+            ])
+            ->whereIn('booking_item_groups.id', function ($sub) use ($request) {
+                $sub->select('group_id')
+                    ->from('booking_items')
+                    ->groupBy('group_id')
+                    ->havingRaw('MIN(service_date) BETWEEN ? AND ?', [
+                        $request->start_date,
+                        $request->end_date,
+                    ]);
+            });
 
             // Filter: customer fully paid
             if ($request->filled('customer_fully_paid')) {
@@ -694,12 +695,11 @@ class BookingItemGroupController extends Controller
             if ($request->filled('expense_not_fully_paid')) {
                 if ($request->boolean('expense_not_fully_paid')) {
                     $query->where(function ($q) {
-                        $q->where('booking_item_groups.expense_status', '!=', 'fully_paid')
+                        $q->where('booking_item_groups.expense_status', 'not_paid')
                           ->orWhereNull('booking_item_groups.expense_status');
                     });
-                } else {
-                    $query->where('booking_item_groups.expense_status', 'fully_paid');
                 }
+
             }
 
             // Role restriction (non-admin sees only own bookings)
