@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Accountance\CashImageResource;
+use App\Services\BookingItemSnapshotService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -17,44 +18,67 @@ class BookingItemResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $product = null;
+        $snapshotService = new BookingItemSnapshotService();
+
+        // ---- Parse variation_snapshot ----
+        $variationSnapshot = null;
+        if ($this->variation_snapshot) {
+            $variationSnapshot = is_string($this->variation_snapshot)
+                ? json_decode($this->variation_snapshot, true)
+                : $this->variation_snapshot;
+        }
+
+        // ---- Parse product_snapshot ----
+        $productSnapshot = null;
+        if ($this->product_snapshot) {
+            $productSnapshot = is_string($this->product_snapshot)
+                ? json_decode($this->product_snapshot, true)
+                : $this->product_snapshot;
+        }
+
+        $product     = null;
         $stay_nights = null;
+        $resolvedRoom      = null;
+        $resolvedCar       = null;
+        $resolvedVariation = null;
+        $resolvedTicket    = null;
+
         switch ($this->product_type) {
-            case 'App\Models\PrivateVanTour':
-                $product = new PrivateVanTourResource($this->product);
-
-                break;
-            case 'App\Models\GroupTour':
-                $product = new GroupTourResource($this->product);
-
-                break;
-            case 'App\Models\EntranceTicket':
-                $product = new EntranceTicketResource($this->product);
-
-                break;
-            case 'App\Models\AirportPickup':
-                $product = new AirportPickupResource($this->product);
-
-                break;
             case 'App\Models\Hotel':
-                $product = new HotelResource($this->product);
-                $stay_nights = Carbon::parse($this->checkin_date)->diffInDays(Carbon::parse($this->checkout_date));
-
+                // product: snapshot first, then live
+                $product =  $this->product ? new HotelResource($this->product) : $productSnapshot ?? null;
+                // variation: snapshot first, then live room
+                $resolvedRoom = $variationSnapshot ?? ($this->room ?? null);
+                $stay_nights  = Carbon::parse($this->checkin_date)->diffInDays(Carbon::parse($this->checkout_date));
                 break;
+
+            case 'App\Models\PrivateVanTour':
+                $product      =  $this->product ? new PrivateVanTourResource($this->product) : $productSnapshot ?? null;
+                $resolvedCar  = $variationSnapshot ?? ($this->car ?? null);
+                break;
+
+            case 'App\Models\EntranceTicket':
+                $product           = $this->product ? new EntranceTicketResource($this->product) : $productSnapshot ?? null;
+                $resolvedVariation = $variationSnapshot ?? ($this->variation ?? null);
+                $resolvedTicket    = $variationSnapshot ?? ($this->ticket ?? null);
+                break;
+
             case 'App\Models\Airline':
-                $product = new AirlineResource($this->product);
-
+                $product        = $this->product ? new AirlineResource($this->product) : $productSnapshot ?? null;
+                $resolvedTicket = $variationSnapshot ?? ($this->ticket ?? null);
                 break;
 
-            case 'App\Models\InclusiveProduct':
-                $product = new InclusiveProductResource($this->product);
-
+            case 'App\Models\GroupTour':
+                $product = $productSnapshot ?? ($this->product ? new GroupTourResource($this->product) : null);
                 break;
-            default:
-                $product = null;
 
+            case 'App\Models\AirportPickup':
+                $product = $productSnapshot ?? ($this->product ? new AirportPickupResource($this->product) : null);
                 break;
         }
+
+        // ---- Price comparison ----
+        $priceComparison = $snapshotService->comparePriceWithCurrent($this->resource);
 
         return [
             'id' => $this->id,
@@ -74,11 +98,20 @@ class BookingItemResource extends JsonResource
             'product_type' => $this->product_type,
             'product_id' => $this->product_id,
             'is_excluded' => $this->is_excluded,
-            'product' => $product,
-            'car' => $this->car,
-            'room' => $this->room,
-            'ticket' => $this->ticket,
-            'variation' => $this->variation,
+            'product'   => $product,
+            'car'       => $resolvedCar,
+            'room'      => $resolvedRoom,
+            'ticket'    => $resolvedTicket,
+            'variation' => $resolvedVariation,
+            // ✅ Snapshot data တွေ
+            'product_snapshot'   => $this->product_snapshot,
+            'variation_snapshot' => $this->variation_snapshot,
+            'price_snapshot'     => $this->price_snapshot,
+            'archive_snapshot'   => $this->archive_snapshot,
+
+            // ✅ Price ပြောင်းသွားလား စစ်ထားသော result
+            'price_comparison' => $priceComparison,
+
             'service_date' => $this->service_date ? Carbon::parse($this->service_date)->format('Y-m-d') : null,
             'formatted_service_date' => $this->service_date ? Carbon::parse($this->service_date)->format('d M Y') : null,
             'quantity' => $this->quantity,
@@ -174,6 +207,33 @@ class BookingItemResource extends JsonResource
             'output_vat' => $this->output_vat,
             'commission' => $this->commission,
             'receipt_images' => $this->group?->cashImages && count($this->group->cashImages) ? CashImageResource::collection($this->group->cashImages) : [],
+            // 'amend_info' => BookingItemAmendmentResource::collection($this->amendments),
+            'has_amendment'  => $this->amendments->isNotEmpty(),
+            'amend_info'     => $this->amendments->map(function ($amendment) {
+                $snapshot = null;
+                if ($amendment->item_snapshot) {
+                    $snapshot = is_string($amendment->item_snapshot)
+                        ? json_decode($amendment->item_snapshot, true)
+                        : (array) $amendment->item_snapshot;
+                }
+
+                $latestHistory = collect($amendment->amend_history ?? [])->last();
+                $latestChanges = $latestHistory['changes'] ?? [];
+
+                return [
+                    'id'              => $amendment->id,
+                    'amend_status'    => $amendment->amend_status,
+                    'amend_approve'   => $amendment->amend_approve,
+                    'amend_request'   => $amendment->amend_request,
+                    'amend_mail_sent' => $amendment->amend_mail_sent,
+                    'is_delete'       => (bool) ($latestChanges['delete'] ?? false),
+                    'latest_changes'  => $latestChanges,
+                    'amend_history'   => $amendment->amend_history,
+                    'has_snapshot'    => $snapshot !== null,
+                    'created_at'      => $amendment->created_at,
+                    'updated_at'      => $amendment->updated_at,
+                ];
+            }),
         ];
     }
 }

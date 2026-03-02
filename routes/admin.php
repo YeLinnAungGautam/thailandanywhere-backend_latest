@@ -474,6 +474,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Amendment
     Route::apiResource('booking-item-amendments', AmendmentController::class);
     Route::post('booking-item-amendments/{id}/reject', [AmendmentController::class, 'rejectAmendment']);
+    Route::post('amendments/{id}/approve', [AmendmentController::class, 'approveAmendment']);
 
     # Case
     Route::apiResource('cases', CaseController::class);

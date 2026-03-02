@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Services\BookingItemSnapshotService;
 
 class BookingController extends Controller
 {
@@ -559,13 +560,26 @@ class BookingController extends Controller
                         if ($booking_item) {
                             $booking_item->update($data);
                             // ✅ update ပြီး $savedItem မှာ သိမ်းသည်
-                            $savedItem = $booking_item;
+                            $savedItem = $booking_item->fresh(); // ✅ fresh() နဲ့ updated data ယူ
                         }
                         $action = 'update';
                     }
 
                     // ✅ Package sync — savedItem ရှိမှသာ လုပ်သည်
                     if (isset($savedItem) && $savedItem) {
+                        try {
+                            $snapshotService = new BookingItemSnapshotService();
+                            $snapshots = $snapshotService->buildSnapshot($savedItem);
+
+                            $savedItem->update([
+                                'product_snapshot'   => $snapshots['product_snapshot'],
+                                'variation_snapshot' => $snapshots['variation_snapshot'],
+                                'price_snapshot'     => $snapshots['price_snapshot'],
+                                'archive_snapshot'   => $snapshots['archive_snapshot'],
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Snapshot rebuild error: ' . $e->getMessage());
+                        }
                         $this->cloneService->syncItemToPackage(
                             $find,
                             array_merge($item, [
