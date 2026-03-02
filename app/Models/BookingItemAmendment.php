@@ -30,6 +30,6 @@ class BookingItemAmendment extends Model
      */
     public function bookingItem()
     {
-        return $this->belongsTo(BookingItem::class);
+        return $this->belongsTo(BookingItem::class)->withDefault();
     }
 }

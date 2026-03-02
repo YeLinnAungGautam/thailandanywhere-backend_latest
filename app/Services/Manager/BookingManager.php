@@ -7,7 +7,7 @@ use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Jobs\ArchiveSaleJob;
 use App\Traits\ImageManager;
-use App\Models\BookingReceipt;
+// use App\Models\BookingReceipt;
 use App\Models\InclusiveProduct;
 use Illuminate\Support\Facades\DB;
 use App\Jobs\UpdateBookingDatesJob;
@@ -18,6 +18,8 @@ use App\Jobs\PersistBookingItemGroupJob;
 use App\Action\UpsertBookingItemGroupAction;
 use App\Models\CashImage;
 use App\Models\Room;
+use App\Services\BookingItemSnapshotService;
+
 
 class BookingManager
 {
@@ -188,7 +190,25 @@ class BookingManager
             }
         }
 
-        BookingItem::create($data);
+        $bookingItem = BookingItem::create($data);
+
+        // ✅ Snapshot ဆောက်မည်
+        try {
+            $snapshotService = new BookingItemSnapshotService();
+            $snapshots = $snapshotService->buildSnapshot($bookingItem);
+
+            $bookingItem->update([
+                'product_snapshot'   => $snapshots['product_snapshot'],
+                'variation_snapshot' => $snapshots['variation_snapshot'],
+                'price_snapshot'     => $snapshots['price_snapshot'],
+                'archive_snapshot'   => $snapshots['archive_snapshot'],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Snapshot save error: ' . $e->getMessage());
+            // Snapshot မအောင်မြင်လည်း booking item ကို ဆက်သုံးနိုင်ရမည်
+        }
+
+        return $bookingItem;
     }
 
     // app/Services/Manager/BookingManager.php
