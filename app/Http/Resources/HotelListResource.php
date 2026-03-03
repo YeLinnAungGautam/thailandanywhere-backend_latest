@@ -74,6 +74,7 @@ class HotelListResource extends JsonResource
 
             'selling_price' => $selling_price,
             'available_room_count' => $this->rooms->where('is_extra', 0)->count(),
+            'data_status' => $this->data_status,
 
             // 'check_in' => $this->check_in,
             // 'check_out' => $this->check_out,
