@@ -16,6 +16,7 @@ class BookingItemAmendment extends Model
         'amend_mail_sent',
         'amend_approve',
         'amend_status',
+        'item_snapshot',
     ];
     protected $casts = [
         'amend_history' => 'array',
@@ -23,6 +24,7 @@ class BookingItemAmendment extends Model
         'amend_mail_sent' => 'boolean',
         'amend_approve' => 'boolean',
         'amend_status' => 'string',
+        'item_snapshot' => 'array',
     ];
 
     /**
