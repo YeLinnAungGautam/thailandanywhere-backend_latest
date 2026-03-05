@@ -52,6 +52,7 @@ class BookingItemAmendmentResource extends JsonResource
                     'booking_date' => $snapshot['booking']['booking_date'] ?? null,
                     'is_inclusive' => $snapshot['booking']['is_inclusive'] ?? null,
                 ] : null,
+                'variation_snapshot' => $snapshot['variation_snapshot'] ?? null,
             ];
         } elseif ($item && $item->id !== null) {
             $bookingItemData = [
@@ -82,6 +83,7 @@ class BookingItemAmendmentResource extends JsonResource
                     'booking_date' => $item->booking->booking_date,
                     'is_inclusive' => $item->booking->is_inclusive,
                 ] : null,
+                'variation_snapshot' => $item->variation_snapshot,
             ];
         } else {
             $bookingItemData = null;

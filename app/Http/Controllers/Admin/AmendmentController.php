@@ -300,16 +300,29 @@ class AmendmentController extends Controller
                     if (is_string($individualPricing)) {
                         $individualPricing = json_decode($individualPricing, true) ?? [];
                     }
-
                     if (!is_array($individualPricing)) {
                         $individualPricing = [];
                     }
 
-                    $childQty   = (int) $changes['child_quantity'];
-                    $childPrice = (float) ($individualPricing['child']['selling_price'] ?? $individualPricing['child']['price'] ?? 0);
-                    $childCost  = (float) ($individualPricing['child']['cost_price'] ?? 0);
+                    $childQty = (int) $changes['child_quantity'];
+
+                    // ✅ changes မှ အရင်ယူ၊ မပါလျှင် existing မှ fallback
+                    $childPrice = (float) (
+                        $changes['child_selling_price']
+                        ?? $individualPricing['child']['selling_price']
+                        ?? $individualPricing['child']['price']
+                        ?? 0
+                    );
+
+                    $childCost = (float) (
+                        $changes['child_cost_price']
+                        ?? $individualPricing['child']['cost_price']
+                        ?? 0
+                    );
 
                     $individualPricing['child']['quantity']         = $childQty;
+                    $individualPricing['child']['selling_price']    = $childPrice;  // ✅
+                    $individualPricing['child']['cost_price']       = $childCost;   // ✅
                     $individualPricing['child']['amount']           = $childQty * $childPrice;
                     $individualPricing['child']['total_cost_price'] = $childQty * $childCost;
 
@@ -362,77 +375,86 @@ class AmendmentController extends Controller
      * Build a full snapshot of a BookingItem + its relations
      * so it can be preserved on the amendment record after the item is deleted.
      */
-    private function buildItemSnapshot(BookingItem $item, Booking $booking): array
+    private function buildItemSnapshot(BookingItem $item, ?Booking $booking): array
     {
-        // Resolve product name safely across all product types
+        // ── Safe product name ─────────────────────────────────────────────────
         $productName = null;
         $productId   = $item->product_id;
         try {
             $productName = $item->product?->name ?? null;
-        } catch (\Exception $e) {
-            // product relation might be missing for some types
-        }
+        } catch (\Exception $e) {}
 
-        // Parse individual_pricing
+        // ── Decode all JSON string fields ─────────────────────────────────────
         $individualPricing = $item->individual_pricing;
         if (is_string($individualPricing)) {
-            try {
-                $individualPricing = json_decode($individualPricing, true);
-            } catch (\Exception $e) {
-                $individualPricing = null;
-            }
+            $individualPricing = json_decode($individualPricing, true) ?? null;
+        }
+
+        $variationSnapshot = $item->variation_snapshot;
+        if (is_string($variationSnapshot)) {
+            $variationSnapshot = json_decode($variationSnapshot, true) ?? null;
+        }
+
+        $productSnapshot = $item->product_snapshot;
+        if (is_string($productSnapshot)) {
+            $productSnapshot = json_decode($productSnapshot, true) ?? null;
+        }
+
+        $priceSnapshot = $item->price_snapshot;
+        if (is_string($priceSnapshot)) {
+            $priceSnapshot = json_decode($priceSnapshot, true) ?? null;
         }
 
         return [
-            // ── Core item fields ─────────────────────────────────────
-            'id'               => $item->id,
-            'booking_id'       => $item->booking_id,
-            'crm_id'           => $item->crm_id,
-            'product_type'     => $item->product_type,
-            'product_id'       => $productId,
-            'service_date'     => $item->service_date,
-            'checkout_date'    => $item->checkout_date,
-            'checkin_date'     => $item->checkin_date,
-            'quantity'         => $item->quantity,
-            'selling_price'    => $item->selling_price,
-            'cost_price'       => $item->cost_price,
-            'amount'           => $item->amount,
-            'total_cost_price' => $item->total_cost_price,
-            'discount'         => $item->discount,
-            'days'             => $item->days,
-            'individual_pricing' => $individualPricing,
-            'item_name'        => $item->item_name ?? null,
-            'comment'          => $item->comment ?? null,
-            'special_request'  => $item->special_request ?? null,
-            'pickup_location'  => $item->pickup_location ?? null,
-            'pickup_time'      => $item->pickup_time ?? null,
-            'route_plan'       => $item->route_plan ?? null,
-            'cancellation'     => $item->cancellation ?? null,
+            // ── Core item fields ──────────────────────────────────────────────
+            'id'                  => $item->id,
+            'booking_id'          => $item->booking_id,
+            'crm_id'              => $item->crm_id,
+            'product_type'        => $item->product_type,
+            'product_id'          => $productId,
+            'service_date'        => $item->service_date,
+            'checkout_date'       => $item->checkout_date,
+            'checkin_date'        => $item->checkin_date,
+            'quantity'            => $item->quantity,
+            'selling_price'       => $item->selling_price,
+            'cost_price'          => $item->cost_price,
+            'amount'              => $item->amount,
+            'total_cost_price'    => $item->total_cost_price,
+            'discount'            => $item->discount,
+            'days'                => $item->days,
+            'individual_pricing'  => $individualPricing,
+            'item_name'           => $item->item_name ?? null,
+            'comment'             => $item->comment ?? null,
+            'special_request'     => $item->special_request ?? null,
+            'pickup_location'     => $item->pickup_location ?? null,
+            'pickup_time'         => $item->pickup_time ?? null,
+            'route_plan'          => $item->route_plan ?? null,
+            'cancellation'        => $item->cancellation ?? null,
 
-            // ── Existing snapshots already on the item ─────────────
-            'product_snapshot'   => $item->product_snapshot,
-            'variation_snapshot' => $item->variation_snapshot,
-            'price_snapshot'     => $item->price_snapshot,
+            // ── Decoded snapshots (proper objects, not escaped strings) ────────
+            'product_snapshot'    => $productSnapshot,
+            'variation_snapshot'  => $variationSnapshot,
+            'price_snapshot'      => $priceSnapshot,
 
-            // ── Resolved relations (safe fallbacks) ──────────────────
+            // ── Resolved relations ────────────────────────────────────────────
             'product' => $productName ? [
                 'id'   => $productId,
                 'name' => $productName,
             ] : null,
 
-            'customer_info' => $booking->customer ? [
+            'customer_info' => $booking?->customer ? [
                 'id'   => $booking->customer->id,
                 'name' => $booking->customer->name,
             ] : null,
 
-            'booking' => [
+            'booking' => $booking ? [
                 'id'           => $booking->id,
                 'crm_id'       => $booking->crm_id,
                 'booking_date' => $booking->booking_date,
                 'is_inclusive' => $booking->is_inclusive,
-            ],
+            ] : null,
 
-            // ── Snapshot metadata ─────────────────────────────────────
+            // ── Metadata ─────────────────────────────────────────────────────
             'snapshotted_at' => now()->toDateTimeString(),
         ];
     }
