@@ -300,16 +300,29 @@ class AmendmentController extends Controller
                     if (is_string($individualPricing)) {
                         $individualPricing = json_decode($individualPricing, true) ?? [];
                     }
-
                     if (!is_array($individualPricing)) {
                         $individualPricing = [];
                     }
 
-                    $childQty   = (int) $changes['child_quantity'];
-                    $childPrice = (float) ($individualPricing['child']['selling_price'] ?? $individualPricing['child']['price'] ?? 0);
-                    $childCost  = (float) ($individualPricing['child']['cost_price'] ?? 0);
+                    $childQty = (int) $changes['child_quantity'];
+
+                    // ✅ changes မှ အရင်ယူ၊ မပါလျှင် existing မှ fallback
+                    $childPrice = (float) (
+                        $changes['child_selling_price']
+                        ?? $individualPricing['child']['selling_price']
+                        ?? $individualPricing['child']['price']
+                        ?? 0
+                    );
+
+                    $childCost = (float) (
+                        $changes['child_cost_price']
+                        ?? $individualPricing['child']['cost_price']
+                        ?? 0
+                    );
 
                     $individualPricing['child']['quantity']         = $childQty;
+                    $individualPricing['child']['selling_price']    = $childPrice;  // ✅
+                    $individualPricing['child']['cost_price']       = $childCost;   // ✅
                     $individualPricing['child']['amount']           = $childQty * $childPrice;
                     $individualPricing['child']['total_cost_price'] = $childQty * $childCost;
 
