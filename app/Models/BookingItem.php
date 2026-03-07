@@ -19,6 +19,10 @@ class BookingItem extends Model
 
     protected $casts = [
         'service_date' => 'date:Y-m-d',
+        'product_snapshot'   => 'array',
+        'variation_snapshot' => 'array',
+        'price_snapshot'     => 'array',
+        'archive_snapshot'   => 'array',
     ];
 
 
