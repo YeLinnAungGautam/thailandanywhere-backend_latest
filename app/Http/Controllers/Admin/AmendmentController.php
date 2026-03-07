@@ -267,6 +267,9 @@ class AmendmentController extends Controller
                 }
 
                 if (!empty($changes['checkout_date'])) {
+                    if(!empty($changes['service_date'])){
+                        $updateData['checkin_date'] = $changes['service_date'];
+                    }
                     $updateData['checkout_date'] = $changes['checkout_date'];
                 }
 
