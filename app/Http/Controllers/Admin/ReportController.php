@@ -468,6 +468,52 @@ class ReportController extends Controller
         return $this->success($data, 'Date: ' . Carbon::parse($date)->format('d F Y'));
     }
 
+    public function inclusiveSaleReport(string $date, Request $request)
+    {
+        $report_service = new SaleReportService($date);
+
+        $search_by = $request->input('search_by', 'created_at'); // 'created_at' or 'inclusive_start_date'
+
+        $data = [
+            'inclusive_sales' => $report_service->getInclusiveSaleData(
+                $request->created_by,
+                $search_by
+            ),
+        ];
+
+        return $this->success($data, 'Inclusive Report: ' . Carbon::parse($date)->format('F Y'));
+    }
+
+    public function inclusiveDayBookings(string $date, Request $request)
+    {
+        $request->validate([
+            'day'       => 'required|date',
+            'search_by' => 'nullable|in:created_at,inclusive_start_date',
+        ]);
+
+        $report_service = new SaleReportService($date);
+
+        $data = $report_service->getInclusiveDayBookings(
+            $request->day,
+            $request->created_by,
+            $request->input('search_by', 'created_at')
+        );
+
+        return $this->success(
+            BookingResource::collection($data)
+                ->additional([
+                    'meta' => [
+                        'total_page' => (int) ceil($data->total() / $data->perPage()),
+                        'total'      => $data->total(),
+                        'day'        => $request->day,
+                    ],
+                ])
+                ->response()
+                ->getData(),
+            'Inclusive bookings for ' . Carbon::parse($request->day)->format('d F Y')
+        );
+    }
+
     public function getSaleCountReport(Request $request)
     {
         $request->validate([

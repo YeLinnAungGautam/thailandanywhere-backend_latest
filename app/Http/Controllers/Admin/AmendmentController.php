@@ -27,7 +27,7 @@ class AmendmentController extends Controller
         $bookingItemId = $request->query('booking_item_id');
         $status        = $request->query('status');
 
-        $query = BookingItemAmendment::query();
+        $query = BookingItemAmendment::with(['bookingItem.booking.customer', 'bookingItem.product']);
 
         if ($bookingItemId) {
             $query->where('booking_item_id', $bookingItemId);
@@ -113,7 +113,7 @@ class AmendmentController extends Controller
 
     public function show(string $id)
     {
-        $amend = BookingItemAmendment::with('bookingItem')->find($id);
+        $amend = BookingItemAmendment::with(['bookingItem.booking.customer', 'bookingItem.product'])->find($id);
         if (!$amend) {
             return $this->error(null, 'Amendment not found', 404);
         }
@@ -285,8 +285,48 @@ class AmendmentController extends Controller
                     $updateData['cost_price'] = $changes['cost_price'];
                 }
 
+                // if (!empty($changes['variation_id'])) {
+                //     $updateData['car_id'] = $changes['variation_id'];
+                // }
                 if (!empty($changes['variation_id'])) {
-                    $updateData['car_id'] = $changes['variation_id'];
+                    $productType = $bookingItem->product_type;
+
+                    // Reset all variant ID columns first to avoid stale data
+                    $updateData['car_id']       = null;
+                    $updateData['room_id']      = null;
+                    $updateData['ticket_id']    = null;
+                    $updateData['variation_id'] = null;
+
+                    // Set only the correct column for this product type
+                    if ($productType === \App\Models\PrivateVanTour::class) {
+                        $updateData['car_id'] = $changes['variation_id'];
+
+                    } elseif ($productType === \App\Models\Hotel::class) {
+                        $updateData['room_id'] = $changes['variation_id'];
+
+                    } elseif ($productType === \App\Models\EntranceTicket::class) {
+                        $updateData['variation_id'] = $changes['variation_id'];
+
+                    } elseif ($productType === \App\Models\Airline::class) {
+                        $updateData['ticket_id'] = $changes['variation_id'];
+
+                    } else {
+                        $updateData['car_id'] = $changes['variation_id'];
+                    }
+
+                    $bookingItem->fill($updateData);
+
+                    // Rebuild snapshots
+                    try {
+                        $snapshotService = new \App\Services\BookingItemSnapshotService();
+                        $snapshots       = $snapshotService->buildSnapshot($bookingItem);
+
+                        $updateData['variation_snapshot'] = $snapshots['variation_snapshot'];
+                        $updateData['price_snapshot']     = $snapshots['price_snapshot'];
+                        $updateData['archive_snapshot']   = $snapshots['archive_snapshot'];
+                    } catch (\Exception $e) {
+                        Log::error('Snapshot rebuild on amend approve: ' . $e->getMessage());
+                    }
                 }
 
                 if (isset($changes['total_amount']) && $changes['total_amount'] !== null) {
