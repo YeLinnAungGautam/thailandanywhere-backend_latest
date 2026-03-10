@@ -240,6 +240,49 @@ class SaleReportService
         return iterator_to_array($dates);
     }
 
+    public function getInclusiveSaleData(?string $created_by = null, string $search_by = 'created_at'): array
+    {
+        // $search_by = 'created_at' | 'inclusive_start_date'
+        $dateColumn = $search_by === 'inclusive_start_date'
+            ? 'inclusive_start_date'
+            : 'created_at';
+
+        $sales = Booking::query()
+            ->where('is_inclusive', 1)
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('created_by', explode(',', $created_by));
+            })
+            ->whereBetween($dateColumn, [$this->start_date, $this->end_date])
+            ->select(
+                'created_by',
+                DB::raw('COUNT(*) as total_count'),
+                DB::raw('SUM(grand_total) as total'),
+                DB::raw('SUM(deposit) as total_deposit'),
+                DB::raw('SUM(balance_due) as total_balance'),
+                DB::raw("DATE_FORMAT({$dateColumn}, '%Y-%m-%d') as sale_date")
+            )
+            ->groupBy('created_by', DB::raw("DATE_FORMAT({$dateColumn}, '%Y-%m-%d')"))
+            ->get();
+
+        return $this->generateSaleResponse($sales, $created_by, true, true);
+    }
+
+    public function getInclusiveDayBookings(string $day, ?string $created_by = null, string $search_by = 'created_at'): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $dateColumn = $search_by === 'inclusive_start_date'
+            ? 'inclusive_start_date'
+            : 'created_at';
+
+        return Booking::query()
+            ->with(['customer', 'items.product', 'createdBy'])
+            ->where('is_inclusive', 1)
+            ->when($created_by, function ($q) use ($created_by) {
+                $q->whereIn('created_by', explode(',', $created_by));
+            })
+            ->whereDate($dateColumn, $day)
+            ->paginate(request('limit', 15));
+    }
+
     private function generateSaleResponse($sales, $created_by = null, $with_balance = false, $with_count = false): array
     {
         $result = [];
