@@ -434,6 +434,8 @@ class ReportService
      */
     private static function calculateOverTargetCount($booking): int
     {
+        $target_amount = (float) $booking->target_amount;  // ← cast here
+
         $created_grand_total = explode(',', $booking->created_at_grand_total);
 
         $grouped = collect($created_grand_total)
@@ -447,7 +449,7 @@ class ReportService
                 ->map(fn($entry) => (float)(explode('__', $entry)[1] ?? 0))
                 ->sum();
 
-            if ($total >= $booking->target_amount) {
+            if ($total >= $target_amount) {  // ← use cast variable
                 $filteredDates[$date] = count($entries);
             }
         }
