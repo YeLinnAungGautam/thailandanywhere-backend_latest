@@ -23,9 +23,13 @@ class AmendmentController extends Controller
 
     public function index(Request $request)
     {
-        $limit         = $request->query('limit', 10);
-        $bookingItemId = $request->query('booking_item_id');
-        $status        = $request->query('status');
+        $limit          = $request->query('limit', 10);
+        $bookingItemId  = $request->query('booking_item_id');
+        $status         = $request->query('status');
+        $userId         = $request->query('user_id');
+        $daterange      = $request->query('daterange');
+        $orderBy        = $request->query('order_by', 'created_at');
+        $orderDirection = $request->query('order_direction', 'desc');
 
         $query = BookingItemAmendment::with(['bookingItem.booking.customer', 'bookingItem.product']);
 
@@ -36,6 +40,31 @@ class AmendmentController extends Controller
         if ($status) {
             $query->where('amend_status', $status);
         }
+
+        // Filter by user_id inside amend_history JSON
+        if ($userId) {
+            $query->whereJsonContains('amend_history', ['user_id' => (int) $userId]);
+        }
+
+        // Filter by created_at daterange
+        if ($daterange) {
+            $dates = explode(',', $daterange);
+            if (count($dates) === 2) {
+                $query->whereBetween('created_at', [
+                    \Carbon\Carbon::parse(trim($dates[0]))->startOfDay(),
+                    \Carbon\Carbon::parse(trim($dates[1]))->endOfDay(),
+                ]);
+            }
+        }
+
+        // Sort
+        $allowedOrderBy = ['created_at', 'updated_at', 'amend_status'];
+        $allowedDirection = ['asc', 'desc'];
+
+        $orderBy        = in_array($orderBy, $allowedOrderBy) ? $orderBy : 'created_at';
+        $orderDirection = in_array($orderDirection, $allowedDirection) ? $orderDirection : 'desc';
+
+        $query->orderBy($orderBy, $orderDirection);
 
         $data = $query->paginate($limit);
 

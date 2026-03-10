@@ -103,7 +103,7 @@ use App\Http\Controllers\RoitemController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
-use App\Models\Booking;
+// use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
