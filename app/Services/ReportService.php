@@ -101,7 +101,10 @@ class ReportService
                 [$date, $grandTotal] = $dateParts;
 
                 // Get airline amount for this specific booking
-                $bookingAirlineAmount = $airlineTotals[$bookingId] ?? 0;
+                // $bookingAirlineAmount = $airlineTotals[$bookingId] ?? 0;
+                // $adjustedGrandTotal = $grandTotal - $bookingAirlineAmount;
+                $grandTotal = (float) $grandTotal;
+                $bookingAirlineAmount = (float) ($airlineTotals[$bookingId] ?? 0);
                 $adjustedGrandTotal = $grandTotal - $bookingAirlineAmount;
 
                 // Store both versions
