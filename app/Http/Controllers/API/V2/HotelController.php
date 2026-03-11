@@ -55,6 +55,7 @@ class HotelController extends Controller
             ->when($request->place, function ($p_query) use ($request) {
                 $p_query->where('place', $request->place);
             })
+            ->when($request->data_status,fn ($query) => $query->where('data_status', $request->data_status))
             ->when($request->price_range, function ($q) use ($request) {
                 $prices = explode('-', $request->price_range);
 

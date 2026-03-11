@@ -30,6 +30,8 @@ class AmendmentController extends Controller
         $daterange      = $request->query('daterange');
         $orderBy        = $request->query('order_by', 'created_at');
         $orderDirection = $request->query('order_direction', 'desc');
+        $crmId          = $request->query('crm_id');         // NEW
+        $amendStatus    = $request->query('amend_status');
 
         $query = BookingItemAmendment::with(['bookingItem.booking.customer', 'bookingItem.product']);
 
@@ -55,6 +57,23 @@ class AmendmentController extends Controller
                     \Carbon\Carbon::parse(trim($dates[1]))->endOfDay(),
                 ]);
             }
+        }
+
+        // NEW: Filter by amend_status (explicit dedicated param)
+        if ($amendStatus) {
+            $query->where('amend_status', $amendStatus);
+        }
+
+        // NEW: Filter by crm_id via bookingItem relationship
+        if ($crmId) {
+            $query->where(function ($q) use ($crmId) {
+                // Search on live booking item relation
+                $q->whereHas('bookingItem', function ($sub) use ($crmId) {
+                    $sub->where('crm_id', 'LIKE', '%' . $crmId . '%');
+                })
+                // Also search in item_snapshot JSON for deleted booking items
+                ->orWhere('item_snapshot', 'LIKE', '%' . $crmId . '%');
+            });
         }
 
         // Sort
