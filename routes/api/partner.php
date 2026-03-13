@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\FacilityController;
+use App\Http\Controllers\Admin\GoodToKnowController;
+use App\Http\Controllers\Admin\KeyHighLightController;
+use App\Http\Controllers\Admin\NearByPlaceController;
+use App\Http\Controllers\Admin\PlaceController;
 use App\Http\Controllers\API\Partner\AuthPartnerController;
 use App\Http\Controllers\API\Partner\CashImageController;
 use App\Http\Controllers\API\Partner\DashboardController;
@@ -51,19 +56,32 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
     Route::put('hotels/{hotel}', [HotelPartnerController::class, 'update']);
     Route::post('hotels/{hotel}/allowment', [HotelPartnerController::class, 'allowmentHotel']);
 
-    // hotel images
+    # hotel images
     Route::delete('hotel/{hotel}/image/{hotel_image}', [HotelPartnerController::class, 'deleteImage']);
     Route::post('hotel/{hotel}/image', [HotelPartnerController::class, 'addImage']);
     Route::post('hotel/{hotel}/image/{hotel_image}', [HotelPartnerController::class, 'editImage']);
 
-    // hotel contracts
+    # hotel contracts
     Route::delete('hotel/{id}/contract/{cid}', [HotelPartnerController::class, 'deleteContract']);
-    Route::post('hotel/contract/{id}', [HotelPartnerController::class, 'addContract']);
 
-    // hotel slug
+    # hotel slug
     Route::post('hotels/{hotel}/slug', [HotelPartnerController::class, 'addSlug']);
 
     Route::apiResource('facilities', FacilityController::class);
+
+    # Place
+    Route::apiResource('places', PlaceController::class);
+
+    # City
+    Route::apiResource('cities', CityController::class);
+
+    # Hotel & Attraction of GoodtoKnow , KeyHighlight & Nearby place
+    Route::apiResource('/good-to-knows', GoodToKnowController::class);
+    Route::put('bluck/good-to-knows/orders', [GoodToKnowController::class, 'updateOrder']);
+    Route::apiResource('/key-highlights', KeyHighLightController::class);
+    Route::put('bluck/key-highlights/orders', [KeyHighLightController::class, 'updateOrder']);
+    Route::apiResource('/nearby-places', NearByPlaceController::class);
+    Route::put('bluck/nearby-places/orders', [NearByPlaceController::class, 'updateOrder']);
 
     # Room
     Route::apiResource('rooms', RoomController::class);

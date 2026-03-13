@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BookingItem\BookingItemGroupListResource;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\Customer;
@@ -540,4 +541,20 @@ class ReportController extends Controller
 
         return $this->success($data, 'Cash Image Report - Date: ' . Carbon::parse($date)->format('d F Y'));
     }
+
+    public function expenseGraph(string $year, string $month, Request $request)
+    {
+        $report_service = new SaleReportService($year . '-' . $month . '-01');
+
+        $data = $report_service->getExpenseGraphData(
+            $request->created_by,
+            $request->input('product_type', 'all'),
+            $request->input('expense_status'),
+            $request->input('customer_payment_status'),
+        );
+
+        return $this->success($data, 'Expense Graph: ' . Carbon::create($year, $month)->format('F Y'));
+    }
+
+
 }
