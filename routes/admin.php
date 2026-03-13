@@ -175,6 +175,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('general-reports/{date}', [ReportController::class, 'generalSaleReport']);
     Route::get('/inclusive-sale-report/{date}', [ReportController::class, 'inclusiveSaleReport']);
     Route::get('/inclusive-sale-report/{date}/day-bookings', [ReportController::class, 'inclusiveDayBookings']);
+    Route::get('/expense-graph/{year}/{month}', [ReportController::class, 'expenseGraph']);
+
     Route::get('general-cash-image-reports/{date}', [ReportController::class, 'generalCashImageReport']);
 
     Route::apiResource('admins', AdminController::class);
