@@ -10,6 +10,6 @@ class EmailTicketMessage extends Model
 
     public function emailTicket()
     {
-        return $this->belongsTo(EmailTicket::class);
+        return $this->belongsTo(EmailTicket::class, 'ticket_id');
     }
 }

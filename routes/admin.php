@@ -619,6 +619,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::patch('gmail/emails/archive', [GmailInboxController::class, 'archive']);
     Route::delete('gmail/emails', [GmailInboxController::class, 'delete']);
     Route::post('gmail/sync', [GmailInboxController::class, 'syncFromGmail']);
+    Route::patch('gmail/tickets/{ticketId}/close', [GmailInboxController::class, 'closeTicket']);
+    Route::patch('gmail/tickets/{ticketId}/reopen', [GmailInboxController::class, 'reopenTicket']);
     # Email Logs
     Route::apiResource('email-logs', EmailLogController::class);
     Route::patch('email-logs/{email_log}/mark-read', [EmailLogController::class, 'markAsRead']);

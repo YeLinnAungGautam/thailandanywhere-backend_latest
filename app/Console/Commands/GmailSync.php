@@ -8,83 +8,110 @@ use Illuminate\Console\Command;
 
 class GmailSync extends Command
 {
-    protected $signature = 'gmail:sync {max=50}';
-    protected $description = 'Sync Gmail inbox and store new messages as ticket messages';
+    protected $signature = 'gmail:sync
+                            {max=50 : Max messages per run (ignored when --all is used)}
+                            {--since= : Only fetch emails after this date, e.g. 2026-01-01}
+                            {--all : Fetch all messages (not just unread), paginating through all results}';
+
+    protected $description = 'Sync Gmail inbox for negyi.partnership@thanywhere.com into email_tickets';
 
     public function handle()
     {
-        // Try to get token from cache first (new system)
-        $token = \Cache::get('gmail_access_token');
-
-        // Fallback to file system if cache doesn't have it (old system)
-        if (!$token) {
-            $tokenJson = \Storage::exists('gmail_token.json') ? \Storage::get('gmail_token.json') : null;
-            if (!$tokenJson) {
-                $this->error('No Gmail token found. Please authenticate first using: GET /admin/gmail/auth/url');
-                $this->error('Follow the OAuth flow to get authenticated.');
-
-                return 1;
-            }
-            $token = json_decode($tokenJson, true);
-        }
-
+        // GmailService auto-loads from storage/app/gmail_token.json
         try {
-            $gmail = new GmailService($token);
+            $gmail = new GmailService();
         } catch (\Exception $e) {
             $this->error('Failed to initialize Gmail service: ' . $e->getMessage());
 
             return 1;
         }
 
-        $this->info('Starting Gmail sync...');
-
+        // Verify connection
         try {
-            // list unread
-            $list = $gmail->listMessages(['maxResults' => (int)$this->argument('max'), 'q' => 'is:unread']);
-            $this->info("Found " . count($list) . " unread messages to sync");
+            $profile = $gmail->service->users->getProfile('me');
+            $this->info('Connected: ' . $profile->getEmailAddress());
         } catch (\Exception $e) {
-            $this->error('Failed to fetch messages: ' . $e->getMessage());
+            $this->error('Gmail not connected: ' . $e->getMessage());
 
             return 1;
         }
 
-        foreach ($list as $m) {
+        $inboxEmail = $gmail->accountEmail;
+        $fetchAll   = $this->option('all');
+        $since      = $this->option('since');   // e.g. "2026-01-01"
+        $max        = (int) $this->argument('max');
+
+        // Build Gmail search query
+        $queryParts = ["to:{$inboxEmail} OR from:{$inboxEmail}"];
+
+        if ($since) {
+            // Gmail accepts after:YYYY/MM/DD
+            $date         = \Carbon\Carbon::parse($since)->format('Y/m/d');
+            $queryParts[] = "after:{$date}";
+        }
+
+        if (!$fetchAll) {
+            $queryParts[] = 'is:unread';
+        }
+
+        $query = implode(' ', $queryParts);
+
+        $mode = $fetchAll ? 'ALL messages' : 'unread messages';
+        $this->info("Syncing {$mode} for {$inboxEmail}" . ($since ? " since {$since}" : '') . ' ...');
+        $this->info("Query: {$query}");
+
+        $synced    = 0;
+        $skipped   = 0;
+        $failed    = 0;
+        $pageToken = null;
+
+        do {
+            // Fetch one page of message IDs
+            $params = ['q' => $query, 'maxResults' => 500];
+            if ($pageToken) {
+                $params['pageToken'] = $pageToken;
+            }
+
             try {
-                $this->info("Processing message: {$m['id']}");
+                $response  = $gmail->service->users_messages->listUsersMessages('me', $params);
+                $messages  = $response->getMessages() ?? [];
+                $pageToken = $response->getNextPageToken(); // null = last page
+            } catch (\Exception $e) {
+                $this->error('Failed to list messages: ' . $e->getMessage());
 
-                $threadId = $m['threadId'];
-                // fetch full message (array)
-                $full = $gmail->getMessage($m['id'], ['format' => 'full']);
+                return 1;
+            }
 
-                // normalize headers
-                $headers = collect($full['payload']['headers'] ?? []);
-                $from = $headers->firstWhere('name', 'From')['value'] ?? '';
-                $to = $headers->firstWhere('name', 'To')['value'] ?? '';
-                $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '';
+            $this->info('Processing ' . count($messages) . ' messages on this page...');
 
-                // extract body (prefer HTML, fallback to plain text)
-                $decode = function (?string $data): string {
-                    if (!$data) {
-                        return '';
-                    }
+            foreach ($messages as $msg) {
+                // Respect --max limit when NOT using --all
+                if (!$fetchAll && ($synced + $skipped + $failed) >= $max) {
+                    $pageToken = null; // stop pagination
 
-                    return base64_decode(strtr($data, '-_', '+/')) ?: '';
-                };
-
-                $body = '';
-                $payload = $full['payload'] ?? [];
-
-                // If top-level body has data
-                if (!empty($payload['body']['data'])) {
-                    $body = $decode($payload['body']['data']);
+                    break;
                 }
 
-                // Traverse parts for text/html or text/plain
-                $parts = $payload['parts'] ?? [];
-                if ($parts) {
-                    $html = '';
+                try {
+                    $full     = $gmail->getMessage($msg->getId(), ['format' => 'full']);
+                    $threadId = $full['threadId'] ?? $msg->getThreadId();
+
+                    // Extract headers
+                    $headers = collect($full['payload']['headers'] ?? []);
+                    $from    = $headers->firstWhere('name', 'From')['value'] ?? '';
+                    $to      = $headers->firstWhere('name', 'To')['value'] ?? '';
+                    $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '(no subject)';
+
+                    // Decode body
+                    $decode = fn(?string $d): string => $d
+                        ? (base64_decode(strtr($d, '-_', '+/')) ?: '')
+                        : '';
+
+                    $body  = $decode($full['payload']['body']['data'] ?? null);
+                    $html  = '';
                     $plain = '';
-                    foreach ($parts as $part) {
+
+                    foreach ($full['payload']['parts'] ?? [] as $part) {
                         $mime = $part['mimeType'] ?? '';
                         $data = $part['body']['data'] ?? null;
                         if ($mime === 'text/html' && $data) {
@@ -93,66 +120,65 @@ class GmailSync extends Command
                             $plain = $decode($data);
                         }
                     }
-                    $body = $html ?: ($body ?: $plain);
-                }
 
-                try {
+                    $body = $html ?: ($body ?: $plain);
+
+                    // Skip if already stored
+                    if (EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    // Upsert ticket (one per thread)
                     $ticket = EmailTicket::firstOrCreate(
                         ['gmail_thread_id' => $threadId],
                         [
-                            'subject' => strlen($subject) > 255 ? substr($subject, 0, 255) : $subject,
-                            'customer_email' => strlen($from) > 255 ? substr($from, 0, 255) : $from
+                            'subject'        => mb_substr($subject, 0, 255),
+                            'customer_email' => mb_substr($from, 0, 255),
+                            'status'         => 'open',
                         ]
                     );
-                } catch (\Exception $e) {
-                    $this->error("Failed to create ticket for thread {$threadId}: " . $e->getMessage());
 
-                    continue;
-                }
+                    EmailTicketMessage::create([
+                        'ticket_id'        => $ticket->id,
+                        'from'             => mb_substr($from, 0, 255),
+                        'to'               => mb_substr($to, 0, 255) ?: 'me',
+                        'body'             => mb_substr($body, 0, 65535),
+                        'gmail_message_id' => $full['id'],
+                        'gmail_datetime'   => now(),
+                        'is_incoming'      => true,
+                    ]);
 
-                // avoid duplicate by gmail message id
-                if (!EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
+                    // Mark as read so regular syncs don't re-process it
                     try {
-                        // Truncate body if too long to prevent database errors
-                        $truncatedBody = strlen($body) > 65535 ? substr($body, 0, 65535) : $body;
-
-                        EmailTicketMessage::create([
-                            'ticket_id' => $ticket->id,
-                            'from' => strlen($from) > 255 ? substr($from, 0, 255) : $from,
-                            'to' => 'me',
-                            'body' => $truncatedBody,
-                            'gmail_message_id' => $full['id'],
-                            'gmail_datetime' => now(),
-                            'is_incoming' => true,
-                        ]);
-
-                        $this->info("Synced message: {$subject}");
+                        $gmail->service->users_messages->modify(
+                            'me',
+                            $full['id'],
+                            new \Google\Service\Gmail\ModifyMessageRequest(['removeLabelIds' => ['UNREAD']])
+                        );
                     } catch (\Exception $e) {
-                        $this->error("Failed to save message {$full['id']}: " . $e->getMessage());
-                        \Log::error("Gmail sync error for message {$full['id']}: " . $e->getMessage());
-
-                        continue; // Skip this message and continue with next
+                        // Non-fatal
                     }
-                }
 
-                // mark message as read (so we don't process again)
-                try {
-                    $gmail->service->users_messages->modify('me', $full['id'], new \Google\Service\Gmail\ModifyMessageRequest(['removeLabelIds' => ['UNREAD']]));
-                    $this->info("Marked message as read: {$full['id']}");
+                    $this->line("  ✓ {$subject}");
+                    $synced++;
+
                 } catch (\Exception $e) {
-                    $this->warn("Failed to remove UNREAD label from {$full['id']}: {$e->getMessage()}");
-                    \Log::error("Failed to remove UNREAD label: {$e->getMessage()}");
+                    $this->error("  ✗ Failed [{$msg->getId()}]: " . $e->getMessage());
+                    \Log::error("gmail:sync error [{$msg->getId()}]: " . $e->getMessage());
+                    $failed++;
                 }
-
-            } catch (\Exception $e) {
-                $this->error("Failed to process message {$m['id']}: " . $e->getMessage());
-                \Log::error("Gmail sync error for message {$m['id']}: " . $e->getMessage());
-
-                continue;
             }
-        }
 
-        $this->info('Gmail sync completed successfully!');
+        } while ($pageToken); // keep going if there are more pages
+
+        $this->newLine();
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        $this->info("Synced:  {$synced}");
+        $this->info("Skipped: {$skipped} (already in DB)");
+        $this->info("Failed:  {$failed}");
+        $this->info('Gmail sync completed!');
 
         return 0;
     }

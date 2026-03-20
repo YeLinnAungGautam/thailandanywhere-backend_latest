@@ -54,9 +54,14 @@ class GmailAuthController extends Controller
             // Store the token securely (you may want to encrypt this)
             Cache::put('gmail_access_token', $token, now()->addDays(7));
 
-            // Test the connection
-            $gmailService = new GmailService($token);
-            $profile = $gmailService->service->users->getProfile('me');
+            // Test the connection early to get profile before creating GmailService again below
+            $gmailServiceTemp = new GmailService($token);
+            $profileTemp = $gmailServiceTemp->service->users->getProfile('me');
+            Cache::put('gmail_account_email', $profileTemp->getEmailAddress(), now()->addDays(7));
+
+            // Use the already-fetched profile
+            $gmailService = $gmailServiceTemp;
+            $profile = $profileTemp;
 
             return $this->success([
                 'email_address' => $profile->getEmailAddress(),
@@ -96,6 +101,7 @@ class GmailAuthController extends Controller
             return $this->success([
                 'connected' => true,
                 'email_address' => $profile->getEmailAddress(),
+                'inbox_email' => Cache::get('gmail_account_email', $profile->getEmailAddress()),
                 'messages_total' => $profile->getMessagesTotal(),
                 'threads_total' => $profile->getThreadsTotal(),
                 'token_expires_at' => isset($token['expires_in']) ?
@@ -134,8 +140,9 @@ class GmailAuthController extends Controller
                 }
             }
 
-            // Clear stored token
+            // Clear stored token and account email
             Cache::forget('gmail_access_token');
+            Cache::forget('gmail_account_email');
 
             return $this->success(null, 'Gmail disconnected successfully');
 

@@ -10,6 +10,6 @@ class EmailTicket extends Model
 
     public function messages()
     {
-        return $this->hasMany(EmailTicketMessage::class);
+        return $this->hasMany(EmailTicketMessage::class, 'ticket_id');
     }
 }
