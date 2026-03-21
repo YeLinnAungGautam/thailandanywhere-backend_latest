@@ -10,32 +10,101 @@ class GmailService
     public GoogleClient $client;
     public Gmail $service;
 
+    /** The Gmail inbox address this token belongs to (auto-detected or hardwired) */
+    public string $accountEmail;
+
     public function __construct(?array $accessToken = null)
     {
         $client = new GoogleClient();
-        $client->setClientId(config('services.google_gmail.client_id') ?? env('GOOGLE_GMAIL_CLIENT_ID'));
-        $client->setClientSecret(config('services.google_gmail.client_secret') ?? env('GOOGLE_GMAIL_CLIENT_SECRET'));
-        $client->setRedirectUri(config('services.google_gmail.redirect') ?? env('GOOGLE_GMAIL_REDIRECT_URL'));
-        $client->setScopes([
+
+        $scopes = [
             Gmail::MAIL_GOOGLE_COM,
             'https://www.googleapis.com/auth/gmail.modify',
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.send',
-        ]);
-        $client->setAccessType('offline');
-        $client->setPrompt('consent');
+        ];
 
-        if ($accessToken) {
-            $client->setAccessToken($accessToken);
-            if ($client->isAccessTokenExpired()) {
-                if ($client->getRefreshToken()) {
-                    $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+        $inboxEmail = env('GMAIL_INBOX_EMAIL', 'negyi.partnership@thanywhere.com');
+
+        // ── Priority 1: Service Account with Domain-Wide Delegation ────────────
+        // No browser/OAuth flow needed. The service account impersonates the inbox
+        // address server-side. Requires one-time Google Workspace admin setup.
+        $serviceAccountPath = storage_path(
+            'app/' . env('GMAIL_SERVICE_ACCOUNT_JSON', 'gmail-service-account.json')
+        );
+
+        if (file_exists($serviceAccountPath)) {
+            $client->setAuthConfig($serviceAccountPath);
+            $client->setSubject($inboxEmail);          // impersonate the inbox
+            $client->addScope($scopes);
+            $client->setAccessType('offline');
+        } else {
+            // ── Priority 2: OAuth token file (refresh_token stored on disk) ────
+            $client->setClientId(config('services.google_gmail.client_id') ?? env('GOOGLE_GMAIL_CLIENT_ID'));
+            $client->setClientSecret(config('services.google_gmail.client_secret') ?? env('GOOGLE_GMAIL_CLIENT_SECRET'));
+            $client->setRedirectUri(config('services.google_gmail.redirect') ?? env('GOOGLE_GMAIL_REDIRECT_URL'));
+            $client->setScopes($scopes);
+            $client->setAccessType('offline');
+            $client->setPrompt('consent');
+
+            // Use injected token, or auto-load from file
+            $tokenData = $accessToken ?? $this->loadTokenFromFile();
+
+            if ($tokenData) {
+                try {
+                    $client->setAccessToken($tokenData);
+
+                    if ($client->isAccessTokenExpired()) {
+                        $refreshToken = $client->getRefreshToken()
+                            ?? ($tokenData['refresh_token'] ?? null);
+
+                        if ($refreshToken) {
+                            $newToken = $client->fetchAccessTokenWithRefreshToken($refreshToken);
+
+                            if (isset($newToken['error'])) {
+                                \Log::warning('Gmail token refresh failed', [
+                                    'error'             => $newToken['error'],
+                                    'error_description' => $newToken['error_description'] ?? '',
+                                ]);
+                            } else {
+                                // Preserve refresh_token if omitted from response
+                                if (!isset($newToken['refresh_token']) && isset($tokenData['refresh_token'])) {
+                                    $newToken['refresh_token'] = $tokenData['refresh_token'];
+                                }
+                                $this->persistTokenToFile($newToken);
+                            }
+                        }
+                    }
+                } catch (\InvalidArgumentException $e) {
+                    \Log::error('GmailService: invalid token, skipping auth. ' . $e->getMessage());
                 }
             }
         }
 
-        $this->client = $client;
-        $this->service = new Gmail($client);
+        $this->client       = $client;
+        $this->service      = new Gmail($client);
+        $this->accountEmail = $inboxEmail;
+    }
+
+    /**
+     * Load Gmail token from local storage file.
+     */
+    private function loadTokenFromFile(): ?array
+    {
+        if (\Storage::exists('gmail_token.json')) {
+            $json = \Storage::get('gmail_token.json');
+            return json_decode($json, true) ?: null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Persist a (refreshed) token back to the local storage file.
+     */
+    private function persistTokenToFile(array $token): void
+    {
+        \Storage::put('gmail_token.json', json_encode($token));
     }
 
     public function getAuthUrl(): string
@@ -72,6 +141,88 @@ class GmailService
         $thread = $this->service->users_threads->get('me', $threadId, ['format' => 'full']);
 
         return json_decode(json_encode($thread), true);
+    }
+
+    /**
+     * Recursively parse a Gmail message payload (multipart/mixed, alternative, etc.)
+     * Extracts text/html, text/plain, and downloads attachments.
+     */
+    public function parseMessagePayload(array $payload, string $msgId): array
+    {
+        $html = '';
+        $plain = '';
+        $attachments = [];
+
+        $this->extractPartsRecurse($payload['parts'] ?? [], $msgId, $html, $plain, $attachments);
+
+        // If no parts (simple message), check payload body directly
+        if (empty($payload['parts'])) {
+            $data = $payload['body']['data'] ?? null;
+            if ($data) {
+                $decoded = base64_decode(strtr($data, '-_', '+/')) ?: '';
+                $mime = $payload['mimeType'] ?? '';
+                if ($mime === 'text/html') $html .= $decoded;
+                else $plain .= $decoded;
+            }
+        }
+
+        return [
+            'body' => $html ?: $plain,
+            'attachments' => $attachments
+        ];
+    }
+
+    private function extractPartsRecurse(array $parts, string $msgId, string &$html, string &$plain, array &$attachments): void
+    {
+        foreach ($parts as $part) {
+            $mime = $part['mimeType'] ?? '';
+
+            // Handle nested parts (like multipart/mixed containing multipart/alternative)
+            if (!empty($part['parts'])) {
+                $this->extractPartsRecurse($part['parts'], $msgId, $html, $plain, $attachments);
+                continue;
+            }
+
+            // Handle Attachments
+            if (!empty($part['filename']) && !empty($part['body']['attachmentId'])) {
+                try {
+                    $attId = $part['body']['attachmentId'];
+                    $attObj = $this->service->users_messages_attachments->get('me', $msgId, $attId);
+                    $attData = base64_decode(strtr($attObj->getData(), '-_', '+/'));
+                    
+                    $ext = pathinfo($part['filename'], PATHINFO_EXTENSION);
+                    $filename = \Str::slug(pathinfo($part['filename'], PATHINFO_FILENAME));
+                    if ($ext) {
+                        $filename .= '.' . $ext;
+                    }
+                                
+                    $path = "emails/attachments/{$msgId}_{$filename}";
+                    \Storage::disk('public')->put($path, $attData);
+
+                    $attachments[] = [
+                        'filename' => $part['filename'],
+                        'mime_type' => $mime,
+                        'size' => $part['body']['size'] ?? 0,
+                        'path' => $path,
+                        'url' => \Storage::url($path),
+                    ];
+                } catch (\Exception $e) {
+                    \Log::error("Failed to download attachment {$part['filename']}: " . $e->getMessage());
+                }
+                continue;
+            }
+
+            // Output body
+            $data = $part['body']['data'] ?? null;
+            if ($data) {
+                $decoded = base64_decode(strtr($data, '-_', '+/')) ?: '';
+                if ($mime === 'text/html') {
+                    $html .= $decoded;
+                } elseif ($mime === 'text/plain') {
+                    $plain .= $decoded;
+                }
+            }
+        }
     }
 
     public function sendRawMessage(string $raw): Message
@@ -157,12 +308,18 @@ class GmailService
 
     /**
      * Sync recent emails from Gmail to local database
+     *
+     * @param int    $limit       Max number of messages to fetch
+     * @param string|null $accountEmail The Gmail address that owns the token (used for sent/received classification)
+     * @param string|null $extraQuery   Additional Gmail search query (e.g. "to:negyi.partnership@thanywhere.com OR from:negyi.partnership@thanywhere.com")
      */
-    public function syncRecentEmails(int $limit = 50): int
+    public function syncRecentEmails(int $limit = 50, ?string $accountEmail = null, ?string $extraQuery = null): int
     {
+        $baseQuery = $extraQuery ?: 'in:inbox OR in:sent';
+
         $params = [
             'maxResults' => $limit,
-            'q' => 'in:inbox OR in:sent'
+            'q' => $baseQuery
         ];
 
         $messages = $this->listMessages($params);
@@ -170,7 +327,7 @@ class GmailService
 
         foreach ($messages as $messageData) {
             try {
-                $this->saveEmailToDatabase($messageData);
+                $this->saveEmailToDatabase($messageData, $accountEmail);
                 $syncedCount++;
             } catch (\Exception $e) {
                 \Log::error('Failed to sync email: ' . $e->getMessage(), [
@@ -184,8 +341,11 @@ class GmailService
 
     /**
      * Save Gmail message to local database
+     *
+     * @param array       $messageData  Decoded Gmail message array
+     * @param string|null $accountEmail The Gmail address that owns the token (used for sent/received classification)
      */
-    private function saveEmailToDatabase(array $messageData): void
+    private function saveEmailToDatabase(array $messageData, ?string $accountEmail = null): void
     {
         $headers = $this->extractHeaders($messageData);
         $body = $this->extractBody($messageData);
@@ -196,7 +356,7 @@ class GmailService
             return; // Skip if already synced
         }
 
-        $emailType = $this->determineEmailType($headers['from'] ?? '');
+        $emailType = $this->determineEmailType($headers['from'] ?? '', $accountEmail);
 
         \App\Models\EmailLog::create([
             'type' => $emailType,
@@ -267,14 +427,18 @@ class GmailService
     }
 
     /**
-     * Determine if email is sent or received based on sender
+     * Determine if email is sent or received based on sender.
+     *
+     * @param string      $fromHeader   The raw From: header value
+     * @param string|null $accountEmail The Gmail address that owns the token.
+     *                                  Falls back to config('mail.from.address') if null.
      */
-    private function determineEmailType(string $fromHeader): string
+    private function determineEmailType(string $fromHeader, ?string $accountEmail = null): string
     {
-        $ourEmail = config('mail.from.address');
+        $referenceEmail = $accountEmail ?? config('mail.from.address');
         $fromEmail = $this->extractEmailAddress($fromHeader);
 
-        return strtolower($fromEmail) === strtolower($ourEmail) ? 'sent' : 'received';
+        return strtolower($fromEmail) === strtolower($referenceEmail) ? 'sent' : 'received';
     }
 
     /**

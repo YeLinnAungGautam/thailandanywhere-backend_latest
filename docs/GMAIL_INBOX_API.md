@@ -61,7 +61,8 @@ GET /admin/gmail/auth/status
   "success": true,
   "data": {
     "connected": true,
-    "email_address": "your@email.com",
+    "email_address": "negyi.partnership@thanywhere.com",
+    "inbox_email": "negyi.partnership@thanywhere.com",
     "messages_total": 1234,
     "threads_total": 567,
     "token_expires_at": "2024-12-21T10:30:00Z"
@@ -89,6 +90,7 @@ GET /admin/gmail/inbox?per_page=20&status=sent&search=booking&unread_only=true
 - `start_date` (string): Filter from date (Y-m-d)
 - `end_date` (string): Filter to date (Y-m-d)
 - `booking_id` (int): Filter by related booking
+- `inbox_email` (string): **Filter to a specific inbox address** (e.g. `negyi.partnership@thanywhere.com`) — returns only emails where `to_email` or `from_email` matches
 
 **Response:**
 ```json
@@ -98,36 +100,18 @@ GET /admin/gmail/inbox?per_page=20&status=sent&search=booking&unread_only=true
     "emails": [
       {
         "id": 1,
-        "thread_id": "thread_12345",
-        "type": "sent",
-        "type_label": "Sent",
-        "from": {
-          "email": "booking@yourcompany.com",
-          "name": "Booking Team",
-          "display": "Booking Team <booking@yourcompany.com>"
-        },
-        "to": {
-          "email": "customer@example.com",
-          "display": "customer@example.com"
-        },
+        "thread_id": "18e1a2b3c4d5e6f7",
         "subject": "Booking Confirmation - #CRM-123",
-        "preview": "Your booking has been confirmed...",
-        "status": "sent",
-        "status_color": "success",
-        "is_read": true,
-        "has_attachments": true,
-        "attachment_count": 2,
-        "dates": {
-          "created_at": "2024-12-14T10:30:00Z",
-          "sent_at": "2024-12-14T10:30:05Z",
-          "delivered_at": "2024-12-14T10:30:10Z",
-          "read_at": "2024-12-14T11:00:00Z"
-        },
-        "related_booking": {
-          "id": 123,
-          "crm_id": "CRM-123",
-          "customer_name": "John Doe"
-        }
+        "customer_email": "customer@example.com",
+        "status": "open",
+        "message_count": 3,
+        "preview": "Your booking has been confirmed. Please find your itinerary attached...",
+        "from": "booking@yourcompany.com",
+        "to": "customer@example.com",
+        "is_incoming": true,
+        "last_message_at": "2024-12-14T11:00:00.000000Z",
+        "created_at": "2024-12-14T10:30:00.000000Z",
+        "updated_at": "2024-12-14T11:00:00.000000Z"
       }
     ],
     "pagination": {
@@ -138,11 +122,10 @@ GET /admin/gmail/inbox?per_page=20&status=sent&search=booking&unread_only=true
       "has_more": true
     },
     "stats": {
-      "total_emails": 1000,
-      "unread_count": 25,
-      "sent_count": 800,
-      "received_count": 200,
-      "failed_count": 5,
+      "total_threads": 266,
+      "open_count": 250,
+      "closed_count": 16,
+      "total_messages": 553,
       "today_count": 15,
       "this_week_count": 87
     }
@@ -164,10 +147,10 @@ GET /admin/gmail/threads?per_page=15&search=booking&unread_only=true
       {
         "thread_id": "thread_12345",
         "subject": "Booking Confirmation - #CRM-123",
+        "customer_email": "customer@example.com",
+        "status": "open",
         "message_count": 3,
-        "has_unread": false,
-        "has_attachments": true,
-        "last_activity": "2024-12-14T15:30:00Z"
+        "last_activity": "2024-12-14T15:30:00.000000Z"
       }
     ],
     "pagination": {
@@ -191,28 +174,29 @@ GET /admin/gmail/threads/{threadId}
 {
   "success": true,
   "data": {
-    "thread_id": "thread_12345",
+    "thread_id": "18e1a2b3c4d5e6f7",
     "subject": "Booking Confirmation - #CRM-123",
-    "participants": ["booking@yourcompany.com", "customer@example.com"],
+    "customer_email": "customer@example.com",
+    "status": "open",
     "message_count": 3,
     "emails": [
       {
         "id": 1,
-        "type": "sent",
-        "from": {
-          "email": "booking@yourcompany.com",
-          "name": "Booking Team"
-        },
-        "to": {
-          "email": "customer@example.com"
-        },
-        "subject": "Booking Confirmation - #CRM-123",
+        "from": "booking@yourcompany.com",
+        "to": "customer@example.com",
         "body": "<html><body>Your booking has been confirmed...</body></html>",
-        "plain_body": "Your booking has been confirmed...",
-        "attachments": ["booking_voucher.pdf", "itinerary.pdf"],
-        "status": "delivered",
-        "is_read": true,
-        "created_at": "2024-12-14T10:30:00Z"
+        "is_incoming": false,
+        "attachments": [
+          {
+            "filename": "itinerary.pdf",
+            "mime_type": "application/pdf",
+            "size": 102456,
+            "path": "emails/attachments/msg_abc123_itinerary.pdf",
+            "url": "/storage/emails/attachments/msg_abc123_itinerary.pdf"
+          }
+        ],
+        "gmail_message_id": "msg_abc123",
+        "created_at": "2024-12-14T10:30:00.000000Z"
       }
     ]
   }
@@ -251,11 +235,27 @@ POST /admin/gmail/compose
 {
   "success": true,
   "data": {
-    "email": {
-      "id": 123,
-      "thread_id": "thread_67890",
-      "status": "sent",
-      "gmail_message_id": "msg_abc123"
+    "ticket": {
+      "id": 1,
+      "subject": "Your Booking Update",
+      "customer_email": "customer@example.com",
+      "gmail_thread_id": "thread_67890",
+      "status": "open",
+      "created_at": "2024-12-14T10:30:00.000000Z",
+      "updated_at": "2024-12-14T10:30:00.000000Z"
+    },
+    "message": {
+      "id": 1,
+      "ticket_id": 1,
+      "from": "negyi.partnership@thanywhere.com",
+      "to": "customer@example.com",
+      "body": "<html><body>Dear Customer, <p>Your booking has been updated...</p></body></html>",
+      "attachments": [],
+      "gmail_message_id": "msg_abc123",
+      "gmail_datetime": "2024-12-14T10:30:00.000000Z",
+      "is_incoming": false,
+      "created_at": "2024-12-14T10:30:00.000000Z",
+      "updated_at": "2024-12-14T10:30:00.000000Z"
     },
     "message_id": "msg_abc123"
   },
@@ -282,11 +282,18 @@ POST /admin/gmail/emails/{emailId}/reply
 {
   "success": true,
   "data": {
-    "email": {
-      "id": 124,
-      "thread_id": "thread_12345",
-      "status": "sent",
-      "in_reply_to": "msg_original123"
+    "message": {
+      "id": 2,
+      "ticket_id": 1,
+      "from": "negyi.partnership@thanywhere.com",
+      "to": "customer@example.com",
+      "body": "<html><body>Thank you for your inquiry. Here's the information you requested...</body></html>",
+      "attachments": [],
+      "gmail_message_id": "msg_reply456",
+      "gmail_datetime": "2024-12-14T10:35:00.000000Z",
+      "is_incoming": false,
+      "created_at": "2024-12-14T10:35:00.000000Z",
+      "updated_at": "2024-12-14T10:35:00.000000Z"
     },
     "message_id": "msg_reply456"
   },
@@ -358,14 +365,60 @@ DELETE /admin/gmail/emails
 POST /admin/gmail/sync?limit=50
 ```
 
+**Query Parameters (optional):**
+- `limit` (int): Max messages to fetch (default: 50)
+- `inbox_email` (string): Scope the sync to a specific Gmail inbox address. When provided, only emails **to or from** this address are fetched from Gmail and saved locally. Example: `negyi.partnership@thanywhere.com`
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "synced_count": 47
+    "synced_count": 47,
+    "skipped_count": 0,
+    "account_email": "negyi.partnership@thanywhere.com"
   },
   "message": "Gmail sync completed successfully"
+}
+```
+
+#### Close Ticket
+```http
+PATCH /admin/gmail/tickets/{ticketId}/close
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "ticket": {
+      "id": 1,
+      "status": "closed",
+      "subject": "Booking Confirmation - #CRM-123"
+    }
+  },
+  "message": "Ticket closed successfully"
+}
+```
+
+#### Reopen Ticket
+```http
+PATCH /admin/gmail/tickets/{ticketId}/reopen
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "ticket": {
+      "id": 1,
+      "status": "open",
+      "subject": "Booking Confirmation - #CRM-123"
+    }
+  },
+  "message": "Ticket reopened successfully"
 }
 ```
 
@@ -429,10 +482,37 @@ All endpoints return consistent error responses:
    - Browse inbox: `GET /admin/gmail/inbox`
    - Send emails: `POST /admin/gmail/compose`
 
+## Artisan Commands
+
+The backend provides CLI commands to fetch emails in the background.
+
+#### `gmail:sync`
+Fetches emails from the connected Gmail account and saves them locally as `EmailTicket` and `EmailTicketMessage` records. It automatically parses `multipart/mixed` payloads to extract HTML bodies and downloads all email attachments to `storage/app/public/emails/attachments/`.
+
+**Basic Usage (Sync recent messages with limit):**
+```bash
+php artisan gmail:sync 50
+```
+*(Fetches up to 50 of the latest messages, both read and unread)*
+
+**Fetch Historical Data Date-Filtered:**
+```bash
+php artisan gmail:sync --since=2024-01-01
+```
+
+**Fetch All Messages (Ignoring Unread Status & Paginated):**
+```bash
+php artisan gmail:sync --since=2024-01-01 --all
+```
+
+**Scheduling:**
+By default, `php artisan gmail:sync 50` is typically scheduled in `app/Console/Kernel.php` to run every **5 minutes**, keeping the local database up to date without require manual `/admin/gmail/sync` API requests.
+
 ## Integration Notes
 
-- All reservation emails sent through `ReservationController::sendNotifyEmail()` are automatically tracked
-- Email logs are stored locally for offline access and reporting
+- All reservation emails sent through `ReservationController::sendNotifyEmail()` are automatically tracked.
+- Email bodies and attachments are parsed natively. Attachments are downloaded locally and their direct access `url` is provided in the API response.
+- Email logs and tickets are stored locally for offline access and reporting.
 - Gmail API quotas apply - monitor usage in Google Cloud Console
 - Access tokens are automatically refreshed when expired
 - Failed emails can be retried through the Email Status API
