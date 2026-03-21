@@ -159,6 +159,7 @@ class GmailInboxController extends Controller
                     'to'               => $msg->to,
                     'body'             => $msg->body,
                     'is_incoming'      => $msg->is_incoming,
+                    'attachments'      => $msg->attachments ?? [],
                     'gmail_message_id' => $msg->gmail_message_id,
                     'created_at'       => $msg->gmail_datetime ?? $msg->created_at,
                 ];
@@ -307,20 +308,9 @@ class GmailInboxController extends Controller
                 $to      = $headers->firstWhere('name', 'To')['value'] ?? '';
                 $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '(no subject)';
 
-                $decode = fn(?string $d): string => $d
-                    ? (base64_decode(strtr($d, '-_', '+/')) ?: '')
-                    : '';
-
-                $body  = $decode($full['payload']['body']['data'] ?? null);
-                $html  = '';
-                $plain = '';
-                foreach ($full['payload']['parts'] ?? [] as $part) {
-                    $mime = $part['mimeType'] ?? '';
-                    $data = $part['body']['data'] ?? null;
-                    if ($mime === 'text/html' && $data) $html  = $decode($data);
-                    elseif ($mime === 'text/plain' && $data) $plain = $decode($data);
-                }
-                $body = $html ?: ($body ?: $plain);
+                $parsed = $this->gmailService->parseMessagePayload($full['payload'] ?? [], $full['id']);
+                $body   = $parsed['body'];
+                $attachments = $parsed['attachments'];
 
                 if (EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
                     $skipped++;
@@ -337,6 +327,7 @@ class GmailInboxController extends Controller
                     'from'             => mb_substr($from, 0, 255),
                     'to'               => mb_substr($to, 0, 255) ?: 'me',
                     'body'             => mb_substr($body, 0, 65535),
+                    'attachments'      => !empty($attachments) ? $attachments : null,
                     'gmail_message_id' => $full['id'],
                     'gmail_datetime'   => now(),
                     'is_incoming'      => true,

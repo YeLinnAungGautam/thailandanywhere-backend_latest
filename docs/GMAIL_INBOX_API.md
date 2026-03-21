@@ -186,6 +186,15 @@ GET /admin/gmail/threads/{threadId}
         "to": "customer@example.com",
         "body": "<html><body>Your booking has been confirmed...</body></html>",
         "is_incoming": false,
+        "attachments": [
+          {
+            "filename": "itinerary.pdf",
+            "mime_type": "application/pdf",
+            "size": 102456,
+            "path": "emails/attachments/msg_abc123_itinerary.pdf",
+            "url": "/storage/emails/attachments/msg_abc123_itinerary.pdf"
+          }
+        ],
         "gmail_message_id": "msg_abc123",
         "created_at": "2024-12-14T10:30:00.000000Z"
       }
@@ -241,6 +250,7 @@ POST /admin/gmail/compose
       "from": "negyi.partnership@thanywhere.com",
       "to": "customer@example.com",
       "body": "<html><body>Dear Customer, <p>Your booking has been updated...</p></body></html>",
+      "attachments": [],
       "gmail_message_id": "msg_abc123",
       "gmail_datetime": "2024-12-14T10:30:00.000000Z",
       "is_incoming": false,
@@ -278,6 +288,7 @@ POST /admin/gmail/emails/{emailId}/reply
       "from": "negyi.partnership@thanywhere.com",
       "to": "customer@example.com",
       "body": "<html><body>Thank you for your inquiry. Here's the information you requested...</body></html>",
+      "attachments": [],
       "gmail_message_id": "msg_reply456",
       "gmail_datetime": "2024-12-14T10:35:00.000000Z",
       "is_incoming": false,
@@ -471,10 +482,37 @@ All endpoints return consistent error responses:
    - Browse inbox: `GET /admin/gmail/inbox`
    - Send emails: `POST /admin/gmail/compose`
 
+## Artisan Commands
+
+The backend provides CLI commands to fetch emails in the background.
+
+#### `gmail:sync`
+Fetches emails from the connected Gmail account and saves them locally as `EmailTicket` and `EmailTicketMessage` records. It automatically parses `multipart/mixed` payloads to extract HTML bodies and downloads all email attachments to `storage/app/public/emails/attachments/`.
+
+**Basic Usage (Sync recent messages with limit):**
+```bash
+php artisan gmail:sync 50
+```
+*(Fetches up to 50 of the latest messages, both read and unread)*
+
+**Fetch Historical Data Date-Filtered:**
+```bash
+php artisan gmail:sync --since=2024-01-01
+```
+
+**Fetch All Messages (Ignoring Unread Status & Paginated):**
+```bash
+php artisan gmail:sync --since=2024-01-01 --all
+```
+
+**Scheduling:**
+By default, `php artisan gmail:sync 50` is typically scheduled in `app/Console/Kernel.php` to run every **5 minutes**, keeping the local database up to date without require manual `/admin/gmail/sync` API requests.
+
 ## Integration Notes
 
-- All reservation emails sent through `ReservationController::sendNotifyEmail()` are automatically tracked
-- Email logs are stored locally for offline access and reporting
+- All reservation emails sent through `ReservationController::sendNotifyEmail()` are automatically tracked.
+- Email bodies and attachments are parsed natively. Attachments are downloaded locally and their direct access `url` is provided in the API response.
+- Email logs and tickets are stored locally for offline access and reporting.
 - Gmail API quotas apply - monitor usage in Google Cloud Console
 - Access tokens are automatically refreshed when expired
 - Failed emails can be retried through the Email Status API

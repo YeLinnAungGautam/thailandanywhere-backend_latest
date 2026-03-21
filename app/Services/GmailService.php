@@ -143,6 +143,88 @@ class GmailService
         return json_decode(json_encode($thread), true);
     }
 
+    /**
+     * Recursively parse a Gmail message payload (multipart/mixed, alternative, etc.)
+     * Extracts text/html, text/plain, and downloads attachments.
+     */
+    public function parseMessagePayload(array $payload, string $msgId): array
+    {
+        $html = '';
+        $plain = '';
+        $attachments = [];
+
+        $this->extractPartsRecurse($payload['parts'] ?? [], $msgId, $html, $plain, $attachments);
+
+        // If no parts (simple message), check payload body directly
+        if (empty($payload['parts'])) {
+            $data = $payload['body']['data'] ?? null;
+            if ($data) {
+                $decoded = base64_decode(strtr($data, '-_', '+/')) ?: '';
+                $mime = $payload['mimeType'] ?? '';
+                if ($mime === 'text/html') $html .= $decoded;
+                else $plain .= $decoded;
+            }
+        }
+
+        return [
+            'body' => $html ?: $plain,
+            'attachments' => $attachments
+        ];
+    }
+
+    private function extractPartsRecurse(array $parts, string $msgId, string &$html, string &$plain, array &$attachments): void
+    {
+        foreach ($parts as $part) {
+            $mime = $part['mimeType'] ?? '';
+
+            // Handle nested parts (like multipart/mixed containing multipart/alternative)
+            if (!empty($part['parts'])) {
+                $this->extractPartsRecurse($part['parts'], $msgId, $html, $plain, $attachments);
+                continue;
+            }
+
+            // Handle Attachments
+            if (!empty($part['filename']) && !empty($part['body']['attachmentId'])) {
+                try {
+                    $attId = $part['body']['attachmentId'];
+                    $attObj = $this->service->users_messages_attachments->get('me', $msgId, $attId);
+                    $attData = base64_decode(strtr($attObj->getData(), '-_', '+/'));
+                    
+                    $ext = pathinfo($part['filename'], PATHINFO_EXTENSION);
+                    $filename = \Str::slug(pathinfo($part['filename'], PATHINFO_FILENAME));
+                    if ($ext) {
+                        $filename .= '.' . $ext;
+                    }
+                                
+                    $path = "emails/attachments/{$msgId}_{$filename}";
+                    \Storage::disk('public')->put($path, $attData);
+
+                    $attachments[] = [
+                        'filename' => $part['filename'],
+                        'mime_type' => $mime,
+                        'size' => $part['body']['size'] ?? 0,
+                        'path' => $path,
+                        'url' => \Storage::url($path),
+                    ];
+                } catch (\Exception $e) {
+                    \Log::error("Failed to download attachment {$part['filename']}: " . $e->getMessage());
+                }
+                continue;
+            }
+
+            // Output body
+            $data = $part['body']['data'] ?? null;
+            if ($data) {
+                $decoded = base64_decode(strtr($data, '-_', '+/')) ?: '';
+                if ($mime === 'text/html') {
+                    $html .= $decoded;
+                } elseif ($mime === 'text/plain') {
+                    $plain .= $decoded;
+                }
+            }
+        }
+    }
+
     public function sendRawMessage(string $raw): Message
     {
         $msg = new Message();

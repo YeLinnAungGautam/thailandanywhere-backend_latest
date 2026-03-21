@@ -50,13 +50,11 @@ class GmailSync extends Command
             $queryParts[] = "after:{$date}";
         }
 
-        if (!$fetchAll) {
-            $queryParts[] = 'is:unread';
-        }
+        // $queryParts[] = 'is:unread'; // User requested to fetch both read and unread
 
         $query = implode(' ', $queryParts);
 
-        $mode = $fetchAll ? 'ALL messages' : 'unread messages';
+        $mode = $fetchAll ? 'ALL messages' : 'recent messages';
         $this->info("Syncing {$mode} for {$inboxEmail}" . ($since ? " since {$since}" : '') . ' ...');
         $this->info("Query: {$query}");
 
@@ -102,26 +100,10 @@ class GmailSync extends Command
                     $to      = $headers->firstWhere('name', 'To')['value'] ?? '';
                     $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '(no subject)';
 
-                    // Decode body
-                    $decode = fn(?string $d): string => $d
-                        ? (base64_decode(strtr($d, '-_', '+/')) ?: '')
-                        : '';
-
-                    $body  = $decode($full['payload']['body']['data'] ?? null);
-                    $html  = '';
-                    $plain = '';
-
-                    foreach ($full['payload']['parts'] ?? [] as $part) {
-                        $mime = $part['mimeType'] ?? '';
-                        $data = $part['body']['data'] ?? null;
-                        if ($mime === 'text/html' && $data) {
-                            $html = $decode($data);
-                        } elseif ($mime === 'text/plain' && $data) {
-                            $plain = $decode($data);
-                        }
-                    }
-
-                    $body = $html ?: ($body ?: $plain);
+                    // Use recursive parser to handle deeply nested bodies and download attachments
+                    $parsed = $gmail->parseMessagePayload($full['payload'] ?? [], $full['id']);
+                    $body   = $parsed['body'];
+                    $attachments = $parsed['attachments'];
 
                     // Skip if already stored
                     if (EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
@@ -145,6 +127,7 @@ class GmailSync extends Command
                         'from'             => mb_substr($from, 0, 255),
                         'to'               => mb_substr($to, 0, 255) ?: 'me',
                         'body'             => mb_substr($body, 0, 65535),
+                        'attachments'      => !empty($attachments) ? json_encode($attachments) : null,
                         'gmail_message_id' => $full['id'],
                         'gmail_datetime'   => now(),
                         'is_incoming'      => true,
