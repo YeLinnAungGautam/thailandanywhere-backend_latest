@@ -61,7 +61,8 @@ class DashboardController extends Controller
 
             // Get additional statistics
             $totalUniqueBookings = $this->getTotalUniqueBookings($year, $productId, $productType);
-            $todayBookingItemGroupCount = $this->getTodayBookingItemGroupCount($year, $productId, $productType);
+            // In getMonthlySalesGraph, call without $year:
+            $todayBookingItemGroupCount = $this->getTodayBookingItemGroupCount($productId, $productType);
 
             return response()->json([
                 'status' => 1,
@@ -216,16 +217,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get today's booking item group count - Match filtering approach
+     * Get today's booking item group count - no year filter, just today
      */
-    private function getTodayBookingItemGroupCount($year, $productId, $productType)
+    private function getTodayBookingItemGroupCount($productId, $productType)
     {
         return DB::table('booking_item_groups')
             ->join('booking_items', 'booking_item_groups.id', '=', 'booking_items.group_id')
             ->where('booking_items.product_id', $productId)
             ->where('booking_items.product_type', $productType)
-            ->whereYear('booking_items.service_date', $year)
-            ->whereDate('booking_items.service_date', Carbon::today())
+            ->whereDate('booking_items.service_date', Carbon::today()) // only today, no year filter
             ->whereNull('booking_items.deleted_at')
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))

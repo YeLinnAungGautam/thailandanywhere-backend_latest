@@ -68,6 +68,7 @@ class HotelController extends Controller
             ->when($allowment !== null, function ($q) use ($allowment) {
                 $q->where('allowment', $allowment);
             })
+            ->when($request->data_status,fn ($query) => $query->where('data_status', $request->data_status))
             ->when($request->type, function ($q) use ($request) {
                 $q->where('type', $request->type);
             })

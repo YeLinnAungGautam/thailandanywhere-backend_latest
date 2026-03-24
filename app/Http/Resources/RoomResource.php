@@ -77,13 +77,22 @@ class RoomResource extends JsonResource
             return $this->room_price;
         }
 
-        // $periods = $period ? explode(' , ', $period) : null;
-        // $dates = $this->getDaysOfMonth($periods[0], $periods[1]);
-
         $dates = $this->getTotalDates($period);
-
         $room_prices = [];
+
         foreach ($dates as $date) {
+            // is_main = true ကို ဦးစွာကြည့်မယ်
+            $mainQuery = $this->periods()
+                ->where('start_date', '<=', $date)
+                ->where('end_date', '>=', $date)
+                ->where('is_main', true);
+
+            if ($mainQuery->exists()) {
+                $room_prices[] = $mainQuery->sum('sale_price');
+                continue;
+            }
+
+            // is_main မရှိရင် ပထမဆုံး match
             $query = $this->periods()
                 ->where('start_date', '<=', $date)
                 ->where('end_date', '>=', $date);

@@ -141,9 +141,48 @@ class RoomService
         ];
     }
 
+    // private function getPriceForDate($date)
+    // {
+    //     // Check if date falls within any special period
+    //     $period = $this->room->periods()
+    //         ->where('start_date', '<=', $date)
+    //         ->where('end_date', '>=', $date)
+    //         ->first();
+
+    //     if ($period) {
+    //         return [
+    //             'sale_price' => $period->sale_price,
+    //             'cost_price' => $period->cost_price ?? $this->room->cost_price,
+    //             'period_name' => $period->period_name
+    //         ];
+    //     }
+
+    //     // Return default room prices
+    //     return [
+    //         'sale_price' => $this->room->room_price,
+    //         'cost_price' => $this->room->cost,
+    //         'period_name' => 'default',
+    //     ];
+    // }
+
     private function getPriceForDate($date)
     {
-        // Check if date falls within any special period
+        // is_main = true တဲ့ period ကို ဦးစွာရှာမယ်
+        $mainPeriod = $this->room->periods()
+            ->where('start_date', '<=', $date)
+            ->where('end_date', '>=', $date)
+            ->where('is_main', true)
+            ->first();
+
+        if ($mainPeriod) {
+            return [
+                'sale_price'  => $mainPeriod->sale_price,
+                'cost_price'  => $mainPeriod->cost_price ?? $this->room->cost,
+                'period_name' => $mainPeriod->period_name,
+            ];
+        }
+
+        // is_main မရှိရင် ပထမဆုံး match တဲ့ period
         $period = $this->room->periods()
             ->where('start_date', '<=', $date)
             ->where('end_date', '>=', $date)
@@ -151,16 +190,16 @@ class RoomService
 
         if ($period) {
             return [
-                'sale_price' => $period->sale_price,
-                'cost_price' => $period->cost_price ?? $this->room->cost_price,
-                'period_name' => $period->period_name
+                'sale_price'  => $period->sale_price,
+                'cost_price'  => $period->cost_price ?? $this->room->cost,
+                'period_name' => $period->period_name,
             ];
         }
 
-        // Return default room prices
+        // Period မရှိရင် default room price
         return [
-            'sale_price' => $this->room->room_price,
-            'cost_price' => $this->room->cost,
+            'sale_price'  => $this->room->room_price,
+            'cost_price'  => $this->room->cost,
             'period_name' => 'default',
         ];
     }
