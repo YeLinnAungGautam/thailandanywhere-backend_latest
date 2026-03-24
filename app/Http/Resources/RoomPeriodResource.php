@@ -26,6 +26,7 @@ class RoomPeriodResource extends JsonResource
             'score' => $this->calculateScore(), // Add score calculation
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'is_main' => $this->is_main,
         ];
     }
 

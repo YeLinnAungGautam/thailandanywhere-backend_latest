@@ -126,6 +126,7 @@ class RoomController extends Controller
                         'sale_price' => $period['sale_price'],
                         'cost_price' => $period['cost_price'] ?? null,
                         'agent_price' => $period['agent_price'] ?? null,
+                        'is_main'     => isset($period['is_main']) ? (bool)$period['is_main'] : false,
                     ]);
                 }
             }
@@ -204,6 +205,7 @@ class RoomController extends Controller
                             'sale_price' => $period['sale_price'],
                             'cost_price' => $period['cost_price'] ?? null,
                             'agent_price' => $period['agent_price'] ?? null,
+                            'is_main'     => isset($period['is_main']) ? (bool)$period['is_main'] : false,
                         ]);
                     }
                 }
