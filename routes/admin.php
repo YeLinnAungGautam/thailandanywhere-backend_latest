@@ -78,6 +78,7 @@ use App\Http\Controllers\AirlineTicketExportImportController;
 use App\Http\Controllers\BalanceDueOverController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CaseController;
+use App\Http\Controllers\CommissionTierController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\DriverInfoController;
 use App\Http\Controllers\EntranceTicketExportImportController;
@@ -654,6 +655,28 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Inclusive generate
     Route::apiResource('inclusive-packages', InclusivePackageController::class);
 
+    #Commission Tiers
+    Route::prefix('commission-tiers')->group(function () {
+
+        // Public read (used by Vue frontend to load tiers dynamically)
+        Route::get('/', [CommissionTierController::class, 'index']);
+        Route::get('/{commissionTier}', [CommissionTierController::class, 'show']);
+
+        // Calculate commission for a given amount (used by frontend)
+        Route::post('/calculate', [CommissionTierController::class, 'calculate']);
+
+
+        Route::post('/',                     [CommissionTierController::class, 'store']);
+        Route::put('/{commissionTier}',      [CommissionTierController::class, 'update']);
+        Route::delete('/{commissionTier}',   [CommissionTierController::class, 'destroy']);
+        ;
+    });
+
+    Route::get('/test-hotel-mail', function (\Illuminate\Http\Request $request) {
+        $email = $request->query('email', 'taryarlin0088@gmail.com');
+        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TestMail());
+        return "Test email sent successfully to {$email}!";
+    });
 
     // In your routes/api.php
 });

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Exports\ReservationReportExport;
+use App\Traits\UsesHotelServiceMail;
 use Excel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class SendSaleReportMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, UsesHotelServiceMail;
 
     public $daterange;
     public $type;
