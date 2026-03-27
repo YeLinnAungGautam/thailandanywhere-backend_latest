@@ -112,12 +112,16 @@ class GmailSync extends Command
                         continue;
                     }
 
+                    // Determine if the message is incoming
+                    $isIncoming = (stripos($from, $inboxEmail) === false);
+                    $customerEmail = $isIncoming ? $from : $to;
+
                     // Upsert ticket (one per thread)
                     $ticket = EmailTicket::firstOrCreate(
                         ['gmail_thread_id' => $threadId],
                         [
                             'subject'        => mb_substr($subject, 0, 255),
-                            'customer_email' => mb_substr($from, 0, 255),
+                            'customer_email' => mb_substr($customerEmail, 0, 255),
                             'status'         => 'open',
                         ]
                     );
@@ -130,10 +134,10 @@ class GmailSync extends Command
                         'attachments'      => !empty($attachments) ? json_encode($attachments) : null,
                         'gmail_message_id' => $full['id'],
                         'gmail_datetime'   => now(),
-                        'is_incoming'      => true,
+                        'is_incoming'      => $isIncoming,
                     ]);
 
-                    // Mark as read so regular syncs don't re-process it
+                    // Mark as read so regular syncs don't re-process it (only for incoming usually, but fine for all)
                     try {
                         $gmail->service->users_messages->modify(
                             'me',

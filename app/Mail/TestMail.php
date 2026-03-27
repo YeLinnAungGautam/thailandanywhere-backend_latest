@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TestMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, UsesHotelServiceMail;
 
     /**
      * Create a new message instance.
