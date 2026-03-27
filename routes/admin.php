@@ -672,5 +672,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         ;
     });
 
+    Route::get('/test-hotel-mail', function (\Illuminate\Http\Request $request) {
+        $email = $request->query('email', 'taryarlin0088@gmail.com');
+        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TestMail());
+        return "Test email sent successfully to {$email}!";
+    });
+
     // In your routes/api.php
 });
