@@ -7,6 +7,33 @@ use Illuminate\Support\Facades\Config;
 trait UsesHotelServiceMail
 {
     /**
+     * Send the message using the given mailer.
+     *
+     * @param  \Illuminate\Contracts\Mail\Factory|\Illuminate\Contracts\Mail\Mailer  $mailer
+     * @return \Illuminate\Mail\SentMessage|null
+     */
+    public function send($mailer)
+    {
+        // 1. Guarantee the configuration is set right before resolving the mailer
+        $this->configureHotelServiceMailer();
+
+        // 2. We MUST explicitly resolve our new 'hotel_service' mailer instance instead of
+        // relying on the passed $mailer. When a user uses `Mail::to(...)->send(...)`,
+        // Laravel passes the instantiated *default* mailer into this method, 
+        // completely bypassing Mailable's internal `$this->mailer` resolution logic.
+        $hotelMailer = app(\Illuminate\Contracts\Mail\Factory::class)->mailer('hotel_service');
+
+        // 3. Send the email pushing our explicit mailer to the parent
+        $result = parent::send($hotelMailer);
+
+        // 4. Fetch and save the newly sent email to DB immediately
+        sleep(2);
+        \Illuminate\Support\Facades\Artisan::call('gmail:sync', ['max' => 5]);
+
+        return $result;
+    }
+
+    /**
      * Prepare the mailable for delivery and configure the hotel service mailer.
      *
      * @return void
