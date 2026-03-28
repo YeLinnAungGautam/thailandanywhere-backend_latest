@@ -17,7 +17,7 @@ class PersistBookingItemGroupJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public Booking $booking)
+    public function __construct(public Booking $booking,public array $itemsPassports = [])
     {
         //
     }
@@ -27,6 +27,6 @@ class PersistBookingItemGroupJob implements ShouldQueue
      */
     public function handle(): void
     {
-        BookingManager::persistBookingItemGroup($this->booking);
+        BookingManager::persistBookingItemGroup($this->booking,$this->itemsPassports);
     }
 }
