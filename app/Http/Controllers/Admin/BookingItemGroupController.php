@@ -49,7 +49,15 @@ class BookingItemGroupController extends Controller
                         });
                     })
                     ->when($request->is_allowment_have, function ($query) {
-                        $query->whereHas('bookingItems', fn($q) => $q->where('is_allowment_have', 1));
+                        $query->whereHas('bookingItems', function ($q) {
+                            $q->where('booking_items.product_type', 'App\Models\Hotel')
+                              ->whereExists(function ($sub) {
+                                  $sub->select(DB::raw(1))
+                                      ->from('hotels')
+                                      ->whereColumn('hotels.id', 'booking_items.product_id')
+                                      ->where('hotels.allowment', 1);
+                              });
+                        });
                     })
                     ->when($request->sent_booking_request, function ($q) use ($request) {
                         $q->where('sent_booking_request', $request->sent_booking_request === 'sent' ? 1 : 0);
@@ -80,6 +88,7 @@ class BookingItemGroupController extends Controller
                             $q->where('type', 'expense_mail_proof');
                         });
                     })
+
                     ->when($request->have_invoice_mail, function ($q) use ($request) {
                         $q->where('have_invoice_mail', $request->have_invoice_mail === 'sent' ? 1 : 0);
                     })

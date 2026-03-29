@@ -88,8 +88,21 @@ class BookingManager
             }
 
             // Persist booking item groups
+            // if ($request->items) {
+            //     PersistBookingItemGroupJob::dispatch($booking);
+            // }
+
+            // ✅ Collect passports from request items BEFORE dispatching
+            $itemsPassports = [];
+            foreach ($request->items as $key => $item) {
+                if (!empty($item['passports'])) {
+                    $itemsPassports[$key] = $item['passports'];
+                }
+            }
+
+            // ✅ Pass $itemsPassports into the job
             if ($request->items) {
-                PersistBookingItemGroupJob::dispatch($booking);
+                PersistBookingItemGroupJob::dispatch($booking, $itemsPassports);
             }
 
             DB::commit();
@@ -181,6 +194,8 @@ class BookingManager
             }
         }
 
+
+
         if (isset($request->items[$key]['confirmation_letter'])) {
             $file = $request->items[$key]['confirmation_letter'];
 
@@ -245,9 +260,9 @@ class BookingManager
         }
     }
 
-    public static function persistBookingItemGroup(Booking $booking)
+    public static function persistBookingItemGroup(Booking $booking,array $itemsPassports = [])
     {
-        UpsertBookingItemGroupAction::execute($booking);
+        UpsertBookingItemGroupAction::execute($booking, $itemsPassports);
     }
 
     private static function saveBookingReceipt(Booking $booking, array $receipt_images)

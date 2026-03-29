@@ -33,7 +33,10 @@ class BookingRequest extends FormRequest
             'grand_total' => 'required|integer',
             'balance_due' => 'required',
             // 'balance_due_date' => 'required',
-            'transfer_code' => 'nullable|in:MMTT,TT,INTT'
+            'transfer_code' => 'nullable|in:MMTT,TT,INTT',
+            'items.*.passports'            => 'nullable|array',
+            'items.*.passports.*.name'     => 'nullable|string',
+            'items.*.passports.*.passport' => 'nullable|string',
         ];
     }
 }

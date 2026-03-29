@@ -608,8 +608,17 @@ class BookingController extends Controller
             // balance due auto set
             UpdateBalanceDueDateJob::dispatch($find->id);
 
+            $itemsPassports = [];
+            if ($request->items) {
+                foreach ($request->items as $key => $item) {
+                    if (!empty($item['passports'])) {
+                        $itemsPassports[$key] = $item['passports'];
+                    }
+                }
+            }
+
             // Persist booking item groups
-            PersistBookingItemGroupJob::dispatch($find);
+            PersistBookingItemGroupJob::dispatch($find, $itemsPassports);
 
             // Auto-set vat
             BookingVatJob::dispatch($find->id);
