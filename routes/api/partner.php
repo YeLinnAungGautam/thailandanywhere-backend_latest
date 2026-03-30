@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\GoodToKnowController;
 use App\Http\Controllers\Admin\KeyHighLightController;
 use App\Http\Controllers\Admin\NearByPlaceController;
 use App\Http\Controllers\Admin\PlaceController;
+use App\Http\Controllers\AmendPartnerController;
 use App\Http\Controllers\API\Partner\AuthPartnerController;
 use App\Http\Controllers\API\Partner\CashImageController;
 use App\Http\Controllers\API\Partner\DashboardController;
@@ -92,4 +93,8 @@ Route::middleware(['auth:sanctum', 'abilities:partner'])->group(function () {
 
     # Room Rates
     Route::apiResource('hotels/{hotel}/rooms/{room}/rates', RoomRateController::class);
+
+    # Amend partner
+    Route::get('/amends',[AmendPartnerController::class,'index']);
+    Route::get('/amends/{id}',[AmendPartnerController::class,'show']);
 });
