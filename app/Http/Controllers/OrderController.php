@@ -256,6 +256,7 @@ class OrderController extends Controller
                 'pickup_location' => $item['pickup_location'] ?? null,
                 'pickup_time' => $item['pickup_time'] ?? null,
                 'individual_pricing' => $individualPricing,
+                'passports' => $item['passports'] ?? null,
             ]);
 
             // Handle Hotel products
