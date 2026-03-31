@@ -184,6 +184,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout/all', [AuthController::class, 'logoutAll']);
+    Route::post('/logout/all-partner', [AuthController::class, 'logoutAllPartner']);
     Route::get('current-sale-rank', [AdminController::class, 'getCurrentSaleRank']);
 
     Route::get('categories-list', [CategoryController::class, 'getCategoryList']);
