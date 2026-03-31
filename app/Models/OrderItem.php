@@ -18,6 +18,7 @@ class OrderItem extends Model
         'individual_pricing' => 'json',
         'room_rates' => 'json',
         'incomplete_allotment' => 'boolean',
+        'passports' => 'array',
     ];
 
     public function order()

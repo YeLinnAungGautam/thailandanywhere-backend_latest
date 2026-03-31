@@ -172,7 +172,14 @@ class OrderAdminController extends Controller
 
             UpdateBookingDatesJob::dispatch($booking->id);
 
-            PersistBookingItemGroupJob::dispatch($booking);
+            $itemsPassports = [];
+            foreach ($order->items as $index => $orderItem) {
+                if (!empty($orderItem->passports)) {
+                    $itemsPassports[$index] = $orderItem->passports;
+                }
+            }
+
+            PersistBookingItemGroupJob::dispatch($booking, $itemsPassports);
 
             return $this->success(
                 new BookingResource($booking),
