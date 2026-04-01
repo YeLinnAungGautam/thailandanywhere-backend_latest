@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\Partner;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,6 +72,13 @@ class AuthController extends Controller
         PersonalAccessToken::where('tokenable_type', Admin::class)->delete();
 
         return $this->success(null, 'Successfully logout for all accounts');
+    }
+
+    public function logoutAllPartner()
+    {
+        PersonalAccessToken::where('tokenable_type', Partner::class)->delete();
+
+        return $this->success(null, 'Successfully logout for all partner accounts');
     }
 
     /**
