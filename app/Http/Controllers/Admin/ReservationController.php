@@ -7,6 +7,8 @@ use App\Http\Resources\BookingItemDetailResource;
 use App\Http\Resources\BookingItemResource;
 use App\Jobs\HotelConfirmationReceiptUploadNotifierJob;
 use App\Jobs\SendReservationNotifyEmailJob;
+use App\Mail\ReservationNotifyDefaultMail;
+use App\Mail\ReservationNotifyEmail;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\EmailLog;
@@ -696,6 +698,7 @@ class ReservationController extends Controller
             'mail_body' => 'required',
             'mail_tos' => 'required',
             'email_type' => 'required|in:booking,expense',
+            'mail_sender'  => 'required|in:hotel,default',
         ]);
 
         $ccEmail = 'negyi.partnership@thanywhere.com';
@@ -704,6 +707,10 @@ class ReservationController extends Controller
             $attachments = ReservationEmailNotifyService::saveAttachToTemp($request->attachments);
             $users = explode(',', $request->mail_tos);
             $emailLogs = [];
+
+            $mailableClass = $request->mail_sender === 'hotel'
+            ? ReservationNotifyEmail::class
+            : ReservationNotifyDefaultMail::class;
 
             foreach ($users as $mail_to) {
                 $mail_to = trim($mail_to);
@@ -748,7 +755,8 @@ class ReservationController extends Controller
                     $attachments,
                     $ccEmail,
                     $request->email_type,
-                    $emailLog->id
+                    $emailLog->id,
+                    $mailableClass
                 );
             }
 

@@ -2,32 +2,32 @@
 
 namespace App\Mail;
 
-use App\Traits\UsesHotelServiceMail;
+use App\Models\BookingItem;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Attachment;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
 
-class ReservationNotifyEmail extends Mailable
+class ReservationNotifyDefaultMail extends Mailable
 {
-    use Queueable, SerializesModels, UsesHotelServiceMail;
+    use Queueable, SerializesModels;
 
-    protected $mail_subject;
+protected $mail_subject;
     protected $mail_body;
-    protected $booking_item_group;
+    protected $booking_item;
     public $attach_files;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $mail_subject, string $mail_body, $booking_item_group, $attach_files = null)
+    public function __construct(string $mail_subject, string $mail_body, BookingItem $booking_item, $attach_files = null)
     {
         $this->mail_subject = $mail_subject;
         $this->mail_body = $mail_body;
-        $this->booking_item_group = $booking_item_group;
+        $this->booking_item = $booking_item;
         $this->attach_files = $attach_files;
     }
 
@@ -61,24 +61,32 @@ class ReservationNotifyEmail extends Mailable
      */
     public function attachments(): array
     {
-        $files = [];
+        $passports = $this->booking_item->reservationCustomerPassport;
+        $expense_receipts = $this->booking_item->reservationReceiptImage;
 
-        // Get passports from the group
-        foreach ($this->booking_item_group->passports as $passport) {
-            if (Storage::exists('passport/' . $passport->file)) {
-                $files[] = Attachment::fromPath(storage_path('app/public/passport/' . $passport->file));
+        $files = [];
+        if ($passports->count()) {
+            foreach ($passports as $passport) {
+                if (Storage::exists('passport/' . $passport->file)) {
+                    $files[] = Attachment::fromPath(Storage::url('passport/' . $passport->file));
+                }
             }
         }
 
-        // Get other documents (receipts etc) if needed via the group
-        // ... attachment logic ...
+        if ($expense_receipts->count()) {
+            foreach ($expense_receipts as $paid_slip) {
+                if (Storage::exists('images/' . $paid_slip->file)) {
+                    $files[] = Attachment::fromPath(Storage::url('images/' . $paid_slip->file));
+                }
+            }
+        }
+
         if (isset($this->attach_files) && count($this->attach_files) > 0) {
             foreach ($this->attach_files as $attach_file) {
-                $files[] = Attachment::fromPath(storage_path('app/public/temp_files/attachments/' . $attach_file));
+                $files[] = Attachment::fromPath(Storage::url('temp_files/attachments/' . $attach_file));
             }
         }
 
         return $files;
     }
 }
-
