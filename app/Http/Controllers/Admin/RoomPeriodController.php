@@ -24,9 +24,11 @@ class RoomPeriodController extends Controller
         $is_incomplete_allotment = false;
 
         if ($partner) {
-            $roomRateService = new PartnerRoomRateService($partner->id, $room->id);
-            $room_rates = $roomRateService->getRateForDaterange($request->checkin_date, $request->checkout_date);
-            $is_incomplete_allotment = $roomRateService->isIncompleteAllotment($request->checkin_date, $request->checkout_date);
+            if($room->hotel->allowment == 1){
+                $roomRateService = new PartnerRoomRateService($partner->id, $room->id);
+                $room_rates = $roomRateService->getRateForDaterange($request->checkin_date, $request->checkout_date);
+                $is_incomplete_allotment = $roomRateService->isIncompleteAllotment($request->checkin_date, $request->checkout_date);
+            }
         }
 
         // ✅ Partner discount ကို daily_pricing တွင် merge လုပ်
