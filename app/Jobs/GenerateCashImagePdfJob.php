@@ -61,12 +61,14 @@ class GenerateCashImagePdfJob implements ShouldQueue
             // This now only fetches 50 items due to batch_offset and batch_limit
             $data = $cashImageService->onlyImages($request);
 
+
             if (empty($data['result'])) {
                 $this->updateJobStatus('failed', 'No data found to generate PDF');
                 return;
             }
 
             $imageData = $data['result'];
+
             $totalItems = count($imageData);
 
             Log::info("Batch {$this->batchNumber}: Generating PDF for {$totalItems} items");
@@ -78,6 +80,23 @@ class GenerateCashImagePdfJob implements ShouldQueue
                 gc_collect_cycles();
             }
 
+            // Determine view based on location
+            $location = $this->requestData['location'] ?? 'thai';
+            $view = strtolower($location) === 'myanmar'
+                ? 'pdf.cash_image_myanmar'
+                : 'pdf.cash_image';
+
+            // $pdf = Pdf::setOption([
+            //     'fontDir' => public_path('/fonts'),
+            //     'timeout' => 1800,
+            //     'isPhpEnabled' => true,
+            //     'chroot' => public_path(),
+            //     'isRemoteEnabled' => true,
+            //     'defaultFont' => 'Poppins',
+            //     'dpi' => 96,
+            //     'defaultPaperSize' => 'A4',
+            // ])->loadView('pdf.cash_image', compact('imageData'));
+
             $pdf = Pdf::setOption([
                 'fontDir' => public_path('/fonts'),
                 'timeout' => 1800,
@@ -87,7 +106,7 @@ class GenerateCashImagePdfJob implements ShouldQueue
                 'defaultFont' => 'Poppins',
                 'dpi' => 96,
                 'defaultPaperSize' => 'A4',
-            ])->loadView('pdf.cash_image', compact('imageData'));
+            ])->loadView($view, compact('imageData'));
 
             $this->updateJobStatus('processing', 'Saving PDF file...', 75);
 

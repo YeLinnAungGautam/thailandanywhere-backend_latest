@@ -168,7 +168,7 @@
                                 @foreach ($url['booking']['grouped_items'] as $item)
                                     <tr class="row">
                                         <td style="width: 160px; font-size: 12px; padding: 10px 0">
-                                            {{ $item['product_name'] ?? 'General Service' }}</td>
+                                            {{ ($item['product_name'] ?? 'General') . ' Service' }}</td>
                                         <td style="font-size: 12px; padding: 10px 0; width: 220px">
                                             -
                                         </td>
