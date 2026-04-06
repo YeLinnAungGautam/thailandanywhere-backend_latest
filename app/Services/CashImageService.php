@@ -1395,12 +1395,12 @@ class CashImageService
     private function getProductNameByType($productType)
     {
         $productTypeMap = [
-            'App\\Models\\Hotel' => 'Hotel Service',
-            'App\\Models\\EntranceTicket' => 'Ticket Service',
-            'App\\Models\\PrivateVanTour' => 'Car Rental Service',
+            'App\\Models\\Hotel' => 'Hotel',
+            'App\\Models\\EntranceTicket' => 'Ticket',
+            'App\\Models\\PrivateVanTour' => 'Car Rental',
         ];
 
-        return $productTypeMap[$productType] ?? 'General Service';
+        return $productTypeMap[$productType] ?? 'General';
     }
 
     /**

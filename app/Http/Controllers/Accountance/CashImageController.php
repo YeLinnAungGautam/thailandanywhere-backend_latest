@@ -788,6 +788,14 @@ class CashImageController extends Controller
             // Create a method to get count or use query builder
             $count = $this->cashImageService->getAllSummaryForExport($request);
 
+            // $data = $this->cashImageService->onlyImages($request);
+
+            // return response()
+
+            // ->json([
+            //     'data' => $data
+            // ], 404);
+
             $totalItems = $count['result']['total_records'];
 
             if ($totalItems === 0) {
