@@ -42,7 +42,7 @@ class GmailSync extends Command
         $max        = (int) $this->argument('max');
 
         // Build Gmail search query
-        $queryParts = ["to:{$inboxEmail} OR from:{$inboxEmail}"];
+        $queryParts = ["in:inbox OR in:sent OR to:{$inboxEmail} OR from:{$inboxEmail}"];
 
         if ($since) {
             // Gmail accepts after:YYYY/MM/DD
@@ -91,8 +91,28 @@ class GmailSync extends Command
                 }
 
                 try {
+                    // Skip if already stored (do this early to avoid API calls and re-downloading attachments)
+                    if (EmailTicketMessage::where('gmail_message_id', $msg->getId())->exists()) {
+                        $skipped++;
+
+                        continue;
+                    }
+
                     $full     = $gmail->getMessage($msg->getId(), ['format' => 'full']);
                     $threadId = $full['threadId'] ?? $msg->getThreadId();
+
+                    // Extract category from labelIds
+                    $labels = $full['labelIds'] ?? [];
+                    $category = 'Primary';
+                    if (in_array('CATEGORY_PROMOTIONS', $labels)) {
+                        $category = 'Promotions';
+                    } elseif (in_array('CATEGORY_SOCIAL', $labels)) {
+                        $category = 'Social';
+                    } elseif (in_array('CATEGORY_UPDATES', $labels)) {
+                        $category = 'Updates';
+                    } elseif (in_array('CATEGORY_FORUMS', $labels)) {
+                        $category = 'Forums';
+                    }
 
                     // Extract headers
                     $headers = collect($full['payload']['headers'] ?? []);
@@ -105,13 +125,6 @@ class GmailSync extends Command
                     $body   = $parsed['body'];
                     $attachments = $parsed['attachments'];
 
-                    // Skip if already stored
-                    if (EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
-                        $skipped++;
-
-                        continue;
-                    }
-
                     // Determine if the message is incoming
                     $isIncoming = (stripos($from, $inboxEmail) === false);
                     $customerEmail = $isIncoming ? $from : $to;
@@ -123,8 +136,12 @@ class GmailSync extends Command
                             'subject'        => mb_substr($subject, 0, 255),
                             'customer_email' => mb_substr($customerEmail, 0, 255),
                             'status'         => 'open',
+                            'category'       => $category,
                         ]
                     );
+
+                    // Keep category updated with the most recent email in thread
+                    $ticket->update(['category' => $category]);
 
                     EmailTicketMessage::create([
                         'ticket_id'        => $ticket->id,
@@ -136,17 +153,6 @@ class GmailSync extends Command
                         'gmail_datetime'   => now(),
                         'is_incoming'      => $isIncoming,
                     ]);
-
-                    // Mark as read so regular syncs don't re-process it (only for incoming usually, but fine for all)
-                    try {
-                        $gmail->service->users_messages->modify(
-                            'me',
-                            $full['id'],
-                            new \Google\Service\Gmail\ModifyMessageRequest(['removeLabelIds' => ['UNREAD']])
-                        );
-                    } catch (\Exception $e) {
-                        // Non-fatal
-                    }
 
                     $this->line("  ✓ {$subject}");
                     $synced++;

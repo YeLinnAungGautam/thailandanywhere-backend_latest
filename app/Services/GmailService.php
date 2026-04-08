@@ -204,7 +204,7 @@ class GmailService
                         'mime_type' => $mime,
                         'size' => $part['body']['size'] ?? 0,
                         'path' => $path,
-                        'url' => \Storage::url($path),
+                        'url' => asset(\Storage::url($path)),
                     ];
                 } catch (\Exception $e) {
                     \Log::error("Failed to download attachment {$part['filename']}: " . $e->getMessage());
