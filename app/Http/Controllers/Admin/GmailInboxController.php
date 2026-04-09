@@ -135,7 +135,9 @@ class GmailInboxController extends Controller
     public function getThread(Request $request, $threadId)
     {
         $ticket = EmailTicket::where('gmail_thread_id', $threadId)
-            ->orWhere('id', $threadId)
+            ->when(is_numeric($threadId), function ($q) use ($threadId) {
+                $q->orWhere('id', $threadId);
+            })
             ->first();
 
         if (!$ticket) {
