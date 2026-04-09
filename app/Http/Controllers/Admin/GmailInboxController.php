@@ -37,13 +37,25 @@ class GmailInboxController extends Controller
         $startDate  = $request->get('start_date');
         $endDate    = $request->get('end_date');
 
+        // $query = EmailTicket::with(['messages' => function ($q) {
+        //     $q->orderBy('created_at', 'desc');
+        // }])->latest('updated_at');
+
         $query = EmailTicket::with(['messages' => function ($q) {
-            $q->orderBy('created_at', 'desc');
+            $q->orderBy('gmail_datetime', 'desc'); // filter with gmail_datetime
         }])->latest('updated_at');
 
         if ($status) {
             $query->where('status', $status);
         }
+
+        if ($request->get('category')) {
+            $query->where('category', $request->get('category'));
+        }
+
+        // if ($unreadOnly){
+        //     $query->where()
+        // }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -135,7 +147,9 @@ class GmailInboxController extends Controller
     public function getThread(Request $request, $threadId)
     {
         $ticket = EmailTicket::where('gmail_thread_id', $threadId)
-            ->orWhere('id', $threadId)
+            ->when(is_numeric($threadId), function ($q) use ($threadId) {
+                $q->orWhere('id', $threadId);
+            })
             ->first();
 
         if (!$ticket) {
