@@ -143,6 +143,11 @@ class GmailSync extends Command
                     // Keep category updated with the most recent email in thread
                     $ticket->update(['category' => $category]);
 
+                    $date = $headers->firstWhere('name', 'Date')['value'] ?? null;
+                    $gmailDatetime = $date
+                        ? \Carbon\Carbon::parse($date)
+                        : now();
+
                     EmailTicketMessage::create([
                         'ticket_id'        => $ticket->id,
                         'from'             => mb_substr($from, 0, 255),
@@ -150,7 +155,7 @@ class GmailSync extends Command
                         'body'             => mb_substr($body, 0, 65535),
                         'attachments'      => !empty($attachments) ? json_encode($attachments) : null,
                         'gmail_message_id' => $full['id'],
-                        'gmail_datetime'   => now(),
+                        'gmail_datetime'   => $gmailDatetime,
                         'is_incoming'      => $isIncoming,
                     ]);
 
