@@ -27,7 +27,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('sessions:cleanup')->daily();
 
         // Gmail: sync unread messages every 5 minutes
-        $schedule->command('gmail:sync 50')->everyFiveMinutes();
+        $schedule->command('gmail:sync 100')->everyFiveMinutes();
 
         $schedule->call(function () {
             (new OrderService)->cleanupExpiredOrders();
