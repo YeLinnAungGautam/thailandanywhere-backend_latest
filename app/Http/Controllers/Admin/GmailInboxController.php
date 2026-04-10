@@ -89,7 +89,9 @@ class GmailInboxController extends Controller
                 'from' => $latest->from ?? null,
                 'to' => $latest->to ?? null,
                 'is_incoming' => $latest->is_incoming ?? true,
-                'last_message_at' => $latest->gmail_datetime ?? $ticket->updated_at,
+                'last_message_at' => $latest->gmail_datetime
+                    ? \Carbon\Carbon::parse($latest->gmail_datetime)->format('Y-m-d h:i A')
+                    : \Carbon\Carbon::parse($ticket->updated_at)->format('Y-m-d h:i A'),
                 'created_at' => $ticket->created_at,
                 'updated_at' => $ticket->updated_at,
             ];
