@@ -21,7 +21,7 @@ class GmailInboxController extends Controller
     public function __construct()
     {
         // GmailService auto-loads the token from storage/app/gmail_token.json
-        $this->gmailService     = new GmailService();
+        $this->gmailService = new GmailService();
         $this->gmailAccountEmail = $this->gmailService->accountEmail;
     }
 
@@ -30,20 +30,25 @@ class GmailInboxController extends Controller
      */
     public function inbox(Request $request)
     {
-        $perPage    = $request->get('per_page', 20);
-        $search     = $request->get('search');
-        $status     = $request->get('status');      // open, closed, etc.
+        $perPage = $request->get('per_page', 20);
+        $search = $request->get('search');
+        $status = $request->get('status');      // open, closed, etc.
         $unreadOnly = $request->get('unread_only', false);
-        $startDate  = $request->get('start_date');
-        $endDate    = $request->get('end_date');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
         // $query = EmailTicket::with(['messages' => function ($q) {
         //     $q->orderBy('created_at', 'desc');
         // }])->latest('updated_at');
 
         $query = EmailTicket::with(['messages' => function ($q) {
-            $q->orderBy('gmail_datetime', 'desc'); // filter with gmail_datetime
-        }])->latest('updated_at');
+            $q->orderBy('gmail_datetime', 'desc');
+        }])->orderByDesc(
+            EmailTicketMessage::select('gmail_datetime')
+                ->whereColumn('ticket_id', 'email_tickets.id')
+                ->orderByDesc('gmail_datetime')
+                ->limit(1)
+        );
 
         if ($status) {
             $query->where('status', $status);
@@ -74,30 +79,30 @@ class GmailInboxController extends Controller
             $latest = $ticket->messages->first();
 
             return [
-                'id'             => $ticket->id,
-                'thread_id'      => $ticket->gmail_thread_id,
-                'subject'        => $ticket->subject,
+                'id' => $ticket->id,
+                'thread_id' => $ticket->gmail_thread_id,
+                'subject' => $ticket->subject,
                 'customer_email' => $ticket->customer_email,
-                'status'         => $ticket->status,
-                'message_count'  => $ticket->messages->count(),
-                'preview'        => $latest ? \Str::limit(strip_tags($latest->body), 150) : null,
-                'from'           => $latest->from ?? null,
-                'to'             => $latest->to ?? null,
-                'is_incoming'    => $latest->is_incoming ?? true,
+                'status' => $ticket->status,
+                'message_count' => $ticket->messages->count(),
+                'preview' => $latest ? \Str::limit(strip_tags($latest->body), 150) : null,
+                'from' => $latest->from ?? null,
+                'to' => $latest->to ?? null,
+                'is_incoming' => $latest->is_incoming ?? true,
                 'last_message_at' => $latest->gmail_datetime ?? $ticket->updated_at,
-                'created_at'     => $ticket->created_at,
-                'updated_at'     => $ticket->updated_at,
+                'created_at' => $ticket->created_at,
+                'updated_at' => $ticket->updated_at,
             ];
         });
 
         return $this->success([
-            'emails'     => $emails,
+            'emails' => $emails,
             'pagination' => [
                 'current_page' => $tickets->currentPage(),
-                'last_page'    => $tickets->lastPage(),
-                'per_page'     => $tickets->perPage(),
-                'total'        => $tickets->total(),
-                'has_more'     => $tickets->hasMorePages(),
+                'last_page' => $tickets->lastPage(),
+                'per_page' => $tickets->perPage(),
+                'total' => $tickets->total(),
+                'has_more' => $tickets->hasMorePages(),
             ],
             'stats' => $this->getInboxStats(),
         ], 'Inbox retrieved successfully');
@@ -108,8 +113,8 @@ class GmailInboxController extends Controller
      */
     public function threads(Request $request)
     {
-        $perPage    = $request->get('per_page', 15);
-        $search     = $request->get('search');
+        $perPage = $request->get('per_page', 15);
+        $search = $request->get('search');
         $unreadOnly = $request->get('unread_only', false);
 
         $query = EmailTicket::withCount('messages')->latest('updated_at');
@@ -121,22 +126,22 @@ class GmailInboxController extends Controller
         $threads = $query->paginate($perPage);
 
         return $this->success([
-            'threads'    => $threads->map(function ($ticket) {
+            'threads' => $threads->map(function ($ticket) {
                 return [
-                    'thread_id'      => $ticket->gmail_thread_id,
-                    'subject'        => $ticket->subject,
+                    'thread_id' => $ticket->gmail_thread_id,
+                    'subject' => $ticket->subject,
                     'customer_email' => $ticket->customer_email,
-                    'status'         => $ticket->status,
-                    'message_count'  => $ticket->messages_count,
-                    'last_activity'  => $ticket->updated_at,
+                    'status' => $ticket->status,
+                    'message_count' => $ticket->messages_count,
+                    'last_activity' => $ticket->updated_at,
                 ];
             }),
             'pagination' => [
                 'current_page' => $threads->currentPage(),
-                'last_page'    => $threads->lastPage(),
-                'per_page'     => $threads->perPage(),
-                'total'        => $threads->total(),
-                'has_more'     => $threads->hasMorePages(),
+                'last_page' => $threads->lastPage(),
+                'per_page' => $threads->perPage(),
+                'total' => $threads->total(),
+                'has_more' => $threads->hasMorePages(),
             ],
         ], 'Email threads retrieved successfully');
     }
@@ -161,21 +166,21 @@ class GmailInboxController extends Controller
             ->get();
 
         return $this->success([
-            'thread_id'      => $ticket->gmail_thread_id,
-            'subject'        => $ticket->subject,
+            'thread_id' => $ticket->gmail_thread_id,
+            'subject' => $ticket->subject,
             'customer_email' => $ticket->customer_email,
-            'status'         => $ticket->status,
-            'message_count'  => $messages->count(),
-            'emails'         => $messages->map(function ($msg) {
+            'status' => $ticket->status,
+            'message_count' => $messages->count(),
+            'emails' => $messages->map(function ($msg) {
                 return [
-                    'id'               => $msg->id,
-                    'from'             => $msg->from,
-                    'to'               => $msg->to,
-                    'body'             => $msg->body,
-                    'is_incoming'      => $msg->is_incoming,
-                    'attachments'      => $msg->attachments ?? [],
+                    'id' => $msg->id,
+                    'from' => $msg->from,
+                    'to' => $msg->to,
+                    'body' => $msg->body,
+                    'is_incoming' => $msg->is_incoming,
+                    'attachments' => $msg->attachments ?? [],
                     'gmail_message_id' => $msg->gmail_message_id,
-                    'created_at'       => $msg->gmail_datetime ?? $msg->created_at,
+                    'created_at' => $msg->gmail_datetime ?? $msg->created_at,
                 ];
             }),
         ], 'Thread retrieved successfully');
@@ -187,14 +192,14 @@ class GmailInboxController extends Controller
     public function sendReply(Request $request, $emailId)
     {
         $request->validate([
-            'body'    => 'required|string',
+            'body' => 'required|string',
             'subject' => 'sometimes|string',
         ]);
 
         try {
             // $emailId can be a ticket id or message id
             $message = EmailTicketMessage::find($emailId);
-            $ticket  = $message
+            $ticket = $message
                 ? EmailTicket::find($message->ticket_id)
                 : EmailTicket::find($emailId);
 
@@ -203,10 +208,10 @@ class GmailInboxController extends Controller
             }
 
             $replyData = [
-                'to'          => $ticket->customer_email,
-                'subject'     => $request->get('subject', 'Re: ' . $ticket->subject),
-                'body'        => $request->body,
-                'thread_id'   => $ticket->gmail_thread_id,
+                'to' => $ticket->customer_email,
+                'subject' => $request->get('subject', 'Re: ' . $ticket->subject),
+                'body' => $request->body,
+                'thread_id' => $ticket->gmail_thread_id,
                 'in_reply_to' => $message?->gmail_message_id,
             ];
 
@@ -214,13 +219,13 @@ class GmailInboxController extends Controller
 
             // Store the sent reply as a message on the ticket
             $sentMessage = EmailTicketMessage::create([
-                'ticket_id'        => $ticket->id,
-                'from'             => $this->gmailAccountEmail,
-                'to'               => $ticket->customer_email,
-                'body'             => $request->body,
+                'ticket_id' => $ticket->id,
+                'from' => $this->gmailAccountEmail,
+                'to' => $ticket->customer_email,
+                'body' => $request->body,
                 'gmail_message_id' => $response['message_id'] ?? null,
-                'gmail_datetime'   => now(),
-                'is_incoming'      => false,
+                'gmail_datetime' => now(),
+                'is_incoming' => false,
             ]);
 
             // Update thread_id on ticket if it was missing
@@ -229,7 +234,7 @@ class GmailInboxController extends Controller
             }
 
             return $this->success([
-                'message'    => $sentMessage,
+                'message' => $sentMessage,
                 'message_id' => $response['message_id'] ?? null,
             ], 'Reply sent successfully');
 
@@ -246,44 +251,44 @@ class GmailInboxController extends Controller
     public function compose(Request $request)
     {
         $request->validate([
-            'to'      => 'required|email',
+            'to' => 'required|email',
             'subject' => 'required|string',
-            'body'    => 'required|string',
-            'cc'      => 'sometimes|array',
-            'cc.*'    => 'email',
+            'body' => 'required|string',
+            'cc' => 'sometimes|array',
+            'cc.*' => 'email',
         ]);
 
         try {
             $emailData = [
-                'to'      => $request->to,
-                'cc'      => $request->cc ?? [],
+                'to' => $request->to,
+                'cc' => $request->cc ?? [],
                 'subject' => $request->subject,
-                'body'    => $request->body,
+                'body' => $request->body,
             ];
 
             $response = $this->gmailService->sendEmail($emailData);
 
             // Create a ticket + outgoing message
             $ticket = EmailTicket::create([
-                'subject'        => $request->subject,
+                'subject' => $request->subject,
                 'customer_email' => $request->to,
                 'gmail_thread_id' => $response['thread_id'] ?? null,
-                'status'         => 'open',
+                'status' => 'open',
             ]);
 
             $msg = EmailTicketMessage::create([
-                'ticket_id'        => $ticket->id,
-                'from'             => $this->gmailAccountEmail,
-                'to'               => $request->to,
-                'body'             => $request->body,
+                'ticket_id' => $ticket->id,
+                'from' => $this->gmailAccountEmail,
+                'to' => $request->to,
+                'body' => $request->body,
                 'gmail_message_id' => $response['message_id'] ?? null,
-                'gmail_datetime'   => now(),
-                'is_incoming'      => false,
+                'gmail_datetime' => now(),
+                'is_incoming' => false,
             ]);
 
             return $this->success([
-                'ticket'     => $ticket,
-                'message'    => $msg,
+                'ticket' => $ticket,
+                'message' => $msg,
                 'message_id' => $response['message_id'] ?? null,
             ], 'Email sent successfully');
 
@@ -300,34 +305,35 @@ class GmailInboxController extends Controller
      */
     public function syncFromGmail(Request $request)
     {
-        $limit      = $request->get('limit', 50);
+        $limit = $request->get('limit', 50);
         $inboxEmail = $this->gmailAccountEmail;
 
         try {
-            $query = "to:{$inboxEmail} OR from:{$inboxEmail} is:unread";
+            $query = "to:{$inboxEmail} OR from:{$inboxEmail}";
 
             $response = $this->gmailService->service->users_messages
                 ->listUsersMessages('me', ['maxResults' => $limit, 'q' => $query]);
 
             $messages = $response->getMessages() ?? [];
-            $synced   = 0;
-            $skipped  = 0;
+            $synced = 0;
+            $skipped = 0;
 
             foreach ($messages as $msg) {
-                $full     = $this->gmailService->getMessage($msg->getId(), ['format' => 'full']);
+                $full = $this->gmailService->getMessage($msg->getId(), ['format' => 'full']);
                 $threadId = $full['threadId'] ?? $msg->getThreadId();
 
                 $headers = collect($full['payload']['headers'] ?? []);
-                $from    = $headers->firstWhere('name', 'From')['value'] ?? '';
-                $to      = $headers->firstWhere('name', 'To')['value'] ?? '';
+                $from = $headers->firstWhere('name', 'From')['value'] ?? '';
+                $to = $headers->firstWhere('name', 'To')['value'] ?? '';
                 $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '(no subject)';
 
                 $parsed = $this->gmailService->parseMessagePayload($full['payload'] ?? [], $full['id']);
-                $body   = $parsed['body'];
+                $body = $parsed['body'];
                 $attachments = $parsed['attachments'];
 
                 if (EmailTicketMessage::where('gmail_message_id', $full['id'])->exists()) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -337,21 +343,21 @@ class GmailInboxController extends Controller
                 );
 
                 EmailTicketMessage::create([
-                    'ticket_id'        => $ticket->id,
-                    'from'             => mb_substr($from, 0, 255),
-                    'to'               => mb_substr($to, 0, 255) ?: 'me',
-                    'body'             => mb_substr($body, 0, 65535),
-                    'attachments'      => !empty($attachments) ? $attachments : null,
+                    'ticket_id' => $ticket->id,
+                    'from' => mb_substr($from, 0, 255),
+                    'to' => mb_substr($to, 0, 255) ?: 'me',
+                    'body' => mb_substr($body, 0, 65535),
+                    'attachments' => !empty($attachments) ? $attachments : null,
                     'gmail_message_id' => $full['id'],
-                    'gmail_datetime'   => now(),
-                    'is_incoming'      => true,
+                    'gmail_datetime' => now(),
+                    'is_incoming' => true,
                 ]);
 
                 $synced++;
             }
 
             return $this->success([
-                'synced_count'  => $synced,
+                'synced_count' => $synced,
                 'skipped_count' => $skipped,
                 'account_email' => $inboxEmail,
             ], 'Gmail sync completed successfully');
@@ -391,6 +397,7 @@ class GmailInboxController extends Controller
     public function markAsRead(Request $request)
     {
         $request->validate(['email_ids' => 'required|array']);
+
         // email_ticket_messages doesn't have read_at, so this is a no-op for now
         return $this->success(['updated_count' => 0], 'Marked as read');
     }
@@ -431,11 +438,11 @@ class GmailInboxController extends Controller
     public function getInboxStats()
     {
         return [
-            'total_threads'  => EmailTicket::count(),
-            'open_count'     => EmailTicket::where('status', 'open')->count(),
-            'closed_count'   => EmailTicket::where('status', 'closed')->count(),
+            'total_threads' => EmailTicket::count(),
+            'open_count' => EmailTicket::where('status', 'open')->count(),
+            'closed_count' => EmailTicket::where('status', 'closed')->count(),
             'total_messages' => EmailTicketMessage::count(),
-            'today_count'    => EmailTicket::whereDate('created_at', today())->count(),
+            'today_count' => EmailTicket::whereDate('created_at', today())->count(),
             'this_week_count' => EmailTicket::whereBetween('created_at', [
                 now()->startOfWeek(),
                 now()->endOfWeek(),
