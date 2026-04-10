@@ -250,6 +250,43 @@ class DashboardController extends Controller
         }
     }
 
+    // ReportController.php
+    public function getHotelPriceGroupReport(Request $request)
+    {
+        try {
+            if (!$request->daterange) {
+                throw new Exception('Hotel price group report: Invalid daterange to filter');
+            }
+
+            $data = ReportService::getHotelPriceGroupReport(
+                $request->daterange,
+                $request->period ?? 'month' // 'month' or 'year'
+            );
+
+            return $this->success($data, 'Hotel price group report');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getHotelPriceGroupDetail(Request $request)
+    {
+        try {
+            if (!$request->daterange || !$request->group) {
+                throw new Exception('Hotel price group detail: Missing required parameters');
+            }
+
+            $data = ReportService::getHotelPriceGroupDetail(
+                $request->daterange,
+                $request->group // 'budget' | 'standard' | 'premium' | 'luxury'
+            );
+
+            return $this->success($data, 'Hotel price group detail');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function saleReportByDate(Request $request)
     {
         try {

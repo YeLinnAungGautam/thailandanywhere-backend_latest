@@ -572,4 +572,162 @@ class ReportService
             'total_booking_items' => $totalItems,
         ];
     }
+
+    private static array $priceGroups = [
+        'budget'   => ['min' => 0,    'max' => 1200,        'label' => 'Budget (0 - 1,200)'],
+        'standard' => ['min' => 1200, 'max' => 2000,        'label' => 'Standard (1,200 - 2,000)'],
+        'premium'  => ['min' => 2000, 'max' => 4000,        'label' => 'Premium (2,000 - 4,000)'],
+        'luxury'   => ['min' => 4000, 'max' => PHP_INT_MAX, 'label' => 'Luxury (4,000+)'],
+    ];
+
+    /**
+     * Shared helper: hotel_id → group key (by lowest room_price)
+     * Summary နဲ့ Detail နှစ်ခုလုံး ဒီ function တစ်ခုတည်း သုံးတယ်
+     */
+    private static function getHotelIdsByGroup(string $group): \Illuminate\Support\Collection
+    {
+        $def      = self::$priceGroups[$group];
+        $maxPrice = $def['max'] === PHP_INT_MAX ? 9999999 : $def['max'];
+
+        return \DB::table('rooms')
+            ->where('is_extra', 0)
+            ->whereNotNull('room_price')
+            ->select('hotel_id', \DB::raw('MIN(room_price) as lowest_price'))
+            ->groupBy('hotel_id')
+            ->havingRaw('MIN(room_price) >= ? AND MIN(room_price) < ?', [$def['min'], $maxPrice])
+            ->pluck('hotel_id');
+    }
+
+    /**
+     * Summary report — service_date filter
+     */
+    public static function getHotelPriceGroupReport(string $daterange): array
+    {
+        [$start_date, $end_date] = self::parseDateRange($daterange);
+
+        $groups = [];
+        foreach (self::$priceGroups as $key => $def) {
+            $groups[$key] = [
+                'group'          => $key,
+                'label'          => $def['label'],
+                'total_quantity' => 0,
+                'total_amount'   => 0,
+                'hotel_count'    => 0,
+            ];
+        }
+
+        foreach (self::$priceGroups as $key => $def) {
+            $hotelIds = self::getHotelIdsByGroup($key);
+
+            if ($hotelIds->isEmpty()) continue;
+
+            $result = BookingItem::query()
+                ->where('product_type', 'App\\Models\\Hotel')
+                ->whereIn('product_id', $hotelIds)
+                ->whereBetween('service_date', [$start_date, $end_date])  // ✅ service_date
+                ->selectRaw('
+                    COUNT(DISTINCT product_id) as hotel_count,
+                    SUM(quantity)              as total_quantity,
+                    SUM(amount)                as total_amount
+                ')
+                ->first();
+
+            $groups[$key]['total_quantity'] = (int)   ($result->total_quantity ?? 0);
+            $groups[$key]['total_amount']   = (float) ($result->total_amount   ?? 0);
+            $groups[$key]['hotel_count']    = (int)   ($result->hotel_count    ?? 0);
+        }
+
+        return array_values($groups);
+    }
+
+    /**
+     * Drill-down detail — service_date filter
+     */
+    public static function getHotelPriceGroupDetail(string $daterange, string $group): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        [$start_date, $end_date] = self::parseDateRange($daterange);
+
+        if (!isset(self::$priceGroups[$group])) {
+            throw new \Exception("Invalid price group: {$group}");
+        }
+
+        $hotelIds = self::getHotelIdsByGroup($group);
+
+        // Hotel list with summary — service_date filter
+        $results = BookingItem::query()
+            ->where('product_type', 'App\\Models\\Hotel')
+            ->whereIn('product_id', $hotelIds)
+            ->whereBetween('service_date', [$start_date, $end_date])  // ✅ service_date
+            ->groupBy('product_id')
+            ->select(
+                'product_id',
+                \DB::raw('SUM(quantity)  as total_quantity'),
+                \DB::raw('SUM(amount)    as total_amount'),
+                \DB::raw('COUNT(id)      as booking_count')
+            )
+            ->orderByDesc('total_amount')
+            ->paginate(10);
+
+        // Hotel name + room price range
+        $hotelData = Hotel::whereIn('id', $results->pluck('product_id'))
+            ->with(['rooms' => fn($q) => $q->where('is_extra', 0)->whereNotNull('room_price')])
+            ->get()
+            ->keyBy('id');
+
+        // Booking items — service_date filter + crm_id fix
+        $bookingItems = BookingItem::query()
+            ->where('product_type', 'App\\Models\\Hotel')
+            ->whereIn('product_id', $results->pluck('product_id'))
+            ->whereBetween('service_date', [$start_date, $end_date])  // ✅ service_date
+            ->with([
+                'booking:id',  // ✅ crm_id ထည့်
+                'room:id,name,room_price,cost',
+            ])
+            ->select(
+                'id',
+                'crm_id',
+                'product_id',
+                'booking_id',
+                'room_id',
+                'quantity',
+                'amount',
+                'cost_price',
+                'selling_price',
+                'service_date',
+                'created_at',
+            )
+            ->orderByDesc('service_date')
+            ->get()
+            ->groupBy('product_id');
+
+        $results->getCollection()->transform(function ($item) use ($hotelData, $bookingItems) {
+            $hotel      = $hotelData[$item->product_id] ?? null;
+            $roomPrices = $hotel?->rooms->pluck('room_price')->map(fn($p) => (float) $p) ?? collect();
+
+            $item->hotel_name     = $hotel?->name ?? '-';
+            $item->room_min_price = $roomPrices->min() ?? 0;
+            $item->room_max_price = $roomPrices->max() ?? 0;
+
+            $item->booking_items = ($bookingItems[$item->product_id] ?? collect())
+                ->map(fn($bi) => [
+                    'id'                      => $bi->id,
+                    'booking_id'              => $bi->booking_id,
+                    'crm_id'                  => $bi->crm_id ?? '-',           // ✅
+                    'room_name'               => $bi->room?->name ?? '-',
+                    'room_price'              => (float) ($bi->room?->room_price ?? 0),
+                    'quantity'                => (int)   $bi->quantity,
+                    'selling_price'           => (float) $bi->selling_price,
+                    'cost_price'              => (float) $bi->cost_price,
+                    'amount'                  => (float) $bi->amount,
+                    'profit'                  => (float) $bi->amount - (float) $bi->cost_price,  // ✅
+                    'service_date'            => $bi->service_date?->format('Y-m-d'),
+                    'created_at'              => $bi->created_at?->format('Y-m-d H:i'),
+                ])
+                ->values();
+
+            return $item;
+        });
+
+        return $results;
+    }
 }

@@ -168,6 +168,10 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('sale-counts', [DashboardController::class, 'getSaleCounts']);
     Route::get('top-selling-products', [DashboardController::class, 'getTopSellingProduct']);
 
+    // hotel group selling graph for marketing
+    Route::get('/hotel-price-group', [DashboardController::class, 'getHotelPriceGroupReport']);
+    Route::get('/hotel-price-group/detail', [DashboardController::class, 'getHotelPriceGroupDetail']);
+
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('reports/hotels', HotelReportController::class);
 
