@@ -60,14 +60,11 @@ class SendReservationNotifyEmailJob implements ShouldQueue
     public function handle(): void
     {
         try {
-            // Update email log status to 'sending'
             if ($this->email_log_id) {
-                EmailLog::where('id', $this->email_log_id)->update(['status' => 'sending']);
+                EmailLog::where('id', $this->email_log_id)
+                    ->update(['status' => 'sending']);
             }
 
-            // Send the email
-            // Mail::to($this->getMails())->cc($this->ccEmail)
-            //     ->send(new ReservationNotifyEmail($this->mail_subject, $this->mail_body, $this->booking_item, $this->attachments));
             $mailable = new $this->mailableClass(
                 $this->mail_subject,
                 $this->mail_body,
@@ -81,37 +78,53 @@ class SendReservationNotifyEmailJob implements ShouldQueue
                 ->when(!$isHotelMail, fn($mail) => $mail->cc($this->ccEmail))
                 ->send($mailable);
 
-            // Update email log status to 'sent' on success
-            if ($this->email_log_id) {
-                EmailLog::where('id', $this->email_log_id)->update(['status' => 'sent']);
+            // ✅ Hotel mail ဆိုရင် trait မှ gmail message id ကို ယူသည်
+            // ✅ Default mail ဆိုရင် SentMessage မှ ယူ၍မရသောကြောင့် null ထားသည်
+            $gmailMessageId      = null;
+            $emailTicketMessageId = null;
 
-                // Save reference in CustomerDocument
+            if ($isHotelMail && isset($mailable->syncedGmailMessageId)) {
+                $gmailMessageId       = $mailable->syncedGmailMessageId;
+                $emailTicketMessageId = $mailable->syncedTicketMessageId;
+            }
+
+            if ($this->email_log_id) {
+                EmailLog::where('id', $this->email_log_id)->update([
+                    'status'     => 'sent',
+                    'gmail_message_id' => $gmailMessageId, // ← Gmail Message ID
+                ]);
+
                 CustomerDocument::create([
                     'booking_item_group_id' => $this->booking_item_group->id,
-                    'type' => $this->email_type === 'booking' ? 'booking_request_proof' : 'expense_mail_proof',
+                    'type' => $this->email_type === 'booking'
+                        ? 'booking_request_proof'
+                        : 'expense_mail_proof',
                     'file' => null,
-                    'meta' => ['email_log_id' => $this->email_log_id]
+                    'meta' => [
+                        'email_log_id'          => $this->email_log_id,
+                        'gmail_message_id'      => $gmailMessageId,       // ← Gmail raw ID
+                        'email_ticket_message_id' => $emailTicketMessageId, // ← DB record ID
+                    ]
                 ]);
             }
 
-            // Update all booking items in the group
             $updateData = $this->email_type == 'booking'
                 ? ['is_booking_request' => 1]
                 : ['is_expense_email_sent' => 1];
 
             $this->booking_item_group->bookingItems()->update($updateData);
+
             Log::info('Group notify email sent successfully', [
-                'group_id' => $this->booking_item_group->id,
-                'email_log_id' => $this->email_log_id,
-                'recipients' => $this->getMails(),
-                'email_type' => $this->email_type
+                'group_id'               => $this->booking_item_group->id,
+                'email_log_id'           => $this->email_log_id,
+                'gmail_message_id'       => $gmailMessageId,
+                'email_ticket_message_id' => $emailTicketMessageId,
             ]);
 
         } catch (Exception $e) {
-            // Update email log with failure details
             if ($this->email_log_id) {
                 EmailLog::where('id', $this->email_log_id)->update([
-                    'status' => 'failed',
+                    'status'     => 'failed',
                     'plain_body' => ($this->attempts() >= $this->tries)
                         ? strip_tags($this->mail_body) . '\n\nFAIL REASON: ' . $e->getMessage()
                         : strip_tags($this->mail_body) . '\n\nRETRY ATTEMPT: ' . $this->attempts() . '/' . $this->tries
@@ -120,16 +133,10 @@ class SendReservationNotifyEmailJob implements ShouldQueue
 
             Log::error('Reservation notify email failed', [
                 'email_log_id' => $this->email_log_id,
-                'group_id' => $this->booking_item_group->id,
-                'recipients' => $this->getMails(),
-                'email_type' => $this->email_type,
-                'attempt' => $this->attempts(),
-                'max_attempts' => $this->tries,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'group_id'     => $this->booking_item_group->id,
+                'error'        => $e->getMessage(),
             ]);
 
-            // If we haven't reached max attempts, re-throw to trigger retry
             if ($this->attempts() < $this->tries) {
                 throw $e;
             }

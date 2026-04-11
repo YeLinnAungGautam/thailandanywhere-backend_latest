@@ -59,22 +59,49 @@ class ReservationNotifyEmail extends Mailable
      *
      * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
+    // public function attachments(): array
+    // {
+    //     $files = [];
+
+    //     // Get passports from the group
+    //     foreach ($this->booking_item_group->passports as $passport) {
+    //         if (Storage::exists('passport/' . $passport->file)) {
+    //             $files[] = Attachment::fromPath(storage_path('app/public/passport/' . $passport->file));
+    //         }
+    //     }
+
+    //     // Get other documents (receipts etc) if needed via the group
+    //     // ... attachment logic ...
+    //     if (isset($this->attach_files) && count($this->attach_files) > 0) {
+    //         foreach ($this->attach_files as $attach_file) {
+    //             $files[] = Attachment::fromPath(storage_path('app/public/temp_files/attachments/' . $attach_file));
+    //         }
+    //     }
+
+    //     return $files;
+    // }
     public function attachments(): array
     {
         $files = [];
 
-        // Get passports from the group
         foreach ($this->booking_item_group->passports as $passport) {
-            if (Storage::exists('passport/' . $passport->file)) {
+            // ✅ null/empty check
+            if (!$passport->file) {
+                continue;
+            }
+
+            // ✅ public/ prefix ထည့်မှ storage/app/public/passport/ ကို မှန်ကန်စွာ ရှာသည်
+            if (Storage::exists('public/passport/' . $passport->file)) {
                 $files[] = Attachment::fromPath(storage_path('app/public/passport/' . $passport->file));
             }
         }
 
-        // Get other documents (receipts etc) if needed via the group
-        // ... attachment logic ...
         if (isset($this->attach_files) && count($this->attach_files) > 0) {
             foreach ($this->attach_files as $attach_file) {
-                $files[] = Attachment::fromPath(storage_path('app/public/temp_files/attachments/' . $attach_file));
+                // ✅ temp file လည်း exist check ထည့်သည်
+                if (Storage::exists('public/temp_files/attachments/' . $attach_file)) {
+                    $files[] = Attachment::fromPath(storage_path('app/public/temp_files/attachments/' . $attach_file));
+                }
             }
         }
 

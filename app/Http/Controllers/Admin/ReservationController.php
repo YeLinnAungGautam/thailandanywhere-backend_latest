@@ -11,6 +11,7 @@ use App\Mail\ReservationNotifyDefaultMail;
 use App\Mail\ReservationNotifyEmail;
 use App\Models\Booking;
 use App\Models\BookingItem;
+use App\Models\BookingItemGroup;
 use App\Models\EmailLog;
 use App\Models\ReservationAssociatedCustomer;
 use App\Models\ReservationBookingConfirmLetter;
@@ -691,7 +692,7 @@ class ReservationController extends Controller
         return $this->success(null, 'Successfully deleted');
     }
 
-    public function sendNotifyEmail(BookingItem $booking_item, Request $request)
+    public function sendNotifyEmail(BookingItemGroup $booking_item_group, Request $request)
     {
         $request->validate([
             'mail_subject' => 'required',
@@ -727,9 +728,9 @@ class ReservationController extends Controller
                     'plain_body' => strip_tags($request->mail_body),
                     'attachments' => $attachments ? json_encode($attachments) : null,
                     'status' => 'pending',
-                    'related_booking_id' => $booking_item->booking_id,
-                    'related_model_type' => 'App\\Models\\BookingItem',
-                    'related_model_id' => $booking_item->id,
+                    'related_booking_id' => $booking_item_group->booking_id,
+                    'related_model_type' => 'App\\Models\\BookingItemGroup',
+                    'related_model_id'   => $booking_item_group->id,
                 ]);
 
                 $emailLogs[] = $emailLog->id;
@@ -751,7 +752,7 @@ class ReservationController extends Controller
                     $request->mail_subject,
                     $request->sent_to_default,
                     $request->mail_body,
-                    $booking_item,
+                    $booking_item_group,
                     $attachments,
                     $ccEmail,
                     $request->email_type,
@@ -765,7 +766,7 @@ class ReservationController extends Controller
             return $this->success(null, $messageType . ' notify email is successfully sent.', 200);
         } catch (Exception $e) {
             Log::error('SendNotifyEmail Error: ' . $e->getMessage(), [
-                'booking_item_id' => $booking_item->id,
+                'booking_item_group_id' => $booking_item_group->id,
                 'email_type' => $request->email_type,
                 'recipients' => $request->mail_tos
             ]);

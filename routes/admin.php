@@ -294,7 +294,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::apiResource('reservations', ReservationController::class);
     Route::get('reservations/{id}/copy', [ReservationController::class, 'copyDetail']);
     Route::get('calendar/reservations', [CalendarController::class, 'index']);
-    Route::post('reservations/{booking_item}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
+    Route::post('reservations/{booking_item_group}/send-notify-email', [ReservationController::class, 'sendNotifyEmail']);
     Route::get('reservations/export/excel', [ReservationListExportController::class, 'export']);
 
     # Reservation Group By
@@ -627,6 +627,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('gmail/sync', [GmailInboxController::class, 'syncFromGmail']);
     Route::patch('gmail/tickets/{ticketId}/close', [GmailInboxController::class, 'closeTicket']);
     Route::patch('gmail/tickets/{ticketId}/reopen', [GmailInboxController::class, 'reopenTicket']);
+    Route::get('gmail/messages/{messageId}', [GmailInboxController::class, 'getMessage']);
     # Email Logs
     Route::apiResource('email-logs', EmailLogController::class);
     Route::patch('email-logs/{email_log}/mark-read', [EmailLogController::class, 'markAsRead']);
