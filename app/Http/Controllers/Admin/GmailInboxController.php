@@ -148,6 +148,33 @@ class GmailInboxController extends Controller
         ], 'Email threads retrieved successfully');
     }
 
+    public function getMessage(Request $request, $messageId)
+    {
+        $message = EmailTicketMessage::with('emailTicket')->find($messageId);
+
+        if (!$message) {
+            return $this->error(null, 'Message not found', 404);
+        }
+
+        return $this->success([
+            'id'               => $message->id,
+            'from'             => $message->from,
+            'to'               => $message->to,
+            'body'             => $message->body,
+            'is_incoming'      => $message->is_incoming,
+            'attachments'      => $message->attachments ?? [],
+            'gmail_message_id' => $message->gmail_message_id,
+            'gmail_datetime'   => $message->gmail_datetime,
+            'created_at'       => $message->created_at,
+            'ticket'           => $message->emailTicket ? [
+                'id'         => $message->emailTicket->id,
+                'subject'    => $message->emailTicket->subject,
+                'thread_id'  => $message->emailTicket->gmail_thread_id,
+                'status'     => $message->emailTicket->status,
+            ] : null,
+        ], 'Message retrieved successfully');
+    }
+
     /**
      * Get all messages in a specific thread.
      */

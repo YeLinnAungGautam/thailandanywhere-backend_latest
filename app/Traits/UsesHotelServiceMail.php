@@ -12,6 +12,11 @@ trait UsesHotelServiceMail
      * @param  \Illuminate\Contracts\Mail\Factory|\Illuminate\Contracts\Mail\Mailer  $mailer
      * @return \Illuminate\Mail\SentMessage|null
      */
+
+    // ✅ Gmail sync ပြီးနောက် ရလာသော ticket_message_id သိမ်းထားရန်
+    public ?int $syncedTicketMessageId = null;
+    public ?string $syncedGmailMessageId = null;
+
     public function send($mailer)
     {
         // 1. Guarantee the configuration is set right before resolving the mailer
@@ -19,7 +24,7 @@ trait UsesHotelServiceMail
 
         // 2. We MUST explicitly resolve our new 'hotel_service' mailer instance instead of
         // relying on the passed $mailer. When a user uses `Mail::to(...)->send(...)`,
-        // Laravel passes the instantiated *default* mailer into this method, 
+        // Laravel passes the instantiated *default* mailer into this method,
         // completely bypassing Mailable's internal `$this->mailer` resolution logic.
         $hotelMailer = app(\Illuminate\Contracts\Mail\Factory::class)->mailer('hotel_service');
 
@@ -29,6 +34,21 @@ trait UsesHotelServiceMail
         // 4. Fetch and save the newly sent email to DB immediately
         sleep(2);
         \Illuminate\Support\Facades\Artisan::call('gmail:sync', ['max' => 5]);
+
+        // ✅ Sync ပြီးနောက် subject ဖြင့် နောက်ဆုံး message ကို ရှာသည်
+        // ✅ emailTicket() သုံးပြီး subject ဖြင့် ရှာသည်
+        $latestMessage = \App\Models\EmailTicketMessage::whereHas('emailTicket', function ($q) {
+                $q->where('subject', $this->mail_subject);
+            })
+            ->where('is_incoming', false)
+            ->orderByDesc('created_at')
+            ->select('id', 'gmail_message_id')
+            ->first();
+
+        if ($latestMessage) {
+            $this->syncedTicketMessageId = $latestMessage->id;
+            $this->syncedGmailMessageId  = $latestMessage->gmail_message_id;
+        }
 
         return $result;
     }
