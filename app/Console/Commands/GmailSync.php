@@ -37,16 +37,16 @@ class GmailSync extends Command
         }
 
         $inboxEmail = $gmail->accountEmail;
-        $fetchAll   = $this->option('all');
-        $since      = $this->option('since');   // e.g. "2026-01-01"
-        $max        = (int) $this->argument('max');
+        $fetchAll = $this->option('all');
+        $since = $this->option('since');   // e.g. "2026-01-01"
+        $max = (int) $this->argument('max');
 
         // Build Gmail search query
         $queryParts = ["in:inbox OR in:sent OR to:{$inboxEmail} OR from:{$inboxEmail}"];
 
         if ($since) {
             // Gmail accepts after:YYYY/MM/DD
-            $date         = \Carbon\Carbon::parse($since)->format('Y/m/d');
+            $date = \Carbon\Carbon::parse($since)->format('Y/m/d');
             $queryParts[] = "after:{$date}";
         }
 
@@ -58,9 +58,9 @@ class GmailSync extends Command
         $this->info("Syncing {$mode} for {$inboxEmail}" . ($since ? " since {$since}" : '') . ' ...');
         $this->info("Query: {$query}");
 
-        $synced    = 0;
-        $skipped   = 0;
-        $failed    = 0;
+        $synced = 0;
+        $skipped = 0;
+        $failed = 0;
         $pageToken = null;
 
         do {
@@ -71,8 +71,8 @@ class GmailSync extends Command
             }
 
             try {
-                $response  = $gmail->service->users_messages->listUsersMessages('me', $params);
-                $messages  = $response->getMessages() ?? [];
+                $response = $gmail->service->users_messages->listUsersMessages('me', $params);
+                $messages = $response->getMessages() ?? [];
                 $pageToken = $response->getNextPageToken(); // null = last page
             } catch (\Exception $e) {
                 $this->error('Failed to list messages: ' . $e->getMessage());
@@ -98,7 +98,7 @@ class GmailSync extends Command
                         continue;
                     }
 
-                    $full     = $gmail->getMessage($msg->getId(), ['format' => 'full']);
+                    $full = $gmail->getMessage($msg->getId(), ['format' => 'full']);
                     $threadId = $full['threadId'] ?? $msg->getThreadId();
 
                     // Extract category from labelIds
@@ -116,13 +116,13 @@ class GmailSync extends Command
 
                     // Extract headers
                     $headers = collect($full['payload']['headers'] ?? []);
-                    $from    = $headers->firstWhere('name', 'From')['value'] ?? '';
-                    $to      = $headers->firstWhere('name', 'To')['value'] ?? '';
+                    $from = $headers->firstWhere('name', 'From')['value'] ?? '';
+                    $to = $headers->firstWhere('name', 'To')['value'] ?? '';
                     $subject = $headers->firstWhere('name', 'Subject')['value'] ?? '(no subject)';
 
                     // Use recursive parser to handle deeply nested bodies and download attachments
                     $parsed = $gmail->parseMessagePayload($full['payload'] ?? [], $full['id']);
-                    $body   = $parsed['body'];
+                    $body = $parsed['body'];
                     $attachments = $parsed['attachments'];
 
                     // Determine if the message is incoming
@@ -133,10 +133,10 @@ class GmailSync extends Command
                     $ticket = EmailTicket::firstOrCreate(
                         ['gmail_thread_id' => $threadId],
                         [
-                            'subject'        => mb_substr($subject, 0, 255),
+                            'subject' => mb_substr($subject, 0, 255),
                             'customer_email' => mb_substr($customerEmail, 0, 255),
-                            'status'         => 'open',
-                            'category'       => $category,
+                            'status' => 'open',
+                            'category' => $category,
                         ]
                     );
 
@@ -144,19 +144,21 @@ class GmailSync extends Command
                     $ticket->update(['category' => $category]);
 
                     $date = $headers->firstWhere('name', 'Date')['value'] ?? null;
+                    // Strip RFC 2822 timezone comments, e.g. "+0700 (+07)" → "+0700"
+                    $date = $date ? preg_replace('/\s*\([^)]*\)\s*$/', '', trim($date)) : null;
                     $gmailDatetime = $date
                         ? \Carbon\Carbon::parse($date)
                         : now();
 
                     EmailTicketMessage::create([
-                        'ticket_id'        => $ticket->id,
-                        'from'             => mb_substr($from, 0, 255),
-                        'to'               => mb_substr($to, 0, 255) ?: 'me',
-                        'body'             => mb_substr($body, 0, 65535),
-                        'attachments'      => !empty($attachments) ? json_encode($attachments) : null,
+                        'ticket_id' => $ticket->id,
+                        'from' => mb_substr($from, 0, 255),
+                        'to' => mb_substr($to, 0, 255) ?: 'me',
+                        'body' => mb_substr($body, 0, 65535),
+                        'attachments' => !empty($attachments) ? json_encode($attachments) : null,
                         'gmail_message_id' => $full['id'],
-                        'gmail_datetime'   => $gmailDatetime,
-                        'is_incoming'      => $isIncoming,
+                        'gmail_datetime' => $gmailDatetime,
+                        'is_incoming' => $isIncoming,
                     ]);
 
                     $this->line("  ✓ {$subject}");
