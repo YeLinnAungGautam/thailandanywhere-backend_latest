@@ -174,6 +174,23 @@ class BookingManager
             'slip_code' => $request->slip_code,
             'is_inclusive' => $request->is_inclusive ? $request->is_inclusive : 0,
             'individual_pricing' => isset($item['individual_pricing']) ? json_encode($item['individual_pricing']) : null,
+            // Save child/adult/infant fields directly without isset check
+            'child_cost' => $item['child_cost'] ?? null,
+            'child_price' => $item['child_price'] ?? null,
+            'child_total_cost' => $item['child_total_cost'] ?? null,
+            'child_total_selling_price' => $item['child_total_selling_price'] ?? null,
+            'child_quantity' => $item['child_quantity'] ?? null,
+            'adult_cost' => $item['adult_cost'] ?? null,
+            'adult_price' => $item['adult_price'] ?? null,
+            'adult_total_cost' => $item['adult_total_cost'] ?? null,
+            'adult_total_selling_price' => $item['adult_total_selling_price'] ?? null,
+            'adult_quantity' => $item['adult_quantity'] ?? null,
+            'infant_cost' => $item['infant_cost'] ?? null,
+            'infant_price' => $item['infant_price'] ?? null,
+            'infant_total_cost' => $item['infant_total_cost'] ?? null,
+            'infant_total_selling_price' => $item['infant_total_selling_price'] ?? null,
+            'infant_quantity' => $item['infant_quantity'] ?? null,
+
             'cancellation' => $item['cancellation'] ?? null,
             'addon' => isset($item['addon']) ? json_encode($item['addon']) : null,
         ];
