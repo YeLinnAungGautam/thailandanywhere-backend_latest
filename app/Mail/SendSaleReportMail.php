@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class SendSaleReportMail extends Mailable
 {
-    use Queueable, SerializesModels, UsesHotelServiceMail;
+    use Queueable, SerializesModels;
 
     public $daterange;
     public $type;
