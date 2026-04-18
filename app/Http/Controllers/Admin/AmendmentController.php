@@ -385,39 +385,55 @@ class AmendmentController extends Controller
                     $updateData['total_cost_price'] = $changes['total_cost_price'];
                 }
 
-                if (isset($changes['child_quantity']) && $changes['child_quantity'] !== null) {
-                    $individualPricing = $bookingItem->individual_pricing;
+                // if (isset($changes['child_quantity']) && $changes['child_quantity'] !== null) {
+                //     $individualPricing = $bookingItem->individual_pricing;
 
-                    if (is_string($individualPricing)) {
-                        $individualPricing = json_decode($individualPricing, true) ?? [];
-                    }
-                    if (!is_array($individualPricing)) {
-                        $individualPricing = [];
-                    }
+                //     if (is_string($individualPricing)) {
+                //         $individualPricing = json_decode($individualPricing, true) ?? [];
+                //     }
+                //     if (!is_array($individualPricing)) {
+                //         $individualPricing = [];
+                //     }
 
+                //     $childQty = (int) $changes['child_quantity'];
+
+                //     // ✅ changes မှ အရင်ယူ၊ မပါလျှင် existing မှ fallback
+                //     $childPrice = (float) (
+                //         $changes['child_selling_price']
+                //         ?? $individualPricing['child']['selling_price']
+                //         ?? $individualPricing['child']['price']
+                //         ?? 0
+                //     );
+
+                //     $childCost = (float) (
+                //         $changes['child_cost_price']
+                //         ?? $individualPricing['child']['cost_price']
+                //         ?? 0
+                //     );
+
+                //     $individualPricing['child']['quantity']         = $childQty;
+                //     $individualPricing['child']['selling_price']    = $childPrice;  // ✅
+                //     $individualPricing['child']['cost_price']       = $childCost;   // ✅
+                //     $individualPricing['child']['amount']           = $childQty * $childPrice;
+                //     $individualPricing['child']['total_cost_price'] = $childQty * $childCost;
+
+                //     $updateData['individual_pricing'] = json_encode($individualPricing);
+
+
+                // }
+
+                if(isset($changes['child_quantity']) && $changes['child_quantity'] !== null) {
                     $childQty = (int) $changes['child_quantity'];
+                    $childPrice = (float) ($changes['child_selling_price'] ?? 0);
+                    $childCost = (float) ($changes['child_cost_price'] ?? 0);
+                    $childTotalCost = $childQty * $childCost;
+                    $childTotalSellingPrice = $childQty * $childPrice;
 
-                    // ✅ changes မှ အရင်ယူ၊ မပါလျှင် existing မှ fallback
-                    $childPrice = (float) (
-                        $changes['child_selling_price']
-                        ?? $individualPricing['child']['selling_price']
-                        ?? $individualPricing['child']['price']
-                        ?? 0
-                    );
-
-                    $childCost = (float) (
-                        $changes['child_cost_price']
-                        ?? $individualPricing['child']['cost_price']
-                        ?? 0
-                    );
-
-                    $individualPricing['child']['quantity']         = $childQty;
-                    $individualPricing['child']['selling_price']    = $childPrice;  // ✅
-                    $individualPricing['child']['cost_price']       = $childCost;   // ✅
-                    $individualPricing['child']['amount']           = $childQty * $childPrice;
-                    $individualPricing['child']['total_cost_price'] = $childQty * $childCost;
-
-                    $updateData['individual_pricing'] = json_encode($individualPricing);
+                    $updateData['child_quantity'] = $childQty;
+                    $updateData['child_price'] = $childPrice;
+                    $updateData['child_cost'] = $childCost;
+                    $updateData['child_total_cost'] = $childTotalCost;
+                    $updateData['child_total_selling_price'] = $childTotalSellingPrice;
                 }
 
                 if (!empty($updateData)) {
