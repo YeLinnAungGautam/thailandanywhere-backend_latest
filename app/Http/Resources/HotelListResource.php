@@ -58,6 +58,7 @@ class HotelListResource extends JsonResource
             'lowest_room_price' => $lowest_room_price,
             'lowest_walk_in_price' => $lowest_walk_in_price,
             'lowest_cost_price' => $lowest_cost_price,
+            // 'lowest_available_room_count' => $this->getLowestAvailableRoomCount(),
             // 'updated_at' => $this->updated_at,
             // 'created_at' => $this->created_at,
             // 'location_map_title' => $this->location_map_title,
@@ -87,4 +88,6 @@ class HotelListResource extends JsonResource
             // 'official_remark' => $this->official_remark,
         ];
     }
+
+
 }

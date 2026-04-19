@@ -41,6 +41,9 @@ class HotelController extends Controller
             ->when(!$request->showAll, function ($q) {
                 $q->directBooking();
             })
+            ->when($request->allowment !== null, function ($a_query) use ($request) {
+                $a_query->where('allowment', $request->allowment);
+            })
             ->when($request->max_price, function ($q) use ($request) {
                 $q->whereIn('id', function ($q1) use ($request) {
                     $q1->select('hotel_id')
