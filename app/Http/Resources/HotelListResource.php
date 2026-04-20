@@ -58,6 +58,9 @@ class HotelListResource extends JsonResource
             'lowest_room_price' => $lowest_room_price,
             'lowest_walk_in_price' => $lowest_walk_in_price,
             'lowest_cost_price' => $lowest_cost_price,
+            'lowest_available_room_count' => $this->allowment == true
+            ? $this->getLowestAvailableRoomCountForNextSevenDays()
+            : null,
             // 'updated_at' => $this->updated_at,
             // 'created_at' => $this->created_at,
             // 'location_map_title' => $this->location_map_title,
@@ -86,5 +89,43 @@ class HotelListResource extends JsonResource
             // 'official_email' => $this->official_email,
             // 'official_remark' => $this->official_remark,
         ];
+    }
+
+    public function getLowestAvailableRoomCountForNextSevenDays(): int
+    {
+        $rooms = $this->rooms->where('is_extra', 0);
+
+        if ($rooms->isEmpty()) return 0;
+
+        if ($this->allowment != 1) {
+            return $rooms->count();
+        }
+
+        $partner = $this->partners->first();
+
+        if (!$partner) return $rooms->count();
+
+        $startDate = now()->toDateString();
+        $endDate = now()->addDays(7)->toDateString();
+
+        $dailyAvailable = [];
+
+        foreach ($rooms as $room) {
+            $service = new \App\Services\PartnerRoomRateService($partner->id, $room->id);
+            $rates = $service->getRateForDaterange($startDate, $endDate);
+
+            foreach ($rates as $date => $rate) {
+                // Take the MIN per date across rooms, not sum
+                $available = max(0, $rate['available_rooms']);
+
+                if (!isset($dailyAvailable[$date])) {
+                    $dailyAvailable[$date] = $available;
+                } else {
+                    $dailyAvailable[$date] = max($dailyAvailable[$date], $available);
+                }
+            }
+        }
+
+        return count($dailyAvailable) > 0 ? max($dailyAvailable) : 0;
     }
 }

@@ -345,6 +345,11 @@ class ReservationController extends Controller
             'pickup_location' => $request->pickup_location ?? $find->pickup_location,
             'pickup_time' => $request->pickup_time ?? $find->pickup_time,
             'individual_pricing' => $request->individual_pricing ? json_encode($request->individual_pricing) : null,
+            'child_cost'                  => $request->child_cost ?? $find->child_cost,
+            'child_price'                 => $request->child_price ?? $find->child_price,
+            'child_quantity'              => $request->child_quantity ?? $find->child_quantity,
+            'child_total_cost'            => $request->child_total_cost ?? $find->child_total_cost,
+            'child_total_selling_price'   => $request->child_total_selling_price ?? $find->child_total_selling_price,
         ];
 
         if (
