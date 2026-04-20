@@ -80,7 +80,7 @@ class PrivateVanTourController extends Controller
             $query = $query->orderBy('destinations_count', 'desc');
         }
 
-        $items = $query->paginate($limit ?? 10);
+        $items = $query->paginate($request->limit ?? 10);
 
         return PrivateVanTourListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }

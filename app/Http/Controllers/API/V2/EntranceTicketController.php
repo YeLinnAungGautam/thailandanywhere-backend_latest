@@ -85,7 +85,7 @@ class EntranceTicketController extends Controller
             $query = $query->orderBy('created_at', 'desc');
         }
 
-        $items = $query->paginate($limit ?? 10);
+        $items = $query->paginate($request->limit ?? 10);
 
         return EntranceTicketListResource::collection($items)->additional(['result' => 1, 'message' => 'success']);
     }
