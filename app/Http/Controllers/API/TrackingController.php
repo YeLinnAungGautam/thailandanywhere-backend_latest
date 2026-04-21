@@ -48,7 +48,7 @@ class TrackingController extends Controller
     {
         $validated = $request->validate([
             'session_hash' => 'required|string',
-            'event_type' => 'required|in:visit_site,view_detail,add_to_cart,go_checkout,complete_purchase',
+            'event_type' => 'required|in:visit_site,view_detail,add_to_cart,go_checkout,complete_purchase,messenger_click',
             'product_type' => 'nullable|in:hotel,attraction,vantour,destination,inclusive',
             'product_id' => 'nullable|integer',
             'metadata' => 'nullable|array',
