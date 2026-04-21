@@ -653,9 +653,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::patch('guides/{guide}/toggle-status', [GuideController::class, 'toggleStatus']);
     Route::post('guides/{guide}/remove-area', [GuideController::class, 'removeArea']);
 
-    # Funnel Report
-
+    // routes/api.php
     Route::get('/funnel-events', [FunnelEventController::class, 'index']);
+    Route::get('/funnel-events/time-series', [FunnelEventController::class, 'getTimeSeries']);
     Route::get('/funnel-events/product-type/{productType}', [FunnelEventController::class, 'getProductTypeFunnel']);
 
     # Inclusive generate
