@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CashImageableController;
+use App\Http\Controllers\Admin\CashImageDateController;
 use App\Http\Controllers\Admin\CashImageProfitController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
@@ -183,6 +184,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/expense-graph/{year}/{month}', [ReportController::class, 'expenseGraph']);
 
     Route::get('general-cash-image-reports/{date}', [ReportController::class, 'generalCashImageReport']);
+    Route::get('reports/cash-image/{date}/agent-details', [ReportController::class, 'getAgentCashImagesList']);
 
     Route::apiResource('admins', AdminController::class);
     Route::get('/me', [AuthController::class, 'me']);

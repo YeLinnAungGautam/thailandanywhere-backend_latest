@@ -1,19 +1,12 @@
 <?php
 namespace App\Services;
 
-use App\Http\Resources\BookingResource;
 use App\Models\Admin;
 use App\Models\Booking;
-use App\Models\BookingItemGroup;
 use App\Models\CashImage;
-use App\Models\EntranceTicket;
-use App\Models\Hotel;
-use App\Models\PrivateVanTour;
 use Carbon\Carbon;
-use DateTime;
-use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class CashImageReportService
 {
@@ -193,6 +186,125 @@ class CashImageReportService
                 'thb' => $other_cash_summary['THB'] ?? 0,
                 'mmk' => $other_cash_summary['MMK'] ?? 0,
             ]
+        ];
+    }
+
+    /**
+     * Get detailed cash images list for a specific agent
+     */
+    public function getAgentCashImagesList($agent_id, $currency = null)
+    {
+        // Polymorphic relationship cash images
+        $polymorphic_images = CashImage::query()
+            ->join('bookings', function ($join) use ($agent_id) {
+                $join->on('cash_images.relatable_id', '=', 'bookings.id')
+                     ->where('cash_images.relatable_type', '=', Booking::class)
+                     ->where('cash_images.relatable_id', '>', 0)
+                     ->where('bookings.created_by', '=', $agent_id);
+            })
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($currency, function($q) use ($currency) {
+                $q->where('cash_images.currency', $currency);
+            })
+            ->select(
+                'cash_images.id',
+                'cash_images.amount',
+                'cash_images.currency',
+                'cash_images.date',
+                'cash_images.data_verify',
+                'cash_images.image',
+                'cash_images.interact_bank',
+                'bookings.id as booking_id',
+                'bookings.crm_id',
+                'cash_images.relatable_type',
+                'cash_images.sender'
+            )
+            ->get();
+
+        // Many-to-many relationship cash images
+        $many_to_many_images = CashImage::query()
+            ->where('cash_images.relatable_type', Booking::class)
+            ->where('cash_images.relatable_id', 0)
+            ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($currency, function($q) use ($currency) {
+                $q->where('cash_images.currency', $currency);
+            })
+            ->whereHas('cashBookings', function($q) use ($agent_id) {
+                $q->where('created_by', $agent_id);
+            })
+            ->with(['cashBookings' => function($q) use ($agent_id) {
+                $q->where('created_by', $agent_id)
+                  ->select('bookings.id', 'bookings.crm_id', 'bookings.created_by');
+            }])
+            ->select(
+                'cash_images.id',
+                'cash_images.amount',
+                'cash_images.currency',
+                'cash_images.date',
+                'cash_images.data_verify',
+                'cash_images.image',
+                'cash_images.interact_bank',
+                'cash_images.relatable_type',
+                'cash_images.sender'
+            )
+            ->get()
+            ->map(function($item) {
+                $booking = $item->cashBookings->first();
+                return [
+                    'id' => $item->id,
+                    'amount' => $item->amount,
+                    'currency' => $item->currency,
+                    'date' => $item->date,
+                    'interact_bank' => $item->interact_bank,
+                    'data_verify' => $item->data_verify,
+                    'image' => Storage::url('images/' . $item->image),
+                    'booking_id' => $booking ? $booking->id : null,
+                    'crm_id' => $booking ? $booking->crm_id : null,
+                    'relationship_type' => $item->relatable_type,
+                    'sender' => $item->sender
+                ];
+            });
+
+        // Merge both collections
+        $all_images = $polymorphic_images->concat($many_to_many_images);
+
+        // Group by date
+        $grouped_by_date = $all_images->groupBy(function($item) {
+            return Carbon::parse($item['date'])->format('Y-m-d');
+        })->map(function($images, $date) {
+            return [
+                'date' => $date,
+                'formatted_date' => Carbon::parse($date)->format('d F Y'),
+                'total_images' => $images->count(),
+                'total_amount' => $images->sum('amount'),
+                'images' => $images->sortByDesc('date')->values()
+            ];
+        })->sortByDesc('date')->values();
+
+        // Summary statistics
+        $summary = [
+            'total_images' => $all_images->count(),
+            'total_amount' => $all_images->sum('amount'),
+            'currency_breakdown' => $all_images->groupBy('currency')->map(function($items, $currency) {
+                return [
+                    'currency' => $currency,
+                    'count' => $items->count(),
+                    'total' => $items->sum('amount')
+                ];
+            })->values(),
+            'bank_breakdown' => $all_images->groupBy('interact_bank')->map(function($items, $bank) {
+                return [
+                    'bank' => $bank ?? 'Unknown',
+                    'count' => $items->count(),
+                    'total' => $items->sum('amount')
+                ];
+            })->values()
+        ];
+
+        return [
+            'summary' => $summary,
+            'images_by_date' => $grouped_by_date,
+            'all_images' => $all_images->sortByDesc('date')->values()
         ];
     }
 
