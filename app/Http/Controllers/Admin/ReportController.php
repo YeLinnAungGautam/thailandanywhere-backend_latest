@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\BookingItem\BookingItemGroupListResource;
 use App\Http\Resources\BookingResource;
+use App\Models\Admin;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\SaleReportService;
@@ -540,6 +540,32 @@ class ReportController extends Controller
         ];
 
         return $this->success($data, 'Cash Image Report - Date: ' . Carbon::parse($date)->format('d F Y'));
+    }
+
+    /**
+     * Get cash images list for a specific agent and date
+     */
+    public function getAgentCashImagesList(string $date, Request $request)
+    {
+        $request->validate([
+            'agent_id' => 'required|integer',
+            'currency' => 'nullable|in:THB,MMK'
+        ]);
+
+        $report_service = new CashImageReportService($date);
+
+        $data = $report_service->getAgentCashImagesList(
+            $request->agent_id,
+            $request->currency
+        );
+
+        $agent = Admin::find($request->agent_id);
+        $agent_name = $agent ? $agent->name : 'Unknown';
+
+        return $this->success(
+            $data,
+            'Cash Images for ' . $agent_name . ' - ' . Carbon::parse($date)->format('F Y')
+        );
     }
 
     public function expenseGraph(string $year, string $month, Request $request)
