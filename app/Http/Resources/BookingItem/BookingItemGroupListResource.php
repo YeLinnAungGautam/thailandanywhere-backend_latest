@@ -74,6 +74,7 @@ class BookingItemGroupListResource extends JsonResource
         return $this->bookingItems->map(function ($item) {
             $data = [
                 'id' => $item->id,
+                'crm_id' => $item->crm_id,
                 'product_name' => $item->product->name ?? 'N/A',
                 'variant_name' => $item->acsr_variation_name ?? 'N/A',
                 'reservation_status' => $item->reservation_status,
