@@ -19,12 +19,26 @@ class HotelCityResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'image' => $this->image ? Storage::url('images/' . $this->image) : null,
-            'places' => $this->getPlaces()
+            'places' => $this->getPlaces(),
+            'hotels' => $this->getHotels()
         ];
     }
 
     public function getPlaces()
     {
-        return $this->hotels()->pluck('place')->unique();
+        return $this->hotels()
+            ->selectRaw('place, COUNT(*) as hotel_count')
+            ->groupBy('place')
+            ->whereNotNull('place')
+            ->get()
+            ->map(fn($item) => [
+                'name' => $item->place,
+                'hotel_count' => $item->hotel_count,
+            ]);
+    }
+
+    public function getHotels()
+    {
+        return $this->hotels()->count();
     }
 }
