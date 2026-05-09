@@ -124,6 +124,7 @@ class CarBookingRepositoryService
             'driver_contact' => $booking_item->reservationCarInfo->driver->contact ?? null,
             'driver_info_id' => $booking_item->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $booking_item->reservationCarInfo->driverInfo->car_number ?? null,
+            'line_history' => $booking_item->line_history ?? null
         ];
     }
 }

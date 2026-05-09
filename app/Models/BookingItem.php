@@ -23,6 +23,7 @@ class BookingItem extends Model
         'variation_snapshot' => 'array',
         'price_snapshot'     => 'array',
         'archive_snapshot'   => 'array',
+        'line_history' => 'array',
     ];
 
 
@@ -270,5 +271,42 @@ class BookingItem extends Model
         } else {
             $this->attributes['individual_pricing'] = $value;
         }
+    }
+
+    public function appendLineHistory(string $message, array $editedData): void
+    {
+        $history  = $this->line_history ?? [];
+        $previous = !empty($history) ? end($history) : null;
+
+        $history[] = [
+            'sent_at' => now()->toISOString(),
+            'message' => $message,
+            'data'    => $editedData,
+            // null on first send, only changed fields on subsequent sends
+            'diff'    => $previous
+                ? $this->computeDiff($previous['data'] ?? [], $editedData)
+                : null,
+        ];
+
+        $this->update(['line_history' => $history]);
+    }
+
+    private function computeDiff(array $old, array $new): array
+    {
+        $changes = [];
+
+        foreach ($new as $key => $newVal) {
+            $oldVal = $old[$key] ?? null;
+            // Only record keys where the value actually changed
+            if ((string) $oldVal !== (string) $newVal) {
+                $changes[$key] = [
+                    'from' => $oldVal,
+                    'to'   => $newVal,
+                ];
+            }
+        }
+
+        // Return null instead of empty array if nothing changed
+        return !empty($changes) ? $changes : [];
     }
 }
