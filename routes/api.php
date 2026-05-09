@@ -47,6 +47,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     Route::get('profile', [UserProfileController::class, 'profile']);
 // });
 
+
+
 # Frontend URI
 Route::group([
     'prefix' => 'v1/customer-portal',
@@ -80,3 +82,5 @@ Route::get('oauth/{driver}/callback', [SocialiteLoginController::class, 'callbac
 Route::get('api-test', function () {
     return response()->json(['message' => 'API is working from new server']);
 });
+
+

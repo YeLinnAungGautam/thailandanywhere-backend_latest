@@ -51,6 +51,7 @@ class CarBookingResource extends JsonResource
             'dropoff_location' => $this->dropoff_location,
             'pickup_location' => $this->pickup_location,
             'pickup_time' => $this->pickup_time,
+            'line_history' => $this->line_history
         ];
     }
 }

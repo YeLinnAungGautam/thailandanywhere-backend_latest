@@ -15,6 +15,7 @@
         "laravel/socialite": "^5.15",
         "laravel/tinker": "^2.8",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "linecorp/line-bot-sdk": "^12.5",
         "maatwebsite/excel": "^3.1"
     },
     "require-dev": {

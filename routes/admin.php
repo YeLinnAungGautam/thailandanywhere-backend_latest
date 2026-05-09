@@ -92,6 +92,7 @@ use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelExportImportController;
 use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\InclusivePackageController;
+use App\Http\Controllers\LineController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealExportImportController;
 use App\Http\Controllers\PrivateVanTourExportImportController;
@@ -125,6 +126,7 @@ Route::get('product-sale-count-report', [ReportController::class, 'getSaleCountR
 Route::get('reservations/report/export', [ReservationExportController::class, 'exportReservationReport']);
 
 Route::get('/customer-sale', [ReportController::class, 'getCustomerSale']);
+
 
 Route::get('/print/cash-image', [CashImageController::class, 'printCashImage']);
 Route::get('/print/cash-parchase-image', [CashImageController::class, 'printCashParchaseImage']);
@@ -408,6 +410,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     # Car Booking
     Route::get('car-bookings', [CarBookingController::class, 'index']);
     Route::get('car-bookings/{booking_item_id}/edit', [CarBookingController::class, 'edit']);
+    Route::post('car-bookings/{id}/send-line', [CarBookingController::class, 'sendLine']);
     Route::post('car-bookings/{booking_item_id}', [CarBookingController::class, 'update']);
     Route::get('car-bookings/summary', [CarBookingController::class, 'getSummary']);
     Route::get('car-bookings/complete/percentage', [CarBookingController::class, 'completePercentage']);
