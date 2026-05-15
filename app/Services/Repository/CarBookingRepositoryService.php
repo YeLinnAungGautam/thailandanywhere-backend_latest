@@ -52,6 +52,9 @@ class CarBookingRepositoryService
                 'contact_number' => $request->contact_number,
                 'total_pax' => $request->total_pax,
                 'collect_comment' => $request->collect_comment,
+                'car_customer_contact' => $request->car_customer_contact ?? null,
+                'car_total_collect'    => $request->car_total_collect    ?? null,
+                'car_payment_method'   => $request->car_payment_method   ?? null,
             ];
 
                // Handle is_driver_collect with three states
@@ -110,6 +113,10 @@ class CarBookingRepositoryService
             ?? null,
             'total_pax' => $booking_item->total_pax,
             'collect_comment' => $booking_item->collect_comment,
+            // new
+            'car_customer_contact' => $booking_item->car_customer_contact ?? null,
+            'car_total_collect'    => $booking_item->car_total_collect    ?? null,
+            'car_payment_method'   => $booking_item->car_payment_method   ?? null,
 
             'route_plan' => $booking_item->route_plan,
             'special_request' => $booking_item->special_request,

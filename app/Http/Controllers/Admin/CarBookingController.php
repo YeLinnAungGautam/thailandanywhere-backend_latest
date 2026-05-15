@@ -106,6 +106,86 @@ class CarBookingController extends Controller
         return $this->success(BookingItemDataService::getCarBookingSummary($request->all()), 'Success car booking summary');
     }
 
+    // public function sendLine(string|int $booking_item_id, Request $request)
+    // {
+    //     try {
+    //         $request->validate([
+    //             'message'     => 'required|string',
+    //             'edited_data' => 'required|array',
+    //         ]);
+
+    //         $booking_item = BookingItem::privateVanTour()->find($booking_item_id);
+
+    //         if (is_null($booking_item)) {
+    //             return $this->error(null, 'Car booking not found', 404);
+    //         }
+
+    //         // ── 1. Save editable booking fields ──────────────────────────────
+    //         $booking_item->update([
+    //             'pickup_time'          => $request->pickup_time,
+    //             'pickup_location'      => $request->pickup_location,
+    //             'dropoff_location'     => $request->dropoff_location,
+    //             'route_plan'           => $request->route_plan,
+    //             'special_request'      => $request->special_request,
+    //             'is_driver_collect'    => $request->is_driver_collect,
+    //             'extra_collect_amount' => $request->is_driver_collect
+    //                 ? $request->extra_collect_amount
+    //                 : 0,
+    //             // ── new fields ────────────────────────────────────────────────
+    //             'car_customer_contact' => $request->car_customer_contact ?? null,
+    //             'car_total_collect'    => $request->car_total_collect    ?? null,
+    //             'car_payment_method'   => $request->car_payment_method   ?? null,
+    //         ]);
+
+    //         // ── 2. Append to line_history (diff computed inside model) ────────
+    //         $booking_item->appendLineHistory($request->message, $request->edited_data);
+
+    //         $history = $booking_item->fresh()->line_history;
+    //         $latest  = end($history);
+    //         $prev    = count($history) >= 2 ? $history[count($history) - 2] : null;
+
+    //         // ── 3. Build the assign link ──────────────────────────────────────
+    //         $frontendUrl = config('app.sale_url', 'http://localhost:5173');
+    //         $assignLink  = "{$frontendUrl}/home/reservations?id={$booking_item->id}&crm_id={$booking_item->crm_id}";
+
+    //         // ── 4. Build final LINE message ───────────────────────────────────
+    //         $lineMessage = '';
+
+    //         // Append --- Amendment --- block only if diff exists
+    //         if (!empty($latest['diff'])) {
+    //             $lineMessage .= "\n--- Amendment ---";
+    //             foreach ($latest['diff'] as $field => $change) {
+    //                 $label = ucwords(str_replace('_', ' ', $field));
+    //                 $from  = ($change['from'] === null || $change['from'] === '') ? '(empty)' : $change['from'];
+    //                 $to    = ($change['to']   === null || $change['to']   === '') ? '(empty)' : $change['to'];
+    //                 $lineMessage .= "\n• {$label}: {$from} → {$to}";
+    //             }
+    //         }
+
+    //         if ($prev) {
+    //             $lineMessage .= "\n\n--- Update Detail --- \n";
+    //         }
+
+    //         $lineMessage .= $request->message;
+
+    //         // Always append assign link at the bottom
+    //         $lineMessage .= "\n\n🔗 Assign: {$assignLink}";
+
+    //         return $this->success([
+    //             'line_history' => $history,
+    //             'sent_message' => $lineMessage,
+    //         ], 'Booking saved successfully');
+
+    //     } catch (Exception $e) {
+    //         Log::error($e);
+    //         return $this->error(null, $e->getMessage(), 500);
+    //     }
+    // }
+
+    /**
+     * Save booking + append line_history, then return the LINE message.
+     * Handles three new fields: car_customer_contact, car_total_collect, car_payment_method.
+     */
     public function sendLine(string|int $booking_item_id, Request $request)
     {
         try {
@@ -131,6 +211,10 @@ class CarBookingController extends Controller
                 'extra_collect_amount' => $request->is_driver_collect
                     ? $request->extra_collect_amount
                     : 0,
+                // ── new fields ────────────────────────────────────────────────
+                'car_customer_contact' => $request->car_customer_contact ?? null,
+                'car_total_collect'    => $request->car_total_collect    ?? null,
+                'car_payment_method'   => $request->car_payment_method   ?? null,
             ]);
 
             // ── 2. Append to line_history (diff computed inside model) ────────
@@ -163,31 +247,6 @@ class CarBookingController extends Controller
             }
 
             $lineMessage .= $request->message;
-
-            // Append --- Update Detail --- block if this is 2nd+ send (prev snapshot exists)
-            // if ($prev) {
-            //     $pd = $prev['data'];
-            //     $isDriverCollect = ($pd['is_driver_collect'] ?? 0) == 1;
-
-            //     $lineMessage .= "\n\n--- Update Detail ---";
-            //     $lineMessage .= "\nCRMID: " . ($pd['crm_id'] ?? '');
-            //     $lineMessage .= "\nC. Name: " . ($pd['customer_name'] ?? '');
-            //     $lineMessage .= "\nContact: " . ($pd['contact'] ?? 'null');
-            //     $lineMessage .= "\n";
-            //     $lineMessage .= "\nS.Date: " . ($pd['service_date'] ?? '');
-            //     $lineMessage .= "\nPickup Time: " . ($pd['pickup_time'] ?? '');
-            //     $lineMessage .= "\nPickup Location: " . ($pd['pickup_location'] ?? '');
-            //     $lineMessage .= "\nDropoff Location: " . ($pd['dropoff_location'] ?? '');
-            //     $lineMessage .= "\n";
-            //     $lineMessage .= "\nRouteplan: " . ($pd['route_plan'] ?? '');
-            //     $lineMessage .= "\n";
-            //     $lineMessage .= "\nProduct Variation: " . ($pd['product_variation'] ?? '');
-            //     $lineMessage .= "\nPaymentMethod: " . ($isDriverCollect ? ($pd['payment_method'] ?? 'xxxx') : 'xxxx');
-            //     $lineMessage .= "\nSaleAmount: "    . ($isDriverCollect ? ($pd['sale_amount'] ?? 'xxxx') : 'xxxx');
-            //     $lineMessage .= "\nExtraCollect: "  . ($isDriverCollect ? ($pd['extra_collect'] ?? '0') : '0');
-            //     $lineMessage .= "\n";
-            //     $lineMessage .= "\nSpecialRequest: " . ($pd['special_request'] ?? '');
-            // }
 
             // Always append assign link at the bottom
             $lineMessage .= "\n\n🔗 Assign: {$assignLink}";
