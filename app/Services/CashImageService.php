@@ -141,7 +141,7 @@ class CashImageService
         $query = CashImage::select([
             'id', 'date', 'sender', 'receiver', 'amount', 'interact_bank', 'currency',
             'data_verify', 'internal_transfer', 'image', 'created_at', 'updated_at',
-            'relatable_id', 'relatable_type', 'bank_verify'
+            'relatable_id', 'relatable_type', 'bank_verify', 'unit'
         ]);
 
         $this->applyFilters($query, $filters);

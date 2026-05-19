@@ -54,6 +54,7 @@ class CashImageDetailResource extends JsonResource
             'updated_at' => $this->updated_at ? $this->updated_at->format('d-m-Y H:i:s') : null,
             'sender' => $this->sender,
             'receiver' => $this->receiver,
+            'unit' => $this->unit,
             'amount' => $this->amount,
             'currency' => $this->currency,
             'interact_bank' => $this->interact_bank,

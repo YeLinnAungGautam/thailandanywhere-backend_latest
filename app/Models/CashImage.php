@@ -22,7 +22,8 @@ class CashImage extends Model
         'bank_verify',
         'relatable_type',
         'relatable_id',
-        'relatables'
+        'relatables',
+        'unit',
     ];
 
     protected $casts = [
@@ -35,6 +36,24 @@ class CashImage extends Model
         'bank_verify' => 'boolean',
         'relatables' => 'array'
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (CashImage $cashImage) {
+            if (empty($cashImage->unit)) {
+                $cashImage->unit = self::generateUnit();
+            }
+        });
+    }
+
+    public static function generateUnit(): string
+    {
+        do {
+            $unit = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 7));
+        } while (self::where('unit', $unit)->exists());
+
+        return $unit;
+    }
 
     // Polymorphic relationship
     public function relatable()
