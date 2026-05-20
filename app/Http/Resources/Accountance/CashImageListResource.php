@@ -47,6 +47,7 @@ class CashImageListResource extends JsonResource
             'sender' => $this->sender,
             'receiver' => $this->receiver,
             'amount' => $this->amount,
+            'unit' => $this->unit,
             'internal_transfer' => $this->internal_transfer ?? false,
             'data_verify' => $this->data_verify ?? false,
             'bank_verify' => $this->bank_verify ?? false,
