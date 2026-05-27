@@ -478,7 +478,17 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/balance-due-over', [ChartOfAccountController::class, 'balanceDueOver']);
 
     # Account Receivable
-    Route::get('/account-receivable', [BalanceDueOverController::class, 'index']);
+    Route::prefix('balance-due-over')->group(function () {
+
+        // Original flat list (used by ReceivableList sidebar)
+        Route::get('/',       [BalanceDueOverController::class, 'index']);
+
+        // Graph endpoint — daily totals split by admin
+        Route::get('/graph',  [BalanceDueOverController::class, 'graph']);
+
+        // Drill-down list for a specific due date (right panel)
+        Route::get('/list',   [BalanceDueOverController::class, 'list']);
+    });
 
     # Partner
     Route::apiResource('partners', PartnerController::class);
