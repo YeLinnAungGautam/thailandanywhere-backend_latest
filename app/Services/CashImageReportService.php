@@ -13,12 +13,14 @@ class CashImageReportService
     protected $date;
     protected $start_date;
     protected $end_date;
+    protected $interact_bank;
 
-    public function __construct(string $date)
+    public function __construct(string $date,?string $interact_bank = null)
     {
         $this->date = $date;
         $this->start_date = Carbon::parse($date)->startOfMonth()->format('Y-m-d');
         $this->end_date = Carbon::parse($date)->endOfMonth()->format('Y-m-d');
+        $this->interact_bank = $interact_bank;
     }
 
     /**
@@ -30,6 +32,7 @@ class CashImageReportService
         // Get cash images with Booking relationship (both polymorphic and many-to-many)
         $cash_images = CashImage::query()
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date]) // FIXED: Use 'date' not 'created_at'
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->where(function($query) use ($created_by) {
                 // Polymorphic relationship (relatable_id > 0)
                 $query->whereHasMorph('relatable', [Booking::class], function ($q) use ($created_by) {
@@ -70,6 +73,13 @@ class CashImageReportService
         return $this->generateCashImageResponse($cash_images, $created_by);
     }
 
+    private function applyInteractBankFilter($query): void
+    {
+        if ($this->interact_bank) {
+            $query->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank));
+        }
+    }
+
     /**
      * Get total cash images received by each agent for the month
      * FIXED: Now properly handles both relationship types and uses 'date' field
@@ -87,6 +97,7 @@ class CashImageReportService
                 $q->whereIn('bookings.created_by', explode(',', $created_by));
             })
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date]) // FIXED: Use 'date'
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->select(
                 'bookings.created_by',
                 'cash_images.currency',
@@ -102,6 +113,7 @@ class CashImageReportService
             ->where('cash_images.relatable_type', Booking::class)
             ->where('cash_images.relatable_id', 0) // FIXED: Only many-to-many
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->whereHas('cashBookings', function($q) use ($created_by) {
                 $q->when($created_by, function ($query) use ($created_by) {
                     $query->whereIn('created_by', explode(',', $created_by));
@@ -203,6 +215,7 @@ class CashImageReportService
                      ->where('bookings.created_by', '=', $agent_id);
             })
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->when($currency, function($q) use ($currency) {
                 $q->where('cash_images.currency', $currency);
             })
@@ -226,6 +239,7 @@ class CashImageReportService
             ->where('cash_images.relatable_type', Booking::class)
             ->where('cash_images.relatable_id', 0)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->when($currency, function($q) use ($currency) {
                 $q->where('cash_images.currency', $currency);
             })
@@ -386,6 +400,7 @@ class CashImageReportService
                 $q->whereIn('bookings.created_by', explode(',', $created_by));
             })
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date]) // FIXED
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->select(
                 'bookings.created_by',
                 'cash_images.currency',
@@ -400,6 +415,7 @@ class CashImageReportService
             ->where('cash_images.relatable_type', Booking::class)
             ->where('cash_images.relatable_id', 0)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->whereHas('cashBookings', function($q) use ($created_by) {
                 $q->when($created_by, function ($query) use ($created_by) {
                     $query->whereIn('created_by', explode(',', $created_by));
@@ -438,6 +454,7 @@ class CashImageReportService
         $expense_totals = CashImage::query()
             ->where('cash_images.relatable_type', '!=', Booking::class)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date]) // FIXED
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->whereIn('cash_images.currency', ['THB', 'MMK'])
             ->select(
                 'cash_images.currency',
@@ -454,6 +471,7 @@ class CashImageReportService
         $income_by_interact_bank = CashImage::query()
             ->where('cash_images.relatable_type', Booking::class)
             ->whereBetween('cash_images.date', [$this->start_date, $this->end_date])
+            ->when($this->interact_bank, fn($q) => $q->whereIn('cash_images.interact_bank', explode(',', $this->interact_bank)))
             ->whereIn('cash_images.currency', ['THB', 'MMK'])
             ->where(function($query) use ($created_by) {
                 // Polymorphic

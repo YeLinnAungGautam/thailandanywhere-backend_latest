@@ -531,7 +531,7 @@ class ReportController extends Controller
 
     public function generalCashImageReport(string $date, Request $request)
     {
-        $report_service = new CashImageReportService($date);
+        $report_service = new CashImageReportService($date, $request->interact_bank);
 
         $data = [
             'daily_summary' => $report_service->getCashImageSummary($request->created_by),
@@ -542,17 +542,15 @@ class ReportController extends Controller
         return $this->success($data, 'Cash Image Report - Date: ' . Carbon::parse($date)->format('d F Y'));
     }
 
-    /**
-     * Get cash images list for a specific agent and date
-     */
     public function getAgentCashImagesList(string $date, Request $request)
     {
         $request->validate([
-            'agent_id' => 'required|integer',
-            'currency' => 'nullable|in:THB,MMK'
+            'agent_id'      => 'required|integer',
+            'currency'      => 'nullable|in:THB,MMK',
+            'interact_bank' => 'nullable|string',
         ]);
 
-        $report_service = new CashImageReportService($date);
+        $report_service = new CashImageReportService($date, $request->interact_bank);
 
         $data = $report_service->getAgentCashImagesList(
             $request->agent_id,
