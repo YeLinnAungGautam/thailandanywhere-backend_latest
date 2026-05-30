@@ -24,7 +24,7 @@ use App\Http\Controllers\Admin\BookingReceiptController;
 use App\Http\Controllers\Admin\CarBookingController;
 use App\Http\Controllers\Admin\CarController;
 use App\Http\Controllers\Admin\CashImageableController;
-use App\Http\Controllers\Admin\CashImageDateController;
+// use App\Http\Controllers\Admin\CashImageDateController;
 use App\Http\Controllers\Admin\CashImageProfitController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChartOfAccountController;
@@ -92,7 +92,7 @@ use App\Http\Controllers\HotelController;
 use App\Http\Controllers\HotelExportImportController;
 use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\InclusivePackageController;
-use App\Http\Controllers\LineController;
+// use App\Http\Controllers\LineController;
 use App\Http\Controllers\MealController;
 use App\Http\Controllers\MealExportImportController;
 use App\Http\Controllers\PrivateVanTourExportImportController;
@@ -106,6 +106,7 @@ use App\Http\Controllers\RoitemController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\BankStatementRecordController;
 // use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
@@ -488,6 +489,17 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
         // Drill-down list for a specific due date (right panel)
         Route::get('/list',   [BalanceDueOverController::class, 'list']);
+    });
+
+    # Bank statement record
+    Route::prefix('bank-statements')->group(function () {
+        Route::post('import',               [BankStatementRecordController::class, 'import']);
+        Route::get('summary',               [BankStatementRecordController::class, 'summary']);
+        Route::get('/',                     [BankStatementRecordController::class, 'index']);
+        Route::get('{id}/duplicates',       [BankStatementRecordController::class, 'duplicateCandidates']);
+        Route::post('{id}/resolve',         [BankStatementRecordController::class, 'resolve']);
+        Route::post('{id}/bank-verify',     [BankStatementRecordController::class, 'bankVerify']);
+        Route::post('/bank-verify-all',[BankStatementRecordController::class,'bankVerifyAll']);
     });
 
     # Partner
