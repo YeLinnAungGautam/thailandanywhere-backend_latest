@@ -102,6 +102,7 @@ class CashImageService
                 'limit' => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE,
                 'filter_type' => 'nullable|in:tax_receipt_have,tax_receipt_missing,invoice_have,invoice_missing',
                 'filter_type_invoice' => 'nullable|in:invoice_have,invoice_missing',
+                'cash_image_ids' => 'nullable|string',
             ]
         );
 
@@ -245,6 +246,16 @@ class CashImageService
 
         if (!empty($filters['filter_type_invoice'])) {
             $this->applyFilterType($query, $filters['filter_type_invoice']);
+        }
+
+        if (!empty($filters['cash_image_ids'])) {
+            $ids = array_filter(
+                array_map('intval', explode(',', $filters['cash_image_ids']))
+            );
+
+            if (!empty($ids)) {
+                $query->whereIn('id', $ids);
+            }
         }
     }
 
@@ -408,6 +419,7 @@ class CashImageService
             'sort_order' => $request->input('sort_order'),
             'filter_type' => $request->input('filter_type'),
             'filter_type_invoice' => $request->input('filter_type_invoice'),
+            'cash_image_ids' => $request->input('cash_image_ids'),
         ];
     }
 
