@@ -640,6 +640,149 @@ class ReportService
         return array_values($groups);
     }
 
+    public static function getProductSalesGraph(
+        string $daterange,
+        string $period,
+        string $productType,
+        array  $productIds = []
+    ): array {
+        [$start, $end] = self::parseDateRange($daterange);
+
+        $bucketExpr = $period === 'year'
+            ? "DATE_FORMAT(bookings.booking_date, '%Y-%m')"
+            : "DATE_FORMAT(bookings.booking_date, '%Y-%m-%d')";
+
+        $rows = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->where('booking_items.product_type', $productType)
+            ->when($productIds, fn($q) => $q->whereIn('booking_items.product_id', $productIds))
+            ->whereBetween('bookings.booking_date', [$start, $end])
+            ->whereNull('booking_items.deleted_at')
+            // ->selectRaw("
+            //     booking_items.product_id,
+            //     {$bucketExpr}                                                       AS period,
+            //     SUM(booking_items.amount)                                           AS total_amount,
+            //     SUM(booking_items.quantity)                                         AS total_quantity,
+            //     SUM(booking_items.amount - IFNULL(booking_items.cost_price, 0))     AS total_profit,
+            //     COUNT(booking_items.id)                                             AS booking_count
+            // ")
+            ->selectRaw("
+                booking_items.product_id,
+                {$bucketExpr} AS period,
+                SUM(booking_items.amount) AS total_amount,
+                SUM(
+                    CASE
+                        WHEN booking_items.product_type = 'App\\\\Models\\\\Hotel'
+                        THEN (
+                            -- Calculate per unique combination of booking_id + product_id
+                            SELECT SUM(GREATEST(DATEDIFF(bi2.checkout_date, bi2.service_date), 1) * bi2.quantity)
+                            FROM booking_items bi2
+                            WHERE bi2.booking_id = booking_items.booking_id
+                            AND bi2.product_id = booking_items.product_id
+                            AND bi2.product_type = 'App\\\\Models\\\\Hotel'
+                            GROUP BY bi2.booking_id, bi2.product_id
+                            LIMIT 1
+                        )
+                        ELSE booking_items.quantity
+                    END
+                ) AS total_quantity,
+                SUM(booking_items.amount - IFNULL(booking_items.cost_price, 0)) AS total_profit,
+                COUNT(DISTINCT booking_items.booking_id) AS booking_count
+            ")
+            ->groupBy('booking_items.product_id', DB::raw($bucketExpr))
+            ->orderBy('booking_items.product_id')
+            ->orderBy('period')
+            ->get();
+
+        $modelClass = $productType;
+        $productMap = $modelClass::whereIn('id', $rows->pluck('product_id')->unique())
+            ->pluck('name', 'id');
+
+        return $rows->groupBy('product_id')->map(function ($items, $productId) use ($productMap, $productType) {
+            return [
+                'product_id'   => $productId,
+                'product_type' => $productType,
+                'product_name' => $productMap[$productId] ?? "Product #{$productId}",
+                'data'         => $items->map(fn($r) => [
+                    'period'         => $r->period,
+                    'total_amount'   => (float) $r->total_amount,
+                    'total_quantity' => (int)   $r->total_quantity,
+                    'total_profit'   => (float) $r->total_profit,
+                    'booking_count'  => (int)   $r->booking_count,
+                ])->values(),
+            ];
+        })->values()->toArray();
+    }
+
+    public static function getProductSalesDetail(
+        string $period,
+        string $periodType,
+        string $productType,
+        int    $productId,
+        int    $page    = 1,
+        int    $perPage = 15
+    ): \Illuminate\Pagination\LengthAwarePaginator {
+
+        if ($periodType === 'year') {
+            [$y, $m] = explode('-', $period);
+            $lastDay  = cal_days_in_month(CAL_GREGORIAN, (int)$m, (int)$y);
+            $start    = "{$period}-01";
+            $end      = "{$period}-{$lastDay}";
+        } else {
+            $start = $period;
+            $end   = $period;
+        }
+
+        $items = BookingItem::query()
+            ->join('bookings', 'booking_items.booking_id', '=', 'bookings.id')
+            ->with([
+                'booking:id,crm_id,booking_date',   // ← add booking_date here
+                'room:id,name,room_price',
+                'variation:id,name',
+                'car:id,name',
+            ])
+            ->where('booking_items.product_type', $productType)
+            ->where('booking_items.product_id', $productId)
+            ->whereBetween('bookings.booking_date', [$start, $end])
+            ->whereNull('booking_items.deleted_at')
+            ->select(
+                'booking_items.id',
+                'booking_items.booking_id',
+                'booking_items.product_id',
+                'booking_items.product_type',
+                'booking_items.room_id',
+                'booking_items.variation_id',
+                'booking_items.car_id',
+                'booking_items.quantity',
+                'booking_items.selling_price',
+                'booking_items.amount',
+                'booking_items.cost_price',
+                'booking_items.service_date',
+                'booking_items.crm_id',
+                'booking_items.reservation_status',
+                'booking_items.payment_status',
+                'booking_items.checkout_date',
+                'bookings.booking_date',        // ← pulled from join
+            )
+            ->orderByDesc('bookings.booking_date')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $items->getCollection()->transform(function ($item) use ($productType) {
+            $item->profit       = (float) $item->amount - (float) $item->cost_price;
+            $item->booking_date = $item->booking_date;   // already on model from select
+            $item->booking_id   = $item->booking_id;     // already on model
+            $item->sub_product_name = match ($productType) {
+                'App\Models\Hotel'          => $item->room?->name      ?? '-',
+                'App\Models\EntranceTicket' => $item->variation?->name ?? '-',
+                'App\Models\PrivateVanTour' => $item->car?->name       ?? '-',
+                default                     => '-',
+            };
+            return $item;
+        });
+
+        return $items;
+    }
+
     /**
      * Drill-down detail — service_date filter
      */

@@ -328,4 +328,50 @@ class DashboardController extends Controller
             return $this->error(null, $e->getMessage(), 500);
         }
     }
+
+    public function getProductSalesGraph(Request $request)
+    {
+        try {
+            if (!$request->daterange)
+                throw new \Exception('daterange is required');
+            if (!$request->product_type)
+                throw new \Exception('product_type is required');
+
+            $productIds = $request->product_ids
+                ? array_map('intval', explode(',', $request->product_ids))
+                : [];
+
+            $data = ReportService::getProductSalesGraph(
+                $request->daterange,
+                $request->period ?? 'month',
+                $request->product_type,   // e.g. "App\Models\Hotel"
+                $productIds
+            );
+
+            return $this->success($data, 'Product sales graph');
+        } catch (\Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getProductSalesDetail(Request $request)
+    {
+        try {
+            if (!$request->product_id || !$request->product_type || !$request->period)
+                throw new \Exception('product_id, product_type and period are required');
+
+            $data = ReportService::getProductSalesDetail(
+                $request->period,
+                $request->period_type ?? 'month',
+                $request->product_type,
+                (int) $request->product_id,
+                (int) ($request->page ?? 1),
+                15
+            );
+
+            return $this->success($data, 'Product sales detail');
+        } catch (\Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }
