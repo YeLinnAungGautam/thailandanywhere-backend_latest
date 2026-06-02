@@ -176,6 +176,9 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/hotel-price-group', [DashboardController::class, 'getHotelPriceGroupReport']);
     Route::get('/hotel-price-group/detail', [DashboardController::class, 'getHotelPriceGroupDetail']);
 
+    Route::get('/reports/product-sales-graph',  [DashboardController::class, 'getProductSalesGraph']);
+    Route::get('/reports/product-sales-detail', [DashboardController::class, 'getProductSalesDetail']);
+
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('reports/hotels', HotelReportController::class);
 
