@@ -100,7 +100,7 @@ class CashImageController extends Controller
             ], ($result['error_type'] ?? 'system') === 'validation' ? 422 : 500);
 
         } catch (\Exception $e) {
-            \Log::error('remindTaxReceipt error: ' . $e->getMessage());
+            Log::error('remindTaxReceipt error: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 0,
@@ -328,7 +328,7 @@ class CashImageController extends Controller
             ], $result['error_type'] === 'validation' ? 422 : 500);
 
         } catch (\Exception $e) {
-            \Log::error('Controller Error in getCashImageInternal: ' . $e->getMessage());
+            Log::error('Controller Error in getCashImageInternal: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 'Error has occurred.',

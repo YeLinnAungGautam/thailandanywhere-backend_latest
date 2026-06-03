@@ -42,7 +42,10 @@ class BalanceDueOverController extends Controller
             ])
             ->where('payment_status', '!=', 'fully_paid')
             ->whereNotNull('balance_due_date')
-            ->where('balance_due_date', '<', Carbon::now())
+            ->when($request->query('mode', 'overdue') === 'upcoming',
+                fn($q) => $q->where('balance_due_date', '>=', Carbon::now()),
+                fn($q) => $q->where('balance_due_date', '<',  Carbon::now())
+            )
             ->whereYear('balance_due_date', $year)
             ->whereMonth('balance_due_date', $month)
             ->groupBy('due_date', 'created_by')
@@ -123,7 +126,10 @@ class BalanceDueOverController extends Controller
         $query = Booking::query()
             ->where('payment_status', '!=', 'fully_paid')
             ->whereNotNull('balance_due_date')
-            ->where('balance_due_date', '<', Carbon::now())
+            ->when($request->query('mode', 'overdue') === 'upcoming',
+                fn($q) => $q->where('balance_due_date', '>=', Carbon::now()),
+                fn($q) => $q->where('balance_due_date', '<',  Carbon::now())
+            )
             ->whereDate('balance_due_date', $date)
             ->with(['customer:id,name', 'createdBy:id,name'])
             ->orderBy('balance_due_date', 'asc');
