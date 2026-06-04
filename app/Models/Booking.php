@@ -5,11 +5,12 @@ namespace App\Models;
 use App\Traits\HasCashImages;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class Booking extends Model
 {
-    use HasFactory, HasCashImages;
+    use HasFactory, HasCashImages, SoftDeletes;
 
     protected $guarded = [];
 
