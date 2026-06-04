@@ -156,6 +156,13 @@ class BookingController extends Controller
             $query->where('payment_status', $paymentStatus);
         }
 
+        // In your index query, add a query param for admins:
+        if ($request->query('show_deleted') && Auth::user()->role === 'super_admin') {
+            $query->onlyTrashed(); // show only deleted
+            // OR
+            $query->withTrashed(); // show all including deleted
+        }
+
         // Apply sorting with the new requirements
         switch ($sortBy) {
             case 'name':
@@ -688,6 +695,18 @@ class BookingController extends Controller
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
+    }
+
+    public function restore(string $id)
+    {
+        $find = Booking::withTrashed()->find($id);
+        if (!$find) {
+            return $this->error(null, 'Data not found', 404);
+        }
+
+        $find->restore(); // clears deleted_at
+
+        return $this->success(null, 'Booking restored successfully');
     }
 
     public function printReceipt(Request $request, string $id)

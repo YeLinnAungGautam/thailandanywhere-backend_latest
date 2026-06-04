@@ -302,7 +302,15 @@ class AmendmentController extends Controller
                 $bookingItem->delete();
 
                 // Recalculate only if NOT inclusive
-                if (!$booking->is_inclusive) {
+                // if (!$booking->is_inclusive) {
+                //     $this->recalculateBookingTotals($booking);
+                // }
+
+                $booking->refresh();
+                if ($booking->items()->count() === 0) {
+                    $booking->delete(); // soft delete — deleted_at is set, data preserved
+                } elseif (!$booking->is_inclusive) {
+                    // Only recalculate if booking still has items and is not inclusive
                     $this->recalculateBookingTotals($booking);
                 }
 
