@@ -107,6 +107,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BankStatementRecordController;
+use App\Http\Controllers\ChatGptImageController;
 // use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
@@ -503,6 +504,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         Route::post('{id}/resolve',         [BankStatementRecordController::class, 'resolve']);
         Route::post('{id}/bank-verify',     [BankStatementRecordController::class, 'bankVerify']);
         Route::post('/bank-verify-all',[BankStatementRecordController::class,'bankVerifyAll']);
+        Route::post('/rematch', [BankStatementRecordController::class, 'rematch']);
     });
 
     # Partner
@@ -712,6 +714,13 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         $email = $request->query('email', 'taryarlin0088@gmail.com');
         \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\TestMail());
         return "Test email sent successfully to {$email}!";
+    });
+
+    Route::prefix('chatgpt')->group(function () {
+        // Image Generation
+        Route::get('/index',[ChatGptImageController::class,'index']);
+        // In routes/api.php
+        Route::post('/generate-image', [ChatGptImageController::class, 'generateImage']);
     });
 
     // In your routes/api.php

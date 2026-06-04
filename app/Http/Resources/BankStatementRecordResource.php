@@ -14,6 +14,9 @@ class BankStatementRecordResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            ...parent::toArray($request),
+            'txn_date' => $this->txn_date?->toDateString(), // → "2026-05-01"
+        ];
     }
 }

@@ -72,6 +72,26 @@ class BankStatementRecordController extends Controller
         ->getData(), 'Bank statement records retrieved');
     }
 
+    // POST /bank-statements/rematch?month=5&year=2026
+    public function rematch(Request $request)
+    {
+        $request->validate([
+            'month' => 'required|integer|min:1|max:12',
+            'year'  => 'required|integer|min:2020',
+        ]);
+
+        try {
+            $counts = $this->importService->rematch(
+                (int) $request->month,
+                (int) $request->year
+            );
+            return $this->success($counts, 'Re-match completed successfully');
+        } catch (\Throwable $e) {
+            Log::error('Re-match error: ' . $e->getMessage());
+            return $this->error(null, 'Re-match failed: ' . $e->getMessage(), 500);
+        }
+    }
+
     // ──────────────────────────────────────────────
     // GET /bank-statements/summary?month=5&year=2026
     // ──────────────────────────────────────────────

@@ -58,6 +58,44 @@ class BankStatementImportService
         }
     }
 
+    public function rematch(int $month, int $year): array
+    {
+        DB::beginTransaction();
+        try {
+            // Reset all existing verifications for this month
+            $this->resetPreviousVerifications($month, $year);
+
+            // Reset all records back to unmatch
+            BankStatementRecord::where('month', $month)
+                ->where('year', $year)
+                ->update([
+                    'verified'      => 'unmatch',
+                    'cash_image_id' => null,
+                    'duplicate_ids' => null,
+                ]);
+
+            // Re-load records and run matching again
+            $records = BankStatementRecord::where('month', $month)
+                ->where('year', $year)
+                ->get();
+
+            $counts = $this->matchRecords($records, $month, $year);
+
+            DB::commit();
+
+            return [
+                'match'     => $counts['match'],
+                'duplicate' => $counts['duplicate'],
+                'unmatch'   => $counts['unmatch'],
+                'month'     => $month,
+                'year'      => $year,
+            ];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     // ───────────────────────────────────────────────
     // CSV PARSING
     // ───────────────────────────────────────────────
