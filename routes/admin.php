@@ -419,6 +419,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::post('car-bookings/{booking_item_id}', [CarBookingController::class, 'update']);
     Route::get('car-bookings/summary', [CarBookingController::class, 'getSummary']);
     Route::get('car-bookings/complete/percentage', [CarBookingController::class, 'completePercentage']);
+    Route::get('car-bookings/monthly-graph', [CarBookingController::class, 'getMonthlyGraph']);
+    Route::get('car-bookings/date-detail',   [CarBookingController::class, 'getDateDetail']);
 
     Route::delete('booking-receipt/{id}', [BookingController::class, 'deleteReceipt']);
     Route::delete('reservation-receipt/{id}', [ReservationController::class, 'deleteReceipt']);

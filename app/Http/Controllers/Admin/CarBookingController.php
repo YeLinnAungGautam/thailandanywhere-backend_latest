@@ -366,4 +366,119 @@ class CarBookingController extends Controller
             return failedMessage('Something went wrong! Please contact to admin.');
         }
     }
+
+    public function getMonthlyGraph(Request $request)
+    {
+        try {
+            // Default to current month if no month/year provided
+            $year  = $request->year  ?? now()->year;
+            $month = $request->month ?? now()->month;
+
+            $query = BookingItem::privateVanTour()
+                ->with([
+                    'reservationCarInfo.supplier',
+                    'booking.customer:id,name',
+                    'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+                    'car',
+                    'product',
+                ])
+                ->whereYear('service_date', $year)
+                ->whereMonth('service_date', $month)
+                ->when($request->agent_id, function ($q) use ($request) {
+                    $q->whereHas('booking', fn($q2) => $q2->where('created_by', $request->agent_id));
+                });
+
+            $items = $query->orderBy('service_date', 'asc')->get();
+
+            // Group by date
+            $grouped = $items->groupBy(fn($item) => $item->service_date->format('Y-m-d'));
+
+            $graph_data = $grouped->map(function ($dayItems, $date) {
+                $total      = $dayItems->count();
+                $assigned   = $dayItems->filter(fn($i) => !is_null($i->reservationCarInfo?->supplier_id))->count();
+                $cost_filled = $dayItems->filter(fn($i) => !is_null($i->cost_price) && !is_null($i->total_cost_price))->count();
+
+                return [
+                    'date'        => $date,
+                    'total'       => $total,
+                    'assigned'    => $assigned,
+                    'cost_filled' => $cost_filled,
+                    'unassigned'  => $total - $assigned,
+                ];
+            })->values();
+
+            // Summary totals
+            $summary = [
+                'total'       => $items->count(),
+                'assigned'    => $items->filter(fn($i) => !is_null($i->reservationCarInfo?->supplier_id))->count(),
+                'cost_filled' => $items->filter(fn($i) => !is_null($i->cost_price) && !is_null($i->total_cost_price))->count(),
+            ];
+
+            return $this->success([
+                'graph_data' => $graph_data,
+                'summary'    => $summary,
+                'year'       => (int) $year,
+                'month'      => (int) $month,
+            ], 'Monthly graph data');
+
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
+    public function getDateDetail(Request $request)
+    {
+        try {
+            $request->validate([
+                'date' => 'required|date',
+            ]);
+
+            $items = BookingItem::privateVanTour()
+                ->with([
+                    'car',
+                    'product',
+                    'booking.customer:id,name',
+                    'reservationCarInfo.supplier',
+                    'reservationCarInfo.driver',
+                    'reservationCarInfo.driverInfo',
+                    'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+                ])
+                ->whereDate('service_date', $request->date)
+                ->when($request->agent_id, function ($q) use ($request) {
+                    $q->whereHas('booking', fn($q2) => $q2->where('created_by', $request->agent_id));
+                })
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            $mapped = $items->map(function ($item) {
+                return [
+                    'id'              => $item->id,
+                    'service_date'    => $item->service_date,
+                    'customer_name'   => $item->booking?->customer?->name ?? null,
+                    'product_name'    => $item->product?->name ?? null,
+                    'pickup_time'     => $item->reservationInfo?->pickup_time ?? $item->pickup_time,
+                    'pickup_location' => $item->reservationInfo?->pickup_location ?? $item->pickup_location,
+                    'supplier_name'   => $item->reservationCarInfo?->supplier?->name ?? null,
+                    'driver_name'     => $item->reservationCarInfo?->driver?->name ?? null,
+                    'car_number'      => $item->reservationCarInfo?->driverInfo?->car_number ?? null,
+                    'cost_price'      => $item->cost_price,
+                    'total_cost_price'=> $item->total_cost_price,
+                    // status flags
+                    'is_assigned'     => !is_null($item->reservationCarInfo?->supplier_id),
+                    'is_cost_filled'  => !is_null($item->cost_price) && !is_null($item->total_cost_price),
+                ];
+            });
+
+            return $this->success([
+                'date'  => $request->date,
+                'items' => $mapped,
+                'count' => $mapped->count(),
+            ], 'Date detail');
+
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
 }
