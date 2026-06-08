@@ -63,7 +63,7 @@ class CarBookingController extends Controller
             }
         }
 
-        $booking_item_query->orderByDESC('created_at');
+        $booking_item_query->orderBy('service_date','asc');
 
         return CarBookingResource::collection($booking_item_query->paginate($request->limit ?? 10))
             ->additional([

@@ -43,7 +43,7 @@ class CarBookingResource extends JsonResource
             'customer_name' => $this->booking->customer->name,
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
-
+            'qty'=>$this->quantity,
             'supplier_name' => $this->reservationCarInfo->supplier->name ?? '-',
 
             'route_plan' => $this->route_plan,
@@ -51,7 +51,9 @@ class CarBookingResource extends JsonResource
             'dropoff_location' => $this->dropoff_location,
             'pickup_location' => $this->pickup_location,
             'pickup_time' => $this->pickup_time,
-            'line_history' => $this->line_history
+            'line_history' => $this->line_history,
+            'booking_id' => $this->booking_id,
+            'group_id' => $this->group_id,
         ];
     }
 }
