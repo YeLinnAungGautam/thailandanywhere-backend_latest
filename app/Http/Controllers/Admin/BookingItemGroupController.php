@@ -124,8 +124,7 @@ class BookingItemGroupController extends Controller
                     ->when($request->assigned, function ($query) use ($request) {
                         if ($request->assigned == 'not_have' && $request->product_type == 'private_van_tour') {
                             $query->whereHas('bookingItems.reservationCarInfo', function ($q) {
-                                $q->whereNull('supplier_id')
-                                  ->whereNull('driver_id');
+                                $q->whereNull('supplier_id');
                             });
                         }
                     })
@@ -392,8 +391,7 @@ class BookingItemGroupController extends Controller
                  ->whereIn('bi.group_id', $groupIds)
                  ->where(function($q) {
                      $q->whereNull('rci.id')
-                        ->orWhereNull('rci.supplier_id')
-                        ->orWhereNull('rci.driver_id');
+                        ->orWhereNull('rci.supplier_id');
                  })
                  ->pluck('bi.group_id')
                  ->unique()
