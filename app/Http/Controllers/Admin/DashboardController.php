@@ -148,6 +148,21 @@ class DashboardController extends Controller
         }
     }
 
+    public function getCashReceivedByAgent(Request $request)
+    {
+        try {
+            if (!$request->daterange) {
+                throw new Exception('Cash by agent: Invalid daterange to filter');
+            }
+
+            $data = ReportService::getCashReceivedByAgent($request->daterange);
+
+            return $this->success($data, 'Cash received by agent');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     public function productTypeSalesReport(Request $request)
     {
         try {

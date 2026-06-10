@@ -53,24 +53,156 @@ class CarBookingController extends Controller
                         $query->where('service_date', '>=', $dates[0])->where('service_date', '<=', $dates[1]);
                     });
             } else {
+                // ✅ Use whereHas directly, not inside whereIn
                 $booking_item_query = $booking_item_query
-                    ->whereIn('id', function ($query) use ($request) {
-                        // $query->select('booking_item_id')->from('reservation_car_infos')->where('supplier_id', $request->supplier_id);
-                        $query->whereHas('reservationCarInfo', function ($q) use ($request) {
-                            $q->where('supplier_id', $request->supplier_id);
-                        });
+                    ->whereHas('reservationCarInfo', function ($q) use ($request) {
+                        $q->where('supplier_id', $request->supplier_id);
                     });
             }
         }
 
-        $booking_item_query->orderBy('service_date','asc');
+        $paginated = $booking_item_query->orderBy('service_date', 'asc')->paginate($request->limit ?? 10);
 
-        return CarBookingResource::collection($booking_item_query->paginate($request->limit ?? 10))
+        $supplierIds = $paginated->getCollection()
+            ->pluck('reservationCarInfo.supplier_id')
+            ->filter()->unique()->values();
+
+        // Sum balance_amount which is already calculated in CarBookingResource
+        $totalBalance = $paginated->getCollection()->sum(function ($item) {
+            if ($item->is_driver_collect == 1) {
+                return ($item->car_collect_amount ?? 0) - ($item->cost_price * $item->quantity ?? 0);
+            }
+            return -($item->cost_price * $item->quantity ?? 0);
+        });
+
+        return CarBookingResource::collection($paginated)
             ->additional([
                 'result' => 1,
                 'message' => 'success',
-                'suppliers' => Supplier::pluck('name', 'id')->toArray(),
+                'suppliers' => Supplier::whereIn('id', $supplierIds)->pluck('name', 'id')->toArray(),
+                'supplierLists' => Supplier::pluck('name', 'id')->toArray(),
+                'total_balance' => $request->supplier_id && is_numeric($request->supplier_id)
+                    ? $totalBalance
+                    : null,
             ]);
+    }
+
+    /**
+     * GET /admin/car-bookings/ledger
+     *
+     * Query params:
+     *   - date_from  (required) e.g. 2024-06-01
+     *   - date_to    (required) e.g. 2024-06-05
+     *   - supplier_id (required, numeric)
+     */
+    public function getLedger(Request $request)
+    {
+        try {
+            $request->validate([
+                'date_from'   => 'required|date',
+                'date_to'     => 'required|date|after_or_equal:date_from',
+                'supplier_id' => 'required|integer|exists:suppliers,id',
+            ]);
+
+            $items = BookingItem::privateVanTour()
+                ->with([
+                    'product',
+                    'booking.customer:id,name',
+                    'booking:id,payment_method,payment_status,customer_id',
+                    'reservationCarInfo.supplier:id,name',
+                    'reservationCarInfo.driverInfo',
+                    'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+                ])
+                ->whereHas('reservationCarInfo', function ($q) use ($request) {
+                    $q->where('supplier_id', $request->supplier_id);
+                })
+                ->whereBetween('service_date', [$request->date_from, $request->date_to])
+                ->orderBy('service_date', 'asc')
+                ->get();
+
+            // Group by date
+            $grouped = $items->groupBy(fn ($item) => \Carbon\Carbon::parse($item->service_date)->format('Y-m-d'));
+
+            $supplier = \App\Models\Supplier::find($request->supplier_id);
+
+            $ledger = $grouped->map(function ($dayItems, $date) {
+                $total_trips        = $dayItems->count();
+                $total_sale_amount  = $dayItems->sum('amount');
+                $total_cost_amount  = $dayItems->sum(fn ($i) => ($i->cost_price ?? 0) * ($i->quantity ?? 1));
+                $total_collect      = $dayItems->sum(fn ($i) => $i->is_driver_collect == 1 ? ($i->car_total_collect ?? 0) : 0);
+                $total_profit_loss  = $total_sale_amount - $total_cost_amount;
+
+                // Balance = what driver collected minus cost (if driver collects), else negative cost
+                $total_balance = $dayItems->sum(function ($i) {
+                    if ($i->is_driver_collect == 1) {
+                        return ($i->car_total_collect ?? 0) - (($i->cost_price ?? 0) * ($i->quantity ?? 1));
+                    }
+                    return -(($i->cost_price ?? 0) * ($i->quantity ?? 1));
+                });
+
+                $detail_items = $dayItems->map(function ($item) {
+                    $cost = ($item->cost_price ?? 0) * ($item->quantity ?? 1);
+                    $balance = $item->is_driver_collect == 1
+                        ? ($item->car_total_collect ?? 0) - $cost
+                        : -$cost;
+
+                    return [
+                        'id'               => $item->id,
+                        'crm_id'           => $item->crm_id,
+                        'customer_name'    => $item->booking?->customer?->name ?? null,
+                        'product_name'     => $item->product?->name ?? null,
+                        'pickup_time'      => $item->reservationInfo?->pickup_time ?? $item->pickup_time,
+                        'pickup_location'  => $item->reservationInfo?->pickup_location ?? $item->pickup_location,
+                        'qty'              => $item->quantity,
+                        'sale_amount'      => $item->amount,
+                        'cost_amount'      => $cost,
+                        'profit_loss'      => ($item->amount ?? 0) - $cost,
+                        'is_driver_collect'=> $item->is_driver_collect,
+                        'car_total_collect'=> $item->car_total_collect,
+                        'balance'          => $balance,
+                        'is_checked'       => $item->is_checked,
+                        'car_payment_method' => $item->car_payment_method,
+                        'car_comment'      => $item->car_comment,
+                    ];
+                })->values();
+
+                return [
+                    'date'               => $date,
+                    'total_trips'        => $total_trips,
+                    'total_sale_amount'  => $total_sale_amount,
+                    'total_cost_amount'  => $total_cost_amount,
+                    'total_collect'      => $total_collect,
+                    'total_profit_loss'  => $total_profit_loss,
+                    'total_balance'      => $total_balance,
+                    'items'              => $detail_items,
+                ];
+            })->values();
+
+            // Grand totals across all days
+            $grand = [
+                'total_trips'       => $ledger->sum('total_trips'),
+                'total_sale_amount' => $ledger->sum('total_sale_amount'),
+                'total_cost_amount' => $ledger->sum('total_cost_amount'),
+                'total_collect'     => $ledger->sum('total_collect'),
+                'total_profit_loss' => $ledger->sum('total_profit_loss'),
+                'total_balance'     => $ledger->sum('total_balance'),
+            ];
+
+            return $this->success([
+                'supplier'    => [
+                    'id'   => $supplier->id,
+                    'name' => $supplier->name,
+                ],
+                'date_from'   => $request->date_from,
+                'date_to'     => $request->date_to,
+                'ledger'      => $ledger,
+                'grand_total' => $grand,
+            ], 'Ledger data');
+
+        } catch (Exception $e) {
+            Log::error($e);
+            return $this->error(null, $e->getMessage(), 500);
+        }
     }
 
     public function edit(string|int $booking_item_id)
