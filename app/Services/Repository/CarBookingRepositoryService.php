@@ -55,6 +55,8 @@ class CarBookingRepositoryService
                 'car_customer_contact' => $request->car_customer_contact ?? null,
                 'car_total_collect'    => $request->car_total_collect    ?? null,
                 'car_payment_method'   => $request->car_payment_method   ?? null,
+                'car_comment' => $request->car_comment ?? null,
+                'is_checked' => $request->is_checked ?? 0,
             ];
 
                // Handle is_driver_collect with three states
@@ -131,7 +133,9 @@ class CarBookingRepositoryService
             'driver_contact' => $booking_item->reservationCarInfo->driver->contact ?? null,
             'driver_info_id' => $booking_item->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $booking_item->reservationCarInfo->driverInfo->car_number ?? null,
-            'line_history' => $booking_item->line_history ?? null
+            'line_history' => $booking_item->line_history ?? null,
+            'is_checked' => $booking_item->is_checked,
+            'car_comment' => $booking_item->car_comment,
         ];
     }
 }

@@ -57,6 +57,10 @@ class ReportService
             ->groupBy('bookings.created_by', 'admins.target_amount')
             ->get();
 
+        // ── Cash received per agent (daterange အတူတူသုံး) ──
+        $cashByAgent = self::getCashReceivedByAgent($daterange)
+            ->keyBy('created_by');
+
         foreach ($bookings as $booking) {
             $bookingIds = !empty($booking->booking_ids) ? explode(',', $booking->booking_ids) : [];
 
@@ -71,59 +75,49 @@ class ReportService
                 ? explode(',', $booking->created_at_grand_total)
                 : [];
 
-            $updatedDateGrandTotalsWithAirline = [];
+            $updatedDateGrandTotalsWithAirline    = [];
             $updatedDateGrandTotalsWithoutAirline = [];
 
             foreach ($dateGrandTotals as $item) {
-                // Check if the item contains the delimiter
-                if (strpos($item, '||') === false) {
-                    // Skip malformed items
-                    continue;
-                }
+                if (strpos($item, '||') === false) continue;
 
-                $parts = explode('||', $item, 2); // Limit to 2 parts
-                if (count($parts) !== 2) {
-                    continue;
-                }
+                $parts = explode('||', $item, 2);
+                if (count($parts) !== 2) continue;
 
                 [$bookingId, $dateAndTotal] = $parts;
 
-                // Check if dateAndTotal contains the delimiter
-                if (strpos($dateAndTotal, '__') === false) {
-                    continue;
-                }
+                if (strpos($dateAndTotal, '__') === false) continue;
 
                 $dateParts = explode('__', $dateAndTotal, 2);
-                if (count($dateParts) !== 2) {
-                    continue;
-                }
+                if (count($dateParts) !== 2) continue;
 
                 [$date, $grandTotal] = $dateParts;
 
-                // Get airline amount for this specific booking
-                // $bookingAirlineAmount = $airlineTotals[$bookingId] ?? 0;
-                // $adjustedGrandTotal = $grandTotal - $bookingAirlineAmount;
-                $grandTotal = (float) $grandTotal;
+                $grandTotal           = (float) $grandTotal;
                 $bookingAirlineAmount = (float) ($airlineTotals[$bookingId] ?? 0);
-                $adjustedGrandTotal = $grandTotal - $bookingAirlineAmount;
+                $adjustedGrandTotal   = $grandTotal - $bookingAirlineAmount;
 
-                // Store both versions
-                $updatedDateGrandTotalsWithAirline[] = $date . '__' . $grandTotal;
+                $updatedDateGrandTotalsWithAirline[]    = $date . '__' . $grandTotal;
                 $updatedDateGrandTotalsWithoutAirline[] = $date . '__' . $adjustedGrandTotal;
             }
 
             // Set all values
-            $booking->airline_total = $airlineTotal;
-            $booking->total_with_airline = $booking->total_with_airline; // Total including airline
-            $booking->total_without_airline = $booking->total_with_airline - $airlineTotal; // Total excluding airline
-            $booking->created_at_grand_total_with_airline = implode(',', $updatedDateGrandTotalsWithAirline);
-            $booking->created_at_grand_total_without_airline = implode(',', $updatedDateGrandTotalsWithoutAirline);
+            $booking->airline_total                              = $airlineTotal;
+            $booking->total_with_airline                         = $booking->total_with_airline;
+            $booking->total_without_airline                      = $booking->total_with_airline - $airlineTotal;
+            $booking->created_at_grand_total_with_airline        = implode(',', $updatedDateGrandTotalsWithAirline);
+            $booking->created_at_grand_total_without_airline     = implode(',', $updatedDateGrandTotalsWithoutAirline);
 
             // Default to total with airline for backward compatibility
-            $booking->total = $booking->total_with_airline;
+            $booking->total                  = $booking->total_with_airline;
             $booking->created_at_grand_total = $booking->created_at_grand_total_with_airline;
 
             $booking->over_target_count = self::calculateOverTargetCount($booking);
+
+            // ── Cash received ထည့် ──
+            $cash = $cashByAgent[$booking->created_by] ?? null;
+            $booking->total_cash_received = $cash?->total_cash_received ?? 0;
+            $booking->cash_image_count    = $cash?->cash_image_count    ?? 0;
         }
 
         return $bookings;
@@ -252,7 +246,67 @@ class ReportService
         ];
     }
 
+    public static function getCashReceivedByAgent(string $daterange): \Illuminate\Support\Collection
+    {
+        [$start_date, $end_date] = self::parseDateRange($daterange);
 
+        // Path 1: cash_images → cash_image_bookings (belongsToMany pivot) → bookings
+        $pivotCash = DB::table('cash_images')
+            ->join('cash_image_bookings', 'cash_images.id', '=', 'cash_image_bookings.cash_image_id')
+            ->join('bookings', 'cash_image_bookings.booking_id', '=', 'bookings.id')
+            ->whereBetween('cash_images.date', [$start_date, $end_date])
+            ->where('cash_images.currency', 'THB')
+            ->select(
+                'bookings.created_by',
+                'cash_images.id as cash_image_id',
+                'cash_images.amount',
+                'cash_images.date as cash_date'
+            );
+
+        // Path 2: cash_images → relatable_id direct → bookings
+        $polyCash = DB::table('cash_images')
+            ->join('bookings', 'cash_images.relatable_id', '=', 'bookings.id')
+            ->where('cash_images.relatable_type', 'App\\Models\\Booking')
+            ->where('cash_images.relatable_id', '>', 0)
+            ->whereBetween('cash_images.date', [$start_date, $end_date])
+            ->where('cash_images.currency', 'THB')
+            ->select(
+                'bookings.created_by',
+                'cash_images.id as cash_image_id',
+                'cash_images.amount',
+                'cash_images.date as cash_date'
+            );
+
+        // Path 3: cash_images → cash_imageables → bookings
+        // cash_image_id = cash_images.id
+        // imageable_type = 'App\Models\Booking'
+        // imageable_id   = bookings.id
+        $morphCash = DB::table('cash_images')
+            ->join('cash_imageables', 'cash_images.id', '=', 'cash_imageables.cash_image_id')
+            ->join('bookings', 'cash_imageables.imageable_id', '=', 'bookings.id')
+            ->where('cash_imageables.imageable_type', 'App\\Models\\Booking')
+            ->whereBetween('cash_images.date', [$start_date, $end_date])
+            ->where('cash_images.currency', 'THB')
+            ->select(
+                'bookings.created_by',
+                'cash_images.id as cash_image_id',
+                'cash_images.amount',
+                'cash_images.date as cash_date'
+            );
+
+        // Union သုံးခုလုံး ပေါင်းပြီး deduplicate
+        $combined = $pivotCash->union($polyCash)->union($morphCash)->get();
+
+        return $combined
+            ->unique('cash_image_id')
+            ->groupBy('created_by')
+            ->map(fn($rows, $createdBy) => (object) [
+                'created_by'          => $createdBy,
+                'total_cash_received' => round($rows->sum('amount'), 2),
+                'cash_image_count'    => $rows->count(),
+            ])
+            ->values();
+    }
 
     /**
      * Calculate remaining expense (revenue paid but expense not paid)

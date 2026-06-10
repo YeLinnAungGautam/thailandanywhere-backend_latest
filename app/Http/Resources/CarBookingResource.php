@@ -33,6 +33,7 @@ class CarBookingResource extends JsonResource
             'payment_status' => $this->payment_status,
             'payment_method' => $this->booking->payment_method,
             'selling_price' => $this->selling_price,
+            'amount' => $this->amount,
             'is_driver_collect' => $this->is_driver_collect,
             'contact_number' => $this->contact_number,
             'total_pax' => $this->total_pax,
@@ -41,11 +42,11 @@ class CarBookingResource extends JsonResource
             'total_cost' => $total_cost,
             'balance_amount' => $balance_amount,
             'customer_name' => $this->booking->customer->name,
+            'customer_payment' => $this->booking->payment_status,
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
             'qty'=>$this->quantity,
             'supplier_name' => $this->reservationCarInfo->supplier->name ?? '-',
-
             'route_plan' => $this->route_plan,
             'special_request' => $this->special_request,
             'dropoff_location' => $this->dropoff_location,
@@ -54,6 +55,10 @@ class CarBookingResource extends JsonResource
             'line_history' => $this->line_history,
             'booking_id' => $this->booking_id,
             'group_id' => $this->group_id,
+            'is_checked' => $this->is_checked,
+            'car_comment' => $this->car_comment,
+            'cost_price' => $this->cost_price,
+            'car_total_collect' => $this->car_total_collect,
         ];
     }
 }

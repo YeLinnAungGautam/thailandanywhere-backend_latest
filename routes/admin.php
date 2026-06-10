@@ -164,6 +164,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('/product-sales-report-by-month', [ProductReportController::class, 'getMonthlyTopProductsByType']);
 
     Route::get('sales-by-agent', [DashboardController::class, 'salesByAgentReport']);
+    Route::get('sales-by-agent-cash',[DashboardController::class, 'getCashReceivedByAgent']);
     Route::get('product-type-sales', [DashboardController::class, 'productTypeSalesReport']);
     Route::get('product-type-booking-item', [DashboardController::class, 'productTypeBooking']);
     Route::get('product-type-remain-expense', [DashboardController::class, 'productTypeRemainExpense']);
@@ -414,6 +415,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Car Booking
     Route::get('car-bookings', [CarBookingController::class, 'index']);
+    Route::get('car-bookings/ledger', [CarBookingController::class, 'getLedger']);
     Route::get('car-bookings/{booking_item_id}/edit', [CarBookingController::class, 'edit']);
     Route::post('car-bookings/{id}/send-line', [CarBookingController::class, 'sendLine']);
     Route::post('car-bookings/{booking_item_id}', [CarBookingController::class, 'update']);
