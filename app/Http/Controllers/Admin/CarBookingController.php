@@ -107,7 +107,7 @@ class CarBookingController extends Controller
             $items = BookingItem::privateVanTour()
                 ->with([
                     'product',
-                    'booking.customer:id,name',
+                    'booking.customer:id,name,id',
                     'booking:id,payment_method,payment_status,customer_id',
                     'reservationCarInfo.supplier:id,name',
                     'reservationCarInfo.driverInfo',
@@ -150,6 +150,7 @@ class CarBookingController extends Controller
                         'id'               => $item->id,
                         'crm_id'           => $item->crm_id,
                         'customer_name'    => $item->booking?->customer?->name ?? null,
+                        'booking_id'       => $item->booking?->id ?? null,
                         'product_name'     => $item->product?->name ?? null,
                         'pickup_time'      => $item->reservationInfo?->pickup_time ?? $item->pickup_time,
                         'pickup_location'  => $item->reservationInfo?->pickup_location ?? $item->pickup_location,
