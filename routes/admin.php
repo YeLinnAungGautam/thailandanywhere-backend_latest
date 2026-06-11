@@ -415,6 +415,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
 
     # Car Booking
     Route::get('car-bookings', [CarBookingController::class, 'index']);
+    Route::get('car-bookings/{booking_item_id}/detail', [CarBookingController::class, 'detail']);
     Route::get('car-bookings/ledger', [CarBookingController::class, 'getLedger']);
     Route::get('car-bookings/{booking_item_id}/edit', [CarBookingController::class, 'edit']);
     Route::post('car-bookings/{id}/send-line', [CarBookingController::class, 'sendLine']);

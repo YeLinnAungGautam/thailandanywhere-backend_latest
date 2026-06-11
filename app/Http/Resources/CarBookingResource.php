@@ -23,6 +23,24 @@ class CarBookingResource extends JsonResource
         $extra_collect_amount = $this->extra_collect_amount ?? 0;
         $balance_amount = $data_service->calcBalanceAmount($this->booking->payment_method, $total_cost, $this->selling_price, $extra_collect_amount);
 
+        $basic_completed = !is_null($this->is_driver_collect)
+            && !empty($this->car_customer_contact)
+            && !empty($this->route_plan)
+            && !empty($this->pickup_time)
+            && !empty($this->dropoff_location)
+            && !empty($this->pickup_location);
+
+        $has_supplier = !is_null($this->reservationCarInfo->supplier_id ?? null);
+        $has_cost_price = !is_null($this->cost_price);
+
+        if ($basic_completed && $has_supplier && $has_cost_price) {
+            $data_completed = 'complete';
+        } elseif (!$basic_completed) {
+            $data_completed = 'fill_data_not_completed';
+        } else {
+            $data_completed = 'not_fill_supplier';
+        }
+
         return [
             'id' => $this->id,
             'crm_id' => $this->crm_id,
@@ -59,6 +77,7 @@ class CarBookingResource extends JsonResource
             'car_comment' => $this->car_comment,
             'cost_price' => $this->cost_price,
             'car_total_collect' => $this->car_total_collect,
+            'data_completed' => $data_completed,
         ];
     }
 }
