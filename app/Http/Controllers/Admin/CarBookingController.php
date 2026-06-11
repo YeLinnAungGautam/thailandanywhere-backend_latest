@@ -87,6 +87,24 @@ class CarBookingController extends Controller
             ]);
     }
 
+    public function detail(string|int $booking_item_id)
+    {
+        $booking_item = BookingItem::privateVanTour()->with(
+            'car',
+            'booking',
+            'product',
+            'reservationCarInfo',
+            'reservationInfo:id,booking_item_id,pickup_location,pickup_time',
+            'booking.customer:id,name'
+        )->find($booking_item_id);
+
+        if (is_null($booking_item)) {
+            return $this->error(null, "Car booking not found", 404);
+        }
+
+        return $this->success(new CarBookingResource($booking_item), 'Edit car booking');
+    }
+
     /**
      * GET /admin/car-bookings/ledger
      *
@@ -359,7 +377,7 @@ class CarBookingController extends Controller
 
             // ── 3. Build the assign link ──────────────────────────────────────
             $frontendUrl = config('app.sale_url', 'http://localhost:5173');
-            $assignLink  = "{$frontendUrl}/home/reservations?id={$booking_item->id}&crm_id={$booking_item->crm_id}";
+            $assignLink  = "{$frontendUrl}/vantour-management?id={$booking_item->id}&crm_id={$booking_item->crm_id}";
 
             // ── 4. Build final LINE message ───────────────────────────────────
             $lineMessage = '';
