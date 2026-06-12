@@ -343,6 +343,7 @@ class CarBookingController extends Controller
             $request->validate([
                 'message'     => 'required|string',
                 'edited_data' => 'required|array',
+                'is_reservation' => 'sometimes|boolean',
             ]);
 
             $booking_item = BookingItem::privateVanTour()->find($booking_item_id);
@@ -384,7 +385,7 @@ class CarBookingController extends Controller
 
             // Append --- Amendment --- block only if diff exists
             if (!empty($latest['diff'])) {
-                $lineMessage .= "\n--- Amendment ---";
+                $lineMessage .= "\n--- AMENDMENT ---";
                 foreach ($latest['diff'] as $field => $change) {
                     $label = ucwords(str_replace('_', ' ', $field));
                     $from  = ($change['from'] === null || $change['from'] === '') ? '(empty)' : $change['from'];
@@ -400,7 +401,11 @@ class CarBookingController extends Controller
             $lineMessage .= $request->message;
 
             // Always append assign link at the bottom
-            $lineMessage .= "\n\n🔗 Assign: {$assignLink}";
+            // $lineMessage .= "\n\n🔗 Assign: {$assignLink}";
+
+            if (!$request->boolean('is_reservation')) {
+                $lineMessage .= "\n\n🔗 Assign: {$assignLink}";
+            }
 
             return $this->success([
                 'line_history' => $history,
