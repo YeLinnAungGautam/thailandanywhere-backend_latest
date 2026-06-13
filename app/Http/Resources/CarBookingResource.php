@@ -61,6 +61,7 @@ class CarBookingResource extends JsonResource
             'balance_amount' => $balance_amount,
             'customer_name' => $this->booking->customer->name,
             'customer_payment' => $this->booking->payment_status,
+            'balance_due' => $this->booking->balance_due,
             'driver_info_id' => $this->reservationCarInfo->driver_info_id ?? null,
             'car_number' => $this->reservationCarInfo->driverInfo->car_number ?? null,
             'qty'=>$this->quantity,
