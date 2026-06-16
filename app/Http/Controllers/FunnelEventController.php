@@ -38,6 +38,22 @@ class FunnelEventController extends Controller
         $goCheckoutCount = (clone $baseQuery)->checkouts()->count();
         $completePurchaseCount = (clone $baseQuery)->purchases()->count();
         $messengerClickCount = (clone $baseQuery)->where('event_type', 'messenger_click')->count();
+        $qrScanCount = (clone $baseQuery)->qrScans()->count();
+
+        $qrScansByBookingId = (clone $baseQuery)
+            ->where('event_type', 'qr_scan')
+            ->whereNotNull('metadata->booking_id') // Use Laravel's JSON syntax
+            ->select(
+                DB::raw('metadata->>"$.booking_id" as booking_id'), // Use ->> for text
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('booking_id')
+            ->get()
+            ->pluck('count', 'booking_id')
+            ->toArray();
+
+        // Count unique booking_ids
+        $qrScanCount = count($qrScansByBookingId);
 
         // By product type
         $visitsByProductType = (clone $baseQuery)->visits()
@@ -98,6 +114,7 @@ class FunnelEventController extends Controller
                 'go_checkout' => $goCheckoutCount,
                 'complete_purchase' => $completePurchaseCount,
                 'messenger_click' => $messengerClickCount,
+                'qr_scan' => $qrScanCount,
             ],
             'visits_by_product_type' => $visitsByProductType,
             'views_by_product_type' => $viewsByProductType,
@@ -106,6 +123,7 @@ class FunnelEventController extends Controller
             'purchases_by_product_type' => $purchasesByProductType,
             'messenger_clicks_by_product_type' => $messengerClicksByProductType,
             'conversion_rates' => $conversionRates,
+            'qr_scans_by_booking_id' => $qrScansByBookingId,
         ];
     }
 
@@ -117,9 +135,10 @@ class FunnelEventController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'event_type' => 'required|in:visit_site,view_detail,add_to_cart,go_checkout,complete_purchase,messenger_click',
+            'event_type' => 'required|in:visit_site,view_detail,add_to_cart,go_checkout,complete_purchase,messenger_click,qr_scan',
             'granularity' => 'required|in:daily,weekly,monthly',
             'product_type' => 'nullable|in:hotel,entrance_ticket,private_van_tour',
+            'booking_id' => 'nullable|string',
         ]);
 
         $startDate = Carbon::parse($request->start_date);
@@ -127,12 +146,17 @@ class FunnelEventController extends Controller
         $eventType = $request->event_type;
         $granularity = $request->granularity;
         $productType = $request->product_type;
+        $bookingId = $request->booking_id;
 
         $query = FunnelEvent::whereBetween('created_at', [$startDate, $endDate])
             ->where('event_type', $eventType);
 
         if ($productType) {
             $query->where('product_type', $productType);
+        }
+
+        if ($bookingId) {
+            $query->where('metadata->booking_id', $bookingId); // Laravel's JSON path syntax
         }
 
         $data = [];

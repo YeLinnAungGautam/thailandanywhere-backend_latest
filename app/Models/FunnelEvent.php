@@ -52,6 +52,10 @@ class FunnelEvent extends Model
     {
         return $query->where('event_type', 'visit_site');
     }
+    public function scopeQrScans($query)
+    {
+        return $query->where('event_type', 'qr_scan');
+    }
 
     public function scopeViews($query)
     {
