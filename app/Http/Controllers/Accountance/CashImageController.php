@@ -790,9 +790,7 @@ class CashImageController extends Controller
 
             // $data = $this->cashImageService->onlyImages($request);
 
-            // return response()
-
-            // ->json([
+            // return response()->json([
             //     'data' => $data
             // ], 404);
 

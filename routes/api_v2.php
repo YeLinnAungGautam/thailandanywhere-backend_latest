@@ -120,6 +120,8 @@ Route::group([], function () {
     # Reservation Information
     Route::get('reservation-information/{id}', [ReservationController::class, 'reservationInformation']);
 
+    Route::get('/bookings-scan/{id}/detail', [BookingController::class, 'getBookingDetail']);
+
     Route::middleware(['auth:sanctum'])->group(function () {
         // for nodejs verify token
         Route::post('/verify-token', [LoginController::class, 'verifyToken']);
