@@ -94,6 +94,7 @@ class CashImageService
                 'sender' => 'nullable|string|max:255',
                 'receiver' => 'nullable|string|max:255',
                 'data_verify' => 'nullable|in:0,1,true,false',
+                'bank_verify' => 'nullable|in:0,1,true,false',
                 'internal_transfer' => 'nullable|in:0,1,true,false',
                 'amount' => 'nullable|numeric|min:0',
                 'date' => 'nullable|string',
@@ -1177,6 +1178,56 @@ class CashImageService
     }
 
     /**
+     * Resolve display name for a booking item (same rules as frontend resolveProductName)
+     */
+    private function resolveProductName($productType, $hasRoom = false)
+    {
+        $rawType = strtolower(class_basename($productType ?? ''));
+
+        if ($rawType === 'hotel' || $hasRoom) {
+            return 'Hotel Service';
+        }
+
+        if ($rawType === 'entranceticket') {
+            return 'Ticket Service';
+        }
+
+        if ($rawType === 'privatevantour') {
+            return 'Car Service';
+        }
+
+        return 'General Service';
+    }
+
+    /**
+     * Scale booking items so their total matches the cash slip amount,
+     * same logic as the frontend buildPrintHtml scaleFactor.
+     */
+    private function buildScaledInvoiceItems($items, $cashAmount)
+    {
+        $items = collect($items)
+            ->filter(fn ($i) => ($i['product_type'] ?? null) !== 'App\Models\InclusiveProduct')
+            ->values();
+
+        $bookingTotal = $items->sum(fn ($i) => (float) ($i['amount'] ?? 0));
+        $scaleFactor = ($bookingTotal > 0 && $cashAmount > 0) ? $cashAmount / $bookingTotal : 1;
+
+        return $items->map(function ($item) use ($scaleFactor) {
+            $qty = (float) ($item['quantity'] ?? 1);
+            $scaledTotal = (float) ($item['amount'] ?? 0) * $scaleFactor;
+            $scaledUnit = $qty > 0 ? $scaledTotal / $qty : $scaledTotal;
+
+            return [
+                'product_name'   => $this->resolveProductName($item['product_type'] ?? null, !empty($item['room_id'])),
+                'quantity'       => $qty,
+                'unit_price'     => round($scaledUnit / 1.07, 2),
+                'total_ex_vat'   => round($scaledTotal / 1.07, 2),
+                'total'          => round($scaledTotal, 2),
+            ];
+        })->values()->toArray();
+    }
+
+    /**
      * Get only images with booking data
      */
     public function onlyImages(Request $request)
@@ -1187,7 +1238,8 @@ class CashImageService
 
             $query = CashImage::select([
                 'id', 'image', 'relatable_id', 'relatable_type', 'date',
-                'sender', 'receiver', 'amount', 'interact_bank', 'currency', 'created_at'
+                'sender', 'receiver', 'amount', 'interact_bank', 'currency',
+                'created_at', 'bank_verify', 'unit'
             ]);
 
             $this->applyFilters($query, $filters);
@@ -1206,15 +1258,17 @@ class CashImageService
                             'id', 'crm_id', 'grand_total', 'customer_id', 'commission',
                             'created_at', 'start_date', 'end_date', 'booking_date',
                             'payment_method', 'payment_status', 'bank_name', 'discount', 'sub_total',
+                            'payment_currency',
                         ])->with([
                             'customer' => function ($customerQ) {
-                                $customerQ->select(['id', 'name', 'phone_number']);
+                                $customerQ->select(['id', 'name', 'phone_number', 'email']);
                             },
                             'items' => function ($itemsQ) {
                                 $itemsQ->select([
                                     'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
                                     'total_cost_price', 'discount', 'product_type', 'amount',
                                     'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
+                                    'room_id',
                                 ])->with('product');
                             }
                         ]);
@@ -1226,15 +1280,17 @@ class CashImageService
                         'bookings.commission', 'bookings.created_at', 'bookings.start_date', 'bookings.end_date',
                         'bookings.booking_date', 'bookings.payment_method', 'bookings.payment_status',
                         'bookings.bank_name', 'bookings.discount', 'bookings.sub_total',
+                        'bookings.payment_currency',
                     ])->with([
                         'customer' => function ($customerQ) {
-                            $customerQ->select(['id', 'name', 'phone_number']);
+                            $customerQ->select(['id', 'name', 'phone_number', 'email']);
                         },
                         'items' => function ($itemsQ) {
                             $itemsQ->select([
                                 'id', 'booking_id', 'product_id', 'quantity', 'selling_price',
                                 'total_cost_price', 'discount', 'product_type', 'amount',
                                 'comment', 'service_date', 'days', 'checkin_date', 'checkout_date',
+                                'room_id',
                             ])->with('product');
                         }
                     ]);
@@ -1313,6 +1369,26 @@ class CashImageService
                     }
                 }
 
+                // ── Build invoice block: scale items so total matches the cash slip amount ──
+                $cashAmount = (float) $cashImage->amount;
+
+                $invoice = null;
+                if ($booking) {
+                    $items = $bookingArray['items'] ?? [];
+
+                    $subTotal  = $cashAmount / 1.07;
+                    $vatAmount = $cashAmount - $subTotal;
+
+                    $invoice = [
+                        'items'       => $this->buildScaledInvoiceItems($items, $cashAmount),
+                        'sub_total'   => round($subTotal, 2),
+                        'vat'         => round($vatAmount, 2),
+                        'grand_total' => round($cashAmount, 2),
+                        'currency'    => $booking->payment_currency ?? $cashImage->currency ?? 'THB',
+                        'payment_no'  => $cashImage->unit ?? null,
+                    ];
+                }
+
                 return [
                     'cash_image_id' => $cashImage->id,
                     'crm_id' => $this->getCrmIdFromCashImage($cashImage),
@@ -1321,9 +1397,12 @@ class CashImageService
                     'bank' => $cashImage->interact_bank,
                     'currency' => $cashImage->currency,
                     'cash_amount' => $cashImage->amount,
+                    'unit' => $cashImage->unit,
                     'sender' => $cashImage->sender,
                     'receiver' => $cashImage->receiver,
                     'booking' => $bookingArray,
+                    'invoice' => $invoice,
+                    'bank_verify' => $cashImage->bank_verify
                 ];
             });
 

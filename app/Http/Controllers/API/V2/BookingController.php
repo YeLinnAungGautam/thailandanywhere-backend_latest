@@ -5,9 +5,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Traits\HttpResponses;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class BookingController extends Controller
 {
@@ -156,5 +158,134 @@ class BookingController extends Controller
                 'has_user' => false
             ], 'Booking has no user assigned');
         }
+    }
+
+    public function getBookingDetail(string $id)
+    {
+        $booking = Booking::with([
+            'customer',
+            'items.product',
+            'items.product.images',
+            'items.car',
+            'items.room',
+            'items.variation',
+            'items.ticket',
+            'items.groupTour',
+        ])->find($id);
+
+        if (!$booking) {
+            return $this->error(null, 'Booking not found', 404);
+        }
+
+        // Web app is user-facing — make sure this booking belongs to the user
+        // if ($booking->user_id !== Auth::id()) {
+        //     return $this->error(null, 'You are not authorized to view this booking', 403);
+        // }
+
+        // $items = $booking->items->map(function ($item) {
+        //     return [
+        //         'id' => $item->id,
+        //         'product_type' => $item->acsr_product_type_name,
+        //         'product_id' => $item->product_id,
+        //         'name' => $item->product->name ?? null,
+        //         'image' => $this->resolveItemImage($item),
+        //         'variation_label' => $item->acsr_variation_name,
+        //         'service_date' => $item->service_date
+        //             ? Carbon::parse($item->service_date)->format('d F Y')
+        //             : null,
+        //         'quantity' => $item->quantity,
+        //         'price' => (float) ($item->selling_price ?? $item->amount ?? 0),
+        //         'discount' => (float) ($item->discount ?? 0),
+        //         'amount' => (float) ($item->amount ?? 0),
+        //     ];
+        // });
+
+        $isInclusive = (bool) $booking->is_inclusive;
+
+        if ($isInclusive) {
+            $items = collect([[
+                'id'              => 'inclusive',
+                'product_type'    => 'Inclusive',
+                'product_id'      => null,
+                'name'            => $booking->inclusive_name,
+                'image'           => null,
+                'variation_label' => $booking->inclusive_description,
+                'service_date'    => $booking->inclusive_start_date && $booking->inclusive_end_date
+                    ? Carbon::parse($booking->inclusive_start_date)->format('d F Y')
+                      . ' – '
+                      . Carbon::parse($booking->inclusive_end_date)->format('d F Y')
+                    : null,
+                'quantity'        => $booking->inclusive_quantity,
+                'price'           => (float) ($booking->inclusive_rate ?? 0),
+                'discount'        => 0,
+                'amount'          => (float) ($booking->inclusive_rate ?? 0) * (int) ($booking->inclusive_quantity ?? 1),
+            ]]);
+        } else {
+            $items = $booking->items->map(function ($item) {
+                return [
+                    'id'              => $item->id,
+                    'product_type'    => $item->acsr_product_type_name,
+                    'product_id'      => $item->product_id,
+                    'name'            => $item->product->name ?? null,
+                    'image'           => $this->resolveItemImage($item),
+                    'variation_label' => $item->acsr_variation_name,
+                    'service_date'    => $item->service_date
+                        ? Carbon::parse($item->service_date)->format('d F Y')
+                        : null,
+                    'quantity'        => $item->quantity,
+                    'price'           => (float) ($item->selling_price ?? $item->amount ?? 0),
+                    'discount'        => (float) ($item->discount ?? 0),
+                    'amount'          => (float) ($item->amount ?? 0),
+                ];
+            });
+        }
+
+        return $this->success([
+            'id' => $booking->id,
+            'invoice_number' => $booking->invoice_number,
+            'crm_id' => $booking->crm_id,
+            'payment_status' => $booking->payment_status,
+            'customer_name' => $booking->customer->name ?? '-',
+            'sales_date' => $booking->booking_date
+                ? Carbon::parse($booking->booking_date)->format('d F Y')
+                : null,
+            'due_date' => $booking->balance_due_date
+                ? Carbon::parse($booking->balance_due_date)->format('d F Y')
+                : null,
+            'item_count' => $items->count(),
+            'items' => $items,
+            'sub_total' => (float) $booking->sub_total,
+            'discount' => (float) $booking->discount,
+            'grand_total' => (float) $booking->grand_total,
+            'deposit' => (float) $booking->deposit,
+            'balance_due' => (float) $booking->balance_due,
+            'payment_due_status' => $booking->payment_status,
+        ], 'Booking detail retrieved');
+    }
+
+    /**
+     * Resolve a thumbnail image for the item card from the live product.
+     */
+    private function resolveItemImage($item)
+    {
+        $product = $item->product;
+
+        if (!$product) {
+            return null;
+        }
+
+        // Hotel uses a separate HotelImage relation
+        if ($item->product_type === \App\Models\Hotel::class) {
+            $firstImage = $product->images->first();
+            return $firstImage
+                ? Storage::url('images/' . $firstImage->image)
+                : null;
+        }
+
+        // Other product types — adjust field names as needed
+        $image = $product->cover_image ?? $product->image
+            ?? null;
+
+        return $image ? Storage::url('images/' . $image) : null;
     }
 }
