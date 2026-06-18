@@ -36,6 +36,10 @@ class PrivateVanTourResource extends JsonResource
             'total_booking_count' => $this->bookingItems()->count(),
             'with_ticket' => $this->with_ticket,
             'ticket_price' => $this->ticket_price,
+            'is_show' => $this->is_show,
+            'supplier_cost' => $this->supplier_cost ? json_decode($this->supplier_cost) : [],
+            // Replace the broken routePlan() call
+            'route_plans' => RoutePlanResource::collection($this->whenLoaded('routePlans')),
         ];
     }
 }

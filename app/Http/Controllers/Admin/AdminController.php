@@ -111,6 +111,27 @@ class AdminController extends Controller
         return $this->success(null, 'Successfully deleted', 200);
     }
 
+    public function destroyAdmin($id)
+    {
+        $admin = Admin::findOrFail($id);
+
+        $admin->is_active = false;
+        $admin->save();
+
+        $admin->tokens()->delete();
+
+        return $this->success(null, 'Successfully deactivated', 200);
+    }
+
+    public function reactivate($id)
+    {
+        $admin = Admin::findOrFail($id);
+        $admin->is_active = true;
+        $admin->save();
+
+        return $this->success($admin, 'Successfully reactivated', 200);
+    }
+
     /**
      * Get current sale ranking of the auth user
      */

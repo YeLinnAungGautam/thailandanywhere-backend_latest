@@ -29,7 +29,7 @@ class PrivateVanTourController extends Controller
         $max_price = (int) $request->query('max_price');
 
         $query = PrivateVanTour::query()
-            ->with('cars')
+            ->with(['cars', 'routePlans'])
             ->when($search, function ($s_query) use ($search) {
                 $s_query->where('name', 'LIKE', "%{$search}%");
             })
@@ -75,6 +75,11 @@ class PrivateVanTourController extends Controller
                     ->havingRaw('COUNT(DISTINCT destination_id) = ?', [count($destination_ids)]);
                 });
             })
+            // Pass show_hidden=1 (e.g. for the admin panel) to also see
+            // van tours that are tucked behind a Route Plan (is_show = false).
+            ->when(!$request->boolean('show_hidden'), function ($q) {
+                $q->where('is_show', true);
+            })
             ->orderBy('created_at', 'desc');
 
         $data = $query->paginate($limit);
@@ -100,11 +105,13 @@ class PrivateVanTourController extends Controller
             'description' => $request->description,
             'type' => $request->type ?? PrivateVanTour::TYPES['car_rental'],
             'sku_code' => $request->sku_code,
-            'long_description' => $request->long_description,
-            'full_description' => $request->full_description,
-            'full_description_en' => $request->full_description_en,
+            'long_description' => $request->long_description ?? null,
+            'full_description' => $request->full_description ?? null,
+            'full_description_en' => $request->full_description_en ?? null,
             'with_ticket' => $request->with_ticket ?? 0,
             'ticket_price' => $request->ticket_price,
+            'is_show' => $request->has('is_show') ? $request->boolean('is_show') : true,
+            'supplier_cost' => $request->supplier_cost ? json_encode($request->supplier_cost) : null,
         ];
 
         if ($file = $request->file('cover_image')) {
@@ -180,6 +187,8 @@ class PrivateVanTourController extends Controller
             'full_description_en' => $request->full_description_en ?? $find->full_description_en,
             'with_ticket' => $request->with_ticket ?? $find->with_ticket,
             'ticket_price' => $request->ticket_price ?? $find->ticket_price,
+            'is_show' => $request->has('is_show') ? $request->boolean('is_show') : $find->is_show,
+            'supplier_cost' => $request->supplier_cost ? json_encode($request->supplier_cost) : $find->supplier_cost,
         ];
 
         if ($file = $request->file('cover_image')) {

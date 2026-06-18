@@ -24,19 +24,19 @@ class StorePrivateVanTourRequest extends FormRequest
     {
         return [
             'name' => 'required',
-            'car_ids' => 'required|array',
+            'car_ids' => 'nullable|array',
             'type' => 'nullable|in:van_tour,car_rental',
-            'prices' => ['required', 'array', function ($attribute, $value, $fail) {
+            'prices' => ['nullable', 'array', function ($attribute, $value, $fail) {
                 if (count($value) !== count($this->input('car_ids'))) {
                     $fail($attribute . ' and cars must have the same number of elements.');
                 }
             }],
-            'agent_prices' => ['required', 'array', function ($attribute, $value, $fail) {
+            'agent_prices' => ['nullable', 'array', function ($attribute, $value, $fail) {
                 if (count($value) !== count($this->input('car_ids'))) {
                     $fail($attribute . ' and cars must have the same number of elements.');
                 }
             }],
-            'sku_code' => 'required|' . Rule::unique('private_van_tours'),
+            // 'sku_code' => 'required|' . Rule::unique('private_van_tours'),
         ];
     }
 

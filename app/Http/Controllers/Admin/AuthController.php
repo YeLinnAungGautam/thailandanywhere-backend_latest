@@ -28,6 +28,11 @@ class AuthController extends Controller
 
         $admin = Auth::guard('admin')->user();
 
+        if (!$admin->is_active) {
+            Auth::guard('admin')->logout();
+            return $this->error('', 'This account has been deactivated', 403);
+        }
+
         // $admin->tokens()->delete();
 
         $abilities = [
