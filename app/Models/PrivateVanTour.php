@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class PrivateVanTour extends Model
 {
@@ -14,6 +15,11 @@ class PrivateVanTour extends Model
     protected $guarded = [];
 
     protected $table = 'private_van_tours';
+
+    protected $casts = [
+        'is_show' => 'boolean',
+        'supplier_cost' => 'array',
+    ];
 
     const TYPES = [
         'van_tour' => 'van_tour',
@@ -70,5 +76,25 @@ class PrivateVanTour extends Model
     public function partners()
     {
         return $this->morphToMany(Partner::class, 'productable', 'partner_has_products');
+    }
+
+    /**
+     * Scope: only van tours that should be shown as standalone products.
+     * Useful for public listing endpoints once is_show exists.
+     */
+    public function scopeShowable($query)
+    {
+        return $query->where('is_show', true);
+    }
+
+
+    public function routePlans()
+    {
+        return $this->belongsToMany(
+            RoutePlan::class,
+            'private_van_tour_route_plans',
+            'private_van_tour_id',
+            'route_plan_id'
+        )->withTimestamps();
     }
 }

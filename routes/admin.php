@@ -67,6 +67,7 @@ use App\Http\Controllers\Admin\ReservationHotelController;
 use App\Http\Controllers\Admin\ReservationListExportController;
 use App\Http\Controllers\Admin\ReservationPaidSlipController;
 use App\Http\Controllers\Admin\RoomPeriodController;
+use App\Http\Controllers\RoutePlanController;
 use App\Http\Controllers\Admin\SaleManagerController;
 use App\Http\Controllers\Admin\Setting\EntranceTicketDiscountController;
 use App\Http\Controllers\Admin\Setting\HotelDiscountController;
@@ -143,7 +144,7 @@ Route::get('/super', function () {
 })->middleware(['auth:sanctum', 'abilities:*']);
 
 
-Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(function () {
     // for nodejs verify token
     Route::post('/verify-token', [AuthController::class, 'verifyToken']);
     # Dashboard
@@ -195,6 +196,8 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
     Route::get('reports/cash-image/{date}/agent-details', [ReportController::class, 'getAgentCashImagesList']);
 
     Route::apiResource('admins', AdminController::class);
+    Route::post('/admins/{id}/destroyAdmin', [AdminController::class,'destroyAdmin']);
+    Route::post('/admins/{id}/reactivate', [AdminController::class,'reactivate']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout/all', [AuthController::class, 'logoutAll']);
@@ -510,6 +513,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin'])->group(function () {
         Route::post('{id}/bank-verify',     [BankStatementRecordController::class, 'bankVerify']);
         Route::post('/bank-verify-all',[BankStatementRecordController::class,'bankVerifyAll']);
         Route::post('/rematch', [BankStatementRecordController::class, 'rematch']);
+    });
+
+    Route::prefix('route-plans')->group(function () {
+        Route::get('/',           [RoutePlanController::class, 'index']);
+        Route::post('/',          [RoutePlanController::class, 'store']);
+        Route::get('/{id}',       [RoutePlanController::class, 'show']);
+        Route::put('/{id}',      [RoutePlanController::class, 'update']);  // _method=PUT via FormData
+        Route::delete('/{id}',    [RoutePlanController::class, 'destroy']);
     });
 
     # Partner
