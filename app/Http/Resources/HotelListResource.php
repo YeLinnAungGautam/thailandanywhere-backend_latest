@@ -72,6 +72,8 @@ class HotelListResource extends JsonResource
             // 'email' => is_null($this->email) ? null : json_decode($this->email),
 
             'total_booking_count' => $this->bookingItems()->count(),
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
 
             'discount_price' => $discount_price,
             'discount_percent' => round($discount_percent),
