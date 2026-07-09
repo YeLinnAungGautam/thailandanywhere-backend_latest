@@ -10,7 +10,6 @@ use App\Models\Destination;
 use App\Models\EntranceTicket;
 use App\Models\EntranceTicketContract;
 use App\Models\EntranceTicketImage;
-use App\Models\EntranceTicketVariation;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
 use Illuminate\Http\Request;
@@ -106,6 +105,11 @@ class EntranceTicketController extends Controller
         if ($file = $request->file('cover_image')) {
             $fileData = $this->uploads($file, 'images/');
             $data['cover_image'] = $fileData['fileName'];
+        }
+
+        if ($file = $request->file('feature_image')) {
+            $fileData = $this->uploads($file, 'images/');
+            $data['feature_image'] = $fileData['fileName'];
         }
 
         $save = EntranceTicket::create($data);
@@ -220,6 +224,15 @@ class EntranceTicketController extends Controller
             }
         }
 
+        if ($file = $request->file('feature_image')) {
+            $fileData = $this->uploads($file, 'images/');
+            $data['feature_image'] = $fileData['fileName'];
+
+            if ($find->feature_image) {
+                Storage::delete('images/' . $find->feature_image);
+            }
+        }
+
         $find->update($data);
 
         if ($request->activities) {
@@ -315,6 +328,7 @@ class EntranceTicketController extends Controller
         $find->cities()->detach();
 
         Storage::delete('images/' . $find->cover_image);
+        Storage::delete('images/' . $find->feature_image);
 
         foreach ($find->images as $image) {
             // Delete the file from storage
@@ -430,6 +444,7 @@ class EntranceTicketController extends Controller
                     'name' => $ticket->name,
                     'description' => $ticket->description,
                     'cover_image' => $ticket->cover_image ? Storage::url('images/' . $ticket->cover_image) : null,
+                    'feature_image' => $ticket->feature_image ? Storage::url('images/' . $ticket->feature_image) : null,
                     'images' => $ticket->images->map(function ($image) {
                         return [
                             'id' => $image->id,

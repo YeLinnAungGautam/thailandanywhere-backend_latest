@@ -33,6 +33,7 @@ class EntranceTicketResource extends JsonResource
             'location_map' => $this->location_map,
             'vat_inclusion' => $this->vat_inclusion,
             'cover_image' => $this->cover_image ? Storage::url('images/' . $this->cover_image) : null,
+            'feature_image' => $this->feature_image ? Storage::url('images/' . $this->feature_image) : null,
             'activities' => AttractionActivityResource::collection($this->activities),
             'tags' => PrivateVanTourTagResource::collection($this->tags),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
