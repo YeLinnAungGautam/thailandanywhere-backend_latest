@@ -273,6 +273,57 @@ class BookingItemGroupController extends Controller
         }
     }
 
+    public function todayList(Request $request)
+    {
+        try {
+            $groups = BookingItemGroup::query()
+                ->has('bookingItems')
+                ->whereHas('booking', function ($q) {
+                    $q->whereDate('created_at', now()->toDateString());
+                })
+                // keep same visibility rule as index(): non-privileged roles only see their own bookings
+                ->when(!in_array(Auth::user()->role, ['super_admin', 'reservation', 'auditor']), function ($query) {
+                    $query->whereHas('booking', fn($q) => $q->where('created_by', Auth::id())->orWhere('past_user_id', Auth::id()));
+                })
+                ->with(['booking', 'bookingItems'])
+                ->orderBy('id', 'desc')
+                ->get();
+
+            $data = $groups->map(function ($group) {
+                $serviceStart = $group->bookingItems->min('service_date');
+                $serviceEnd   = $group->bookingItems->max('service_date');
+                $sellingPrice = $group->bookingItems->sum('amount'); // <-- adjust column name if different
+                $costPrice    = $group->bookingItems->sum('total_cost_price');
+                $productName  = $group->bookingItems->first()->product->name ?? 'N/A';
+                $margin       =  ($sellingPrice - $costPrice) / $sellingPrice ;
+
+                return [
+                    'group_id'           => $group->id,
+                    'booking_id'         => $group->booking_id,
+                    'crm_id'             => $group->booking->crm_id ?? null,
+                    'product_type'       => $group->product_type,
+                    'product_name'       => $productName,
+                    'service_start_date' => $serviceStart,
+                    'service_end_date'   => $serviceEnd,
+                    'selling_price'      => (float) $sellingPrice,
+                    'cost_price'         => (float) $costPrice,
+                    'margin'             => (float) $margin,
+                    'booking_created_at' => optional($group->booking)->created_at,
+                ];
+            });
+
+            return $this->success([
+                'data'                       => $data,
+                'total'                      => $data->count(),
+                'grand_total_selling_price'  => (float) $data->sum('selling_price'),
+                'grand_total_cost_price'     => (float) $data->sum('cost_price'),
+                'grand_total_margin'         => (float) $data->sum('margin'),
+            ], 'Today Booking Item Group List');
+        } catch (Exception $e) {
+            return $this->error(null, $e->getMessage(), 500);
+        }
+    }
+
     // ... rest of your methods remain the same
     private function calculateStatistics($buildBaseQuery, $productType, $totalFilteredGroups)
     {
