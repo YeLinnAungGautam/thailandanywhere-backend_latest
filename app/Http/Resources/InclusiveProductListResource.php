@@ -19,7 +19,7 @@ class InclusiveProductListResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'sku_code' => $this->sku_code,
-            'price' => $this->price,
+            'price' => round($this->price/1.07,2),
             // 'agent_price' => $this->agent_price,
             'day' => $this->day,
             'night' => $this->night,

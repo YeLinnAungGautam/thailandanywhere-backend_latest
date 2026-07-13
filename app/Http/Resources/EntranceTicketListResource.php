@@ -49,7 +49,7 @@ class EntranceTicketListResource extends JsonResource
             // 'variations' => $this->getVariations(),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
 
-            'lowest_variation_price' => $this->getLowestVariationPrice(),
+            'lowest_variation_price' => round($this->getLowestVariationPrice() / 1.07, 2),
             'selling_price' => $selling_price,
             'discount_price' => $discount_price,
             'discount_percent' => round($discount_percent),

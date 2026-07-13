@@ -56,7 +56,7 @@ class HotelResource extends JsonResource
             'contacts' => HotelContractResource::collection($this->contracts),
             'images' => HotelImageResource::collection($this->images),
             'facilities' => FacilityResource::collection($this->facilities),
-            'lowest_room_price' => $lowest_room_price,
+            'lowest_room_price' => round($lowest_room_price / 1.07, 2),
             'lowest_walk_in_price' => $lowest_walk_in_price,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
