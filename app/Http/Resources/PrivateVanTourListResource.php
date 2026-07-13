@@ -34,7 +34,7 @@ class PrivateVanTourListResource extends JsonResource
             'destinations' => PrivateVanTourDestinationResource::collection($this->destinations),
             'cities' => PrivateVanTourCityResource::collection($this->cities),
             'images' => $this->images ? PrivateVanTourImageResource::collection($this->images) : null,
-            'lowest_car_price' => $lowest_car_price,
+            'lowest_car_price' => round($lowest_car_price/1.07,2),
             'lowest_cost_price' => $lowest_cost_price,
             'total_booking_count' => $this->bookingItems()->count(),
             'ticket_price' => $this->ticket_price,

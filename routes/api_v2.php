@@ -28,6 +28,7 @@ use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PromoV2Controller;
 use Illuminate\Support\Facades\Route;
 
 Route::group([], function () {
@@ -130,6 +131,10 @@ Route::group([], function () {
         Route::get('profile', [ProfileController::class, 'show']);
         Route::put('profile', [ProfileController::class, 'updateProfile']);
         Route::post('change-password', [ProfileController::class, 'changePassword']);
+
+        Route::get('/promos/search', [PromoV2Controller::class, 'search']);
+        Route::post('/promos/apply', [PromoV2Controller::class, 'apply']);
+        Route::post('/promos/remove', [PromoV2Controller::class, 'remove']);
 
         # Bookings
         Route::get('bookings', [BookingController::class, 'index']);

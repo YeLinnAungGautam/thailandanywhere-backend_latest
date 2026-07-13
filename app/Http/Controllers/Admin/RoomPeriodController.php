@@ -41,7 +41,10 @@ class RoomPeriodController extends Controller
             }
 
             $day['partner_discount']  = $partner_discount;
-            $day['sale_price']     = $day['selling_price'] - $partner_discount;
+            $day['sale_price']     = ($day['selling_price'] - $partner_discount);
+            $day['sale_price_before_vat']     = ($day['selling_price'] - $partner_discount) /1.07;
+            $day['selling_price']     = ($day['selling_price'] - $partner_discount);
+            $day['selling_price_before_vat']     = ($day['selling_price'] - $partner_discount)/1.07;
             $day['cost_price']        = $day['cost_price'] - $partner_discount;
 
             return $day;
@@ -49,6 +52,7 @@ class RoomPeriodController extends Controller
 
         // ✅ Total များကို recalculate လုပ်
         $total_selling_price = array_sum(array_column($daily_pricing, 'sale_price'));
+        $total_selling_price_before_vat = array_sum(array_column($daily_pricing, 'sale_price_before_vat'));
         $total_cost_price    = array_sum(array_column($daily_pricing, 'cost_price'));
 
         $data = [
@@ -57,8 +61,9 @@ class RoomPeriodController extends Controller
             // 'total_sale_price'        => $pricing['total_sale'],
             'total_cost_price'        => $total_cost_price,       // ✅ recalculated
             'total_discount_price'    => $pricing['total_discount'],
-            'total_sale_price'     => $total_selling_price,    // ✅ recalculated
-            'total_selling_price'     => $total_selling_price,    // ✅ recalculated
+            'total_sale_price'     => $total_selling_price ,    // ✅ recalculated
+            'total_selling_price_before_vat'     => $total_selling_price_before_vat ,    // ✅ recalculated
+            'total_selling_price'     => $total_selling_price ,    // ✅ recalculated
             'overall_discount_percent' => $pricing['overall_discount_percent'],
             'service_date'            => $request->service_date,
             'room_rates'              => $room_rates,
