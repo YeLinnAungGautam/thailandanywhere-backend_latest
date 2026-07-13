@@ -132,6 +132,16 @@ class BookingItem extends Model
         return $this->hasMany(BookingItemAmendment::class);
     }
 
+    public function promo()
+    {
+        return $this->belongsTo(Promo::class, 'promo_id', 'promo_id');
+    }
+
+    public function promoUsage()
+    {
+        return $this->hasOne(PromoUsage::class);
+    }
+
     protected function calcSalePrice(): Attribute
     {
         return Attribute::make(get: fn () => (new BookingItemDataService($this))->getSalePrice());

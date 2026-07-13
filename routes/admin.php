@@ -109,6 +109,7 @@ use App\Http\Controllers\RoomExportImportController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BankStatementRecordController;
 use App\Http\Controllers\ChatGptImageController;
+use App\Http\Controllers\PromoController;
 // use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
@@ -388,6 +389,14 @@ Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(fun
     Route::delete('meals/{meal}/images/{product_image}', [MealController::class, 'deleteImage']);
     Route::get('meals/export/csv', [MealExportImportController::class, 'export']);
     Route::post('meals/import/csv', [MealExportImportController::class, 'import']);
+
+    # Promo
+    Route::get('/promos', [PromoController::class, 'index']);
+    Route::post('/promos', [PromoController::class, 'store']);
+    Route::get('/promos/{promo}', [PromoController::class, 'show']);
+    Route::put('/promos/{promo}', [PromoController::class, 'update']);
+    Route::patch('/promos/{promo}', [PromoController::class, 'update']);
+    Route::delete('/promos/{promo}', [PromoController::class, 'destroy']);
 
     # Driver
     Route::apiResource('drivers', DriverController::class);
