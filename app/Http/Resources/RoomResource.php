@@ -21,7 +21,7 @@ class RoomResource extends JsonResource
             'name' => $this->name,
             'hotel' => new HotelResource($this->hotel),
             'extra_price' => $this->extra_price,
-            'room_price' => $this->getRoomPrice($request->period)/1.07,
+            'room_price' => $this->getRoomPrice($request->period),
             'is_extra' => $this->is_extra,
             'has_breakfast' => $this->has_breakfast,
             'cost' => $this->cost,
