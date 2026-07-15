@@ -108,7 +108,7 @@ class OrderController extends Controller
                 'email' => $payload['email'] ?? null,
                 'sold_from' => $payload['sold_from'] ?? null,
                 'order_datetime' => Carbon::now(),
-                'expire_datetime' => Carbon::now()->addHours(24),
+                'expire_datetime' => Carbon::parse($payload['balance_due_date']),
                 'order_number' => 'ORD-'.Carbon::now()->format('Ymd-His').'-'.Auth::id(),
                 'balance_due_date' => $payload['balance_due_date'] ?? null,
                 'customer_id' => $customer->id ?? null,
