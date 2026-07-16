@@ -11,7 +11,8 @@
         // window.close()
 
         window.opener.postMessage({
-            token: "{{ $token }}"
+            token: "{{ $token }}",
+            message: "{{ $message ?? '' }}"
         }, "*");
         window.close()
 
