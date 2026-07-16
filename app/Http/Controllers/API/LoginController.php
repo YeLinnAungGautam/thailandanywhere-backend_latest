@@ -34,15 +34,23 @@ class LoginController extends Controller
             'password' => 'required'
         ]);
 
-        if (!Auth::guard('user')->attempt($request->only('email', 'password'))) {
+        $user = User::withTrashed()->where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return failedMessage('Credentials do not match');
         }
 
-        $user = Auth::guard('user')->user();
+        $wasRestored = false;
+        if ($user->trashed()) {
+            $user->restore();
+            $wasRestored = true;
+        }
+
+        Auth::guard('user')->login($user);
 
         // Check if user is active
         if (!$user->is_active) {
-            // Log the user out since we just logged them in with Auth::attempt
+            // Log the user out since we just logged them in with Auth::login
             Auth::guard('user')->logout();
 
             return failedMessage('Your account is not active. Please verify your email or contact administrator.');
@@ -63,10 +71,12 @@ class LoginController extends Controller
 
         $token = $user->createToken($user->name . '-AuthToken-' . now())->plainTextToken;
 
+        $message = $wasRestored ? 'Welcome back! Your account has been restored.' : 'Successfully logged in.';
+
         return success([
             'user' => $user,
             'token' => $token
-        ]);
+        ], $message);
     }
 
     public function forgetPassword(Request $request)

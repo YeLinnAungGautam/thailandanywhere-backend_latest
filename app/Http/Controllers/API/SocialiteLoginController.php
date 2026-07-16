@@ -37,10 +37,13 @@ class SocialiteLoginController extends Controller
 
             $token = $user->createToken('UserToken')->plainTextToken;
 
-            // info('Generated Token: ', ['token' => $token]);
+            $message = isset($user->was_recently_restored) && $user->was_recently_restored 
+                ? 'Welcome back! Your account has been restored.' 
+                : 'Successfully logged in.';
 
             return view('oauth/callback', [
                 'token' => $token,
+                'message' => $message,
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
@@ -61,9 +64,20 @@ class SocialiteLoginController extends Controller
             return $oauthProvider->user;
         }
 
-        if (User::where('email', $user->getEmail())->exists()) {
-            return User::where('email', $user->getEmail())->first();
-            // throw new EmailTakenException;
+        $existingUser = User::withTrashed()->where('email', $user->getEmail())->first();
+
+        if ($existingUser) {
+            if ($existingUser->trashed()) {
+                $existingUser->restore();
+                $existingUser->was_recently_restored = true;
+            }
+
+            $existingUser->oauthProviders()->firstOrCreate([
+                'provider' => $provider,
+                'provider_user_id' => $user->getId(),
+            ]);
+
+            return $existingUser;
         }
 
         return $this->createUser($provider, $user);
