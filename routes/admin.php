@@ -110,6 +110,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BankStatementRecordController;
 use App\Http\Controllers\ChatGptImageController;
 use App\Http\Controllers\PromoController;
+use App\Http\Controllers\VanTourController;
 // use App\Models\Booking;
 use Illuminate\Support\Facades\Route;
 
@@ -328,6 +329,23 @@ Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(fun
     Route::get('private-van-tours/export/csv', [PrivateVanTourExportImportController::class, 'export']);
     Route::post('private-van-tours/import/csv', [PrivateVanTourExportImportController::class, 'import']);
 
+    // Route::prefix('vantours')->group(function () {
+    //     Route::get('/', [VanTourController::class, 'index']);
+    //     Route::post('/', [VanTourController::class, 'store']);
+    //     Route::get('/{id}', [VanTourController::class, 'show']);
+    //     Route::put('/{id}', [VanTourController::class, 'update']);
+    //     Route::delete('/{id}', [VanTourController::class, 'destroy']);
+    //     Route::delete('/{id}/hard-delete', [VanTourController::class, 'hardDelete']);
+    //     Route::post('/{id}/restore', [VanTourController::class, 'restore']);
+    // });
+        Route::get('vantours/', [VanTourController::class, 'index']);
+        Route::post('vantours/', [VanTourController::class, 'store']);
+        Route::get('vantours/{id}', [VanTourController::class, 'show']);
+        Route::put('vantours/{id}', [VanTourController::class, 'update']);
+        Route::delete('vantours/{id}', [VanTourController::class, 'destroy']);
+        Route::delete('vantours/{id}/hard-delete', [VanTourController::class, 'hardDelete']);
+        Route::post('vantours/{id}/restore', [VanTourController::class, 'restore']);
+
     # Hotel
     Route::apiResource('hotels', HotelController::class);
     // Route::get('hotels/map', [HotelController::class, 'listMapAll']);
@@ -528,7 +546,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(fun
         Route::get('/',           [RoutePlanController::class, 'index']);
         Route::post('/',          [RoutePlanController::class, 'store']);
         Route::get('/{id}',       [RoutePlanController::class, 'show']);
-        Route::put('/{id}',      [RoutePlanController::class, 'update']);  // _method=PUT via FormData
+        Route::post('/{id}',      [RoutePlanController::class, 'update']);  // _method=PUT via FormData
         Route::delete('/{id}',    [RoutePlanController::class, 'destroy']);
     });
 

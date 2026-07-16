@@ -31,6 +31,16 @@ class RoutePlan extends Model
         )->withTimestamps();
     }
 
+    public function vanTours()
+    {
+        return $this->belongsToMany(
+            VanTour::class,
+            'van_tour_route_plans',
+            'route_plan_id',
+            'vantour_id'
+        )->withTimestamps();
+    }
+
     /**
      * Destinations grouped under this route plan (one Route Plan -> many Destinations).
      */

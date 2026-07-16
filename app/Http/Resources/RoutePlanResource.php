@@ -18,7 +18,7 @@ class RoutePlanResource extends JsonResource
         return [
             'route_id'            => $this->id,
             // vantour_ids array removed — use the relation instead
-            'van_tours'           => PrivateVanTourResource::collection($this->whenLoaded('privateVanTours')),
+            'van_tours'           => VanTourV2Resource::collection($this->whenLoaded('vanTours')),
             'destination_ids'     => $this->destination_ids ?? [],
             'city_ids'            => $this->city_ids ?? [],
             'main_cover_photo'    => $this->main_cover_photo

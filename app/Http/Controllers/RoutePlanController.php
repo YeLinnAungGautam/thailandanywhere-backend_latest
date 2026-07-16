@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRoutePlanRequest;
 use App\Http\Requests\UpdateRoutePlanRequest;
-use App\Http\Resources\PrivateVanTourResource;
 use App\Http\Resources\RoutePlanResource;
+use App\Http\Resources\VanTourV2Resource;
 use App\Models\RoutePlan;
 use App\Traits\HttpResponses;
 use App\Traits\ImageManager;
@@ -26,7 +26,7 @@ class RoutePlanController extends Controller
         $limit = $request->query('limit', 10);
         $search = $request->query('search');
 
-        $query = RoutePlan::query()->with('privateVanTours')
+        $query = RoutePlan::query()->with('vanTours')
             ->when($search, function ($q) use ($search) {
                 $q->where('english_description', 'LIKE', "%{$search}%")
                   ->orWhere('mm_description', 'LIKE', "%{$search}%");
@@ -73,7 +73,7 @@ class RoutePlanController extends Controller
 
         // Sync attached packages
         if ($request->vantour_ids) {
-            $save->privateVanTours()->sync($request->vantour_ids);
+            $save->vanTours()->sync($request->vantour_ids);
         }
 
         return $this->success(new RoutePlanResource($save), 'Successfully created');
@@ -119,7 +119,7 @@ class RoutePlanController extends Controller
 
         // Sync packages if provided
         if ($request->has('vantour_ids')) {
-            $find->privateVanTours()->sync($request->vantour_ids);
+            $find->vanTours()->sync($request->vantour_ids);
         }
 
         return $this->success(new RoutePlanResource($find), 'Successfully updated');
@@ -133,7 +133,7 @@ class RoutePlanController extends Controller
         }
 
         // Detach all packages first
-        $find->privateVanTours()->detach();
+        $find->vanTours()->detach();
         $find->delete();
 
         return $this->success(null, 'Successfully deleted');
@@ -147,7 +147,7 @@ class RoutePlanController extends Controller
         }
 
         $payload = (new RoutePlanResource($find))->resolve(request());
-        $payload['van_tours'] = PrivateVanTourResource::collection($find->privateVanTours()->get());
+        $payload['van_tours'] = VanTourV2Resource::collection($find->vanTours()->get());
         $payload['destinations'] = $find->destinations()->get();
         $payload['cities'] = $find->cities()->get();
 
