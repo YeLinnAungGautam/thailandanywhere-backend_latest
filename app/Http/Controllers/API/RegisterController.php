@@ -7,6 +7,7 @@ use App\Http\Requests\RegisterRequest;
 use App\Mail\VerifyEmail;
 use App\Models\User;
 use App\Traits\HttpResponses;
+use App\Traits\HandlesReactivation;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -17,25 +18,33 @@ use function Laravel\Prompts\error;
 
 class RegisterController extends Controller
 {
-    use HttpResponses;
+    use HttpResponses, HandlesReactivation;
 
     public function register(RegisterRequest $request)
     {
         try {
-            // Check if email already exists
-            $existingUser = User::where('email', $request->email)->first();
+            // Include trashed so deleted accounts are detected here too
+            $existingUser = User::withTrashed()->where('email', $request->email)->first();
 
             if ($existingUser) {
+
+                // Previously deleted account: send reactivation email instead of erroring
+                if ($existingUser->trashed()) {
+                    $this->sendReactivationEmail($existingUser);
+
+                    return success([
+                        'reactivation_required' => true,
+                        'email' => $existingUser->email,
+                    ], 'This email was previously registered and deleted. We\'ve sent a reactivation email — please set a new password to restore your account.');
+                }
+
                 // If the user exists but is not active (not verified)
                 if (!$existingUser->is_active) {
-                    // Generate new verification code
                     $code = sprintf('%06d', mt_rand(0, 999999));
 
-                    // Update the existing user with new verification code
                     $existingUser->email_verification_token = $code;
                     $existingUser->save();
 
-                    // Resend verification email
                     Mail::to($existingUser->email)->queue(new VerifyEmail($existingUser));
 
                     return error('This email is already registered but not verified. A new verification code has been sent to your email.');
@@ -45,7 +54,7 @@ class RegisterController extends Controller
                 return error('This email is already registered. Please login instead.');
             }
 
-            // If email doesn't exist, create new user
+            // If email doesn't exist at all, create new user
             $code = sprintf('%06d', mt_rand(0, 999999));
 
             $user = User::create([
@@ -60,7 +69,6 @@ class RegisterController extends Controller
                 'is_active' => false,
             ]);
 
-            // send verification email
             Mail::to($user->email)->queue(new VerifyEmail($user));
 
             return success($user, 'User registered successfully. Please check your email to verify your account.');
@@ -89,15 +97,13 @@ class RegisterController extends Controller
                 return error('Email already verified!');
             }
 
-            // Generate new 6-digit verification code
             $code = sprintf('%06d', mt_rand(0, 999999));
 
             $user->email_verification_token = $code;
             $user->email_verified_at = null;
-            $user->is_active = false; // Deactivate the user before sending the verification email
+            $user->is_active = false;
             $user->save();
 
-            // send verification email
             Mail::to($user->email)->queue(new VerifyEmail($user));
 
             return success(null, 'Verification email sent successfully.');
@@ -111,13 +117,12 @@ class RegisterController extends Controller
         try {
             $request->validate([
                 'verification_code' => 'required|numeric|digits:6',
-                'email' => 'required|email' // Add email validation
+                'email' => 'required|email'
             ]);
 
             $code = $request->verification_code;
             $email = $request->email;
 
-            // Find user with both the correct email and verification code
             $user = User::where('email', $email)
                 ->where('email_verification_token', $code)
                 ->first();
@@ -128,7 +133,7 @@ class RegisterController extends Controller
 
             $user->email_verification_token = null;
             $user->email_verified_at = Carbon::now();
-            $user->is_active = true; // Activate the user after email verification
+            $user->is_active = true;
             $user->save();
 
             $token = $user->createToken($user->name . '-AuthToken')->plainTextToken;
@@ -138,7 +143,6 @@ class RegisterController extends Controller
                 'token' => $token
             ], 'Your email has been verified successfully. You can now login.');
         } catch (Exception $e) {
-
             return $this->error(null, $e->getMessage());
         }
     }
