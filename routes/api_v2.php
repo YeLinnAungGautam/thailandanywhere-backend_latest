@@ -127,6 +127,7 @@ Route::group([], function () {
         // for nodejs verify token
         Route::post('/verify-token', [LoginController::class, 'verifyToken']);
         Route::post('logout', [LoginController::class, 'logout']);
+        Route::post('/set-password',[LoginController::class,'setPassword']);
 
         Route::get('profile', [ProfileController::class, 'show']);
         Route::put('profile', [ProfileController::class, 'updateProfile']);

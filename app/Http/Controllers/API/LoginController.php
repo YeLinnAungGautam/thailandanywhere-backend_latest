@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Mail\ResetPasswordEmail;
 use App\Services\SessionTracker;
+use App\Traits\HandlesReactivation;
 use App\Traits\HttpResponses;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +19,7 @@ use Exception;
 
 class LoginController extends Controller
 {
-    use HttpResponses;
+    use HttpResponses, HandlesReactivation;
 
     protected $tracker;
 
@@ -36,30 +37,36 @@ class LoginController extends Controller
 
         $user = User::withTrashed()->where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             return failedMessage('Credentials do not match');
         }
 
-        $wasRestored = false;
+        // Deleted account: don't check password or auto-restore.
+        // Send a reactivation email so the user sets a fresh password.
         if ($user->trashed()) {
-            $user->restore();
-            $wasRestored = true;
+            $this->sendReactivationEmail($user);
+
+            return success([
+                'reactivation_required' => true,
+                'email' => $user->email,
+            ], 'This account was deleted. We\'ve sent a reactivation email — please set a new password to restore your account.');
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return failedMessage('Credentials do not match');
         }
 
         Auth::guard('user')->login($user);
 
         // Check if user is active
         if (!$user->is_active) {
-            // Log the user out since we just logged them in with Auth::login
             Auth::guard('user')->logout();
-
             return failedMessage('Your account is not active. Please verify your email or contact administrator.');
         }
 
-        // Check if email is verified (optional, if you're also implementing email verification)
+        // Check if email is verified
         if ($user->email_verified_at === null) {
             Auth::guard('user')->logout();
-
             return failedMessage('Please verify your email before logging in.');
         }
 
@@ -71,12 +78,10 @@ class LoginController extends Controller
 
         $token = $user->createToken($user->name . '-AuthToken-' . now())->plainTextToken;
 
-        $message = $wasRestored ? 'Welcome back! Your account has been restored.' : 'Successfully logged in.';
-
         return success([
             'user' => $user,
             'token' => $token
-        ], $message);
+        ], 'Successfully logged in.');
     }
 
     public function forgetPassword(Request $request)
@@ -88,11 +93,17 @@ class LoginController extends Controller
 
             $email = $request->email;
 
-            // Find user
-            $user = User::where('email', $email)->first();
+            // Include trashed so deleted accounts can be reactivated via this flow too
+            $user = User::withTrashed()->where('email', $email)->first();
 
-            // Always return success message for security (don't reveal if email exists)
+            // Always return the same success message for security
+            // (don't reveal whether the email exists, is active, or is deleted)
             if (!$user) {
+                return successMessage('If an account with that email exists, a password reset link has been sent.');
+            }
+
+            if ($user->trashed()) {
+                $this->sendReactivationEmail($user);
                 return successMessage('If an account with that email exists, a password reset link has been sent.');
             }
 
@@ -127,7 +138,6 @@ class LoginController extends Controller
     public function verifyToken(Request $request)
     {
         try {
-            // Get the authenticated user via Sanctum
             $query = User::query();
             $query->where('id', Auth::id());
             $user = $query->first();
@@ -136,13 +146,11 @@ class LoginController extends Controller
                 return $this->error('', 'Invalid token', 401);
             }
 
-            // Link guest session to user
             $sessionHash = $request->input('session_hash');
             if ($sessionHash) {
                 $this->tracker->linkSessionToUser($sessionHash, $user->id);
             }
 
-            // Return user info for Node.js chat
             return success([
                 'id' => (string) $user->id,
                 'type' => 'user',
@@ -175,7 +183,6 @@ class LoginController extends Controller
                 return $this->error('Invalid or expired password reset token.');
             }
 
-            // Check if token is expired (60 minutes)
             $tokenCreatedAt = \Carbon\Carbon::parse($resetRecord->created_at);
             if ($tokenCreatedAt->addMinutes(60)->isPast()) {
                 DB::table('password_reset_tokens')
@@ -184,7 +191,6 @@ class LoginController extends Controller
                 return $this->error('Password reset token has expired.');
             }
 
-            // Verify token
             if (!Hash::check($request->token, $resetRecord->token)) {
                 return $this->error('Invalid password reset token.');
             }
@@ -197,7 +203,7 @@ class LoginController extends Controller
     }
 
     /**
-     * Reset password
+     * Reset password (also reactivates a soft-deleted account, if applicable)
      */
     public function resetPassword(Request $request)
     {
@@ -205,10 +211,9 @@ class LoginController extends Controller
             $request->validate([
                 'token' => 'required',
                 'email' => 'required|email',
-                'password' => 'required|string|min:8|confirmed', // This checks password_confirmation
+                'password' => 'required|string|confirmed',
             ]);
 
-            // Find reset record
             $resetRecord = DB::table('password_reset_tokens')
                 ->where('email', $request->email)
                 ->first();
@@ -217,7 +222,6 @@ class LoginController extends Controller
                 return $this->error('Invalid or expired password reset token.');
             }
 
-            // Check if token is expired (60 minutes)
             $tokenCreatedAt = \Carbon\Carbon::parse($resetRecord->created_at);
             if ($tokenCreatedAt->addMinutes(60)->isPast()) {
                 DB::table('password_reset_tokens')
@@ -226,28 +230,36 @@ class LoginController extends Controller
                 return $this->error('Password reset token has expired.');
             }
 
-            // Verify token
             if (!Hash::check($request->token, $resetRecord->token)) {
                 return $this->error('Invalid password reset token.');
             }
 
-            // Find user
-            $user = User::where('email', $request->email)->first();
+            // Include trashed so a deleted account can be reactivated right here
+            $user = User::withTrashed()->where('email', $request->email)->first();
 
             if (!$user) {
                 return $this->error('User not found.');
             }
 
-            // Update password
+            $wasRestored = false;
+            if ($user->trashed()) {
+                $user->restore();
+                $user->is_active = true;
+                $wasRestored = true;
+            }
+
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // Delete used token
             DB::table('password_reset_tokens')
                 ->where('email', $request->email)
                 ->delete();
 
-            return success(null, 'Password has been reset successfully.');
+            $message = $wasRestored
+                ? 'Your account has been reactivated and your password has been reset. You can now login.'
+                : 'Password has been reset successfully.';
+
+            return success(null, $message);
 
         } catch (Exception $e) {
             return $this->error('An error occurred while resetting password: ' . $e->getMessage());
@@ -256,10 +268,31 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        $user = Auth::guard('user')->user();
-
         auth()->user()->tokens()->delete();
 
         return successMessage('Successfully Logout');
+    }
+
+    public function setPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'password' => 'required|string|confirmed',
+            ]);
+
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->error('', 'Unauthenticated.', 401);
+            }
+
+            $user->password = Hash::make($request->password);
+
+            $user->save();
+
+            return success(null, 'Password set successfully.');
+        } catch (Exception $e) {
+            return $this->error('An error occurred while setting password: ' . $e->getMessage());
+        }
     }
 }
