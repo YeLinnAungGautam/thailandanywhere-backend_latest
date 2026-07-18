@@ -45,4 +45,9 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Room::class);
     }
+
+     public function promo()
+    {
+        return $this->belongsTo(Promo::class);
+    }
 }

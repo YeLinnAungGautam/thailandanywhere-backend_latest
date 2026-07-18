@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Promo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class PromoResource extends JsonResource
 {
@@ -50,6 +51,7 @@ class PromoResource extends JsonResource
 
             'usages_count' => $this->whenCounted('usages'),
             'usages' => PromoUsageResource::collection($this->whenLoaded('usages')),
+            'image' => $this->image ? Storage::url('images/' . $this->image) : null,
         ];
     }
 

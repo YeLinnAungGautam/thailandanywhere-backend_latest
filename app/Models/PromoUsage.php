@@ -10,6 +10,7 @@ class PromoUsage extends Model
         'promo_id',
         'booking_item_id',
         'customer_id',
+        'order_item_id',
         'discount_applied',
     ];
 
@@ -21,6 +22,10 @@ class PromoUsage extends Model
     public function bookingItem()
     {
         return $this->belongsTo(BookingItem::class);
+    }
+     public function orderItem()
+    {
+        return $this->belongsTo(OrderItem::class);
     }
 
     public function customer()

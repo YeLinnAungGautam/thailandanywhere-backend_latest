@@ -8,6 +8,8 @@ use App\Models\Customer;
 use App\Models\Hotel;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Promo;
+use App\Models\PromoUsage;
 use App\Services\OrderManager;
 use App\Services\PartnerRoomRateService;
 use App\Services\SessionTracker;
@@ -241,6 +243,7 @@ class OrderController extends Controller
                 'product_id' => $item['product_id'],
                 'variation_id' => $item['variation_id'] ?? null,
                 'car_id' => $item['car_id'] ?? null,
+                'promo_id' => $item['promo_id'] ?? null,
                 'room_id' => $item['room_id'] ?? null,
                 'service_date' => $item['service_date'] ?? null,
                 'checkin_date' => $item['checkin_date'] ?? null,
@@ -276,6 +279,8 @@ class OrderController extends Controller
                 'infant_quantity' => $item['infant_quantity'] ?? null,
                 'passports' => $item['passports'] ?? null,
             ]);
+
+
 
             // Handle Hotel products
             if ($orderItem['product_type'] == Hotel::class) {
@@ -322,7 +327,27 @@ class OrderController extends Controller
             }
 
             $order->items()->save($orderItem);
+
             $createdItems[] = $orderItem;
+
+            $promo = null;
+
+            if (!empty($item['promo_id'])) {
+                $promo = Promo::where('promo_id', $item['promo_id'])
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            if ($promo) {
+                PromoUsage::create([
+                    'promo_id' => $promo->promo_id,
+                    'order_item_id' => $orderItem->id, // now populated correctly
+                    'customer_id' => $order->customer_id,
+                    'discount_applied' => $item['discount'] ?? 0,
+                ]);
+
+                $promo->increment('promo_used_count');
+            }
 
             // Collect cart IDs to delete
             if (isset($item['cart_id'])) {
