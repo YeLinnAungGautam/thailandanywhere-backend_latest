@@ -411,10 +411,11 @@ Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(fun
     # Promo
     Route::get('/promos', [PromoController::class, 'index']);
     Route::post('/promos', [PromoController::class, 'store']);
-    Route::get('/promos/{promo}', [PromoController::class, 'show']);
-    Route::put('/promos/{promo}', [PromoController::class, 'update']);
-    Route::patch('/promos/{promo}', [PromoController::class, 'update']);
-    Route::delete('/promos/{promo}', [PromoController::class, 'destroy']);
+    Route::get('/promos/{id}', [PromoController::class, 'show']);
+    // Route::post('/promos/{id}', [PromoController::class, 'update']);
+    Route::post('/promo-update/{id}',[PromoController::class,'update']);
+    // Route::patch('/promos/{promo}', [PromoController::class, 'update']);
+    Route::delete('/promos/{id}', [PromoController::class, 'destroy']);
 
     # Driver
     Route::apiResource('drivers', DriverController::class);

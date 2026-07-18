@@ -21,10 +21,7 @@ class UpdatePromoRequest extends FormRequest
         return [
             'promo_name'       => 'sometimes|string|max:255',
             'promo_des'        => 'nullable|string',
-            'promo_code'       => [
-                'sometimes', 'string', 'max:50',
-                Rule::unique('promos', 'promo_code')->ignore($promoId, 'promo_id'),
-            ],
+
             'promo_type'       => 'sometimes|in:fixed,percent',
             'promo_amount'     => 'sometimes|numeric|min:0',
             'promo_count'      => 'sometimes|integer|min:1',
@@ -47,6 +44,8 @@ class UpdatePromoRequest extends FormRequest
             'all_entrance_tickets' => 'boolean',
             'all_vantours'         => 'boolean',
             'all_inclusive'        => 'boolean',
+            'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'remove_image' => 'nullable|boolean',
         ];
     }
 

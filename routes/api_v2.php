@@ -133,9 +133,9 @@ Route::group([], function () {
         Route::put('profile', [ProfileController::class, 'updateProfile']);
         Route::post('change-password', [ProfileController::class, 'changePassword']);
 
-        Route::get('/promos/search', [PromoV2Controller::class, 'search']);
-        Route::post('/promos/apply', [PromoV2Controller::class, 'apply']);
-        Route::post('/promos/remove', [PromoV2Controller::class, 'remove']);
+        Route::get('promos/search', [PromoV2Controller::class, 'search']);
+        Route::get('promos/search-by-date', [PromoV2Controller::class, 'searchByDate']);
+        Route::get('promos/available', [PromoV2Controller::class, 'searchAvailable']);
 
         # Bookings
         Route::get('bookings', [BookingController::class, 'index']);
@@ -158,5 +158,7 @@ Route::group([], function () {
         Route::delete('orders/{id}', [OrderController::class, 'cancelOrder']);
         Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
+
+
     });
 });

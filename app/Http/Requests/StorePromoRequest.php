@@ -42,6 +42,7 @@ class StorePromoRequest extends FormRequest
             'all_entrance_tickets' => 'boolean',
             'all_vantours'         => 'boolean',
             'all_inclusive'        => 'boolean',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // 2MB max
         ];
     }
 

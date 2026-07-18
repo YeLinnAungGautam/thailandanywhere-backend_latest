@@ -7,11 +7,14 @@ use App\Http\Requests\UpdatePromoRequest;
 use App\Http\Resources\PromoResource;
 use App\Models\Promo;
 use App\Traits\HttpResponses;
+use App\Traits\ImageManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PromoController extends Controller
 {
      use HttpResponses;
+    use ImageManager;
     /**
      * Build the applicable_products JSON from request input.
      */
@@ -71,6 +74,13 @@ class PromoController extends Controller
     {
         $validated = $request->validated();
 
+        $image = '';
+
+        if ($file = $request->file('image')) {
+            $fileData = $this->uploads($file, 'images/');
+            $image = $fileData['fileName'];
+        }
+
         $promo = Promo::create([
             'promo_name'          => $validated['promo_name'],
             'promo_des'           => $validated['promo_des'] ?? null,
@@ -83,6 +93,7 @@ class PromoController extends Controller
             'promo_end_date'      => $validated['promo_end_date'],
             'promo_applies_to'    => $validated['promo_applies_to'],
             'applicable_products' => $this->buildApplicableProducts($request),
+            'image'               => $image
         ]);
 
         // return response()->json($promo, 201);
@@ -90,18 +101,22 @@ class PromoController extends Controller
     }
 
     // GET /admin/promos/{promo}
-    public function show(Promo $promo)
+    public function show(Request $request, $id)
     {
+        $promo = Promo::findOrFail($id);
         // return response()->json($promo->load('usages'));
         $data = $promo->load('usages');
         return $this->success(new PromoResource($data), 'Successfully get detail', 200);
     }
 
     // PUT/PATCH /admin/promos/{promo}
-    public function update(UpdatePromoRequest $request, Promo $promo)
+    public function update(UpdatePromoRequest $request, $id)
     {
         $validated = $request->validated();
 
+        $promo = Promo::findOrFail($id);
+
+        // Build the base update payload first
         $updateData = collect($validated)->only([
             'promo_name', 'promo_des', 'promo_code', 'promo_type', 'promo_amount',
             'promo_count', 'promo_active', 'promo_start_date', 'promo_end_date', 'promo_applies_to',
@@ -111,15 +126,29 @@ class PromoController extends Controller
             $updateData['applicable_products'] = $this->buildApplicableProducts($request);
         }
 
+        // Handle new image upload
+        if ($file = $request->file('image')) {
+            if ($promo->image) {
+                Storage::delete('images/' . $promo->image);
+            }
+
+            $fileData = $this->uploads($file, 'images/');
+            $updateData['image'] = $fileData['fileName'];
+        } elseif ($request->boolean('remove_image') && $promo->image) {
+            // Only clear the image if no new file was uploaded and removal was explicitly requested
+            Storage::delete('images/' . $promo->image);
+            $updateData['image'] = null;
+        }
+
         $promo->update($updateData);
 
-        // return response()->json($promo);
         return $this->success(new PromoResource($promo), 'Successfully updated', 200);
     }
 
     // DELETE /admin/promos/{promo}
-    public function destroy(Promo $promo)
+    public function destroy($id)
     {
+        $promo = Promo::findOrFail($id);
         $promo->delete();
 
         // return response()->json(['message' => 'Promo deleted']);
