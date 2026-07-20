@@ -46,8 +46,12 @@ class OrderItem extends Model
         return $this->belongsTo(Room::class);
     }
 
-     public function promo()
+    public function promo()
     {
         return $this->belongsTo(Promo::class);
+    }
+    public function productAvailableSchedule()
+    {
+        return $this->belongsTo(ProductAvailableSchedule::class, 'product_available_schedule_id');
     }
 }
