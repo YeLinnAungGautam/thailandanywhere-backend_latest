@@ -583,6 +583,7 @@ Route::middleware(['auth:sanctum', 'abilities:admin','admin.active'])->group(fun
 
     # order part
     Route::get('orders', [OrderAdminController::class, 'index']);
+    Route::get('orders/{id}', [OrderAdminController::class, 'show']);
     Route::post('orders/{id}/payment', [OrderAdminController::class, 'addPayment']);
     Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
     Route::post('orders/{id}/change-status', [OrderAdminController::class, 'changeStatus']);

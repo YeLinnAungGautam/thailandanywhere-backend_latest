@@ -60,4 +60,25 @@ class Order extends Model
     {
         return Carbon::now()->isAfter($this->expire_datetime);
     }
+
+    // App\Models\Order
+
+    public function refreshCompletionStatus(): void
+    {
+        $scheduleIds = $this->items()
+            ->whereNotNull('product_available_schedule_id')
+            ->pluck('product_available_schedule_id');
+
+        if ($scheduleIds->isEmpty()) {
+            return;
+        }
+
+        $allAvailable = ProductAvailableSchedule::whereIn('id', $scheduleIds)
+            ->where('status', '!=', 'available')
+            ->doesntExist();
+
+        if ($allAvailable && $this->order_status !== 'confirmed') {
+            $this->update(['order_status' => 'confirmed']);
+        }
+    }
 }

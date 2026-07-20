@@ -25,4 +25,9 @@ class ProductAvailableSchedule extends Model
     public function updatedBy(){
         return $this->belongsTo(Admin::class, 'updated_by');
     }
+
+    public function orderItem()
+    {
+        return $this->hasOne(OrderItem::class, 'product_available_schedule_id');
+    }
 }

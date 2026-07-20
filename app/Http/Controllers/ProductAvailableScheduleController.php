@@ -185,7 +185,7 @@ class ProductAvailableScheduleController extends Controller
         try {
             $schedule = ProductAvailableSchedule::find($product_available_schedule_id);
 
-            if(is_null($schedule)) {
+            if (is_null($schedule)) {
                 throw new Exception('Product available schedule not found');
             }
 
@@ -197,6 +197,14 @@ class ProductAvailableScheduleController extends Controller
             ];
 
             $schedule->update($data);
+
+            if ($request->status === 'available') {
+                $schedule->load('orderItem.order');
+
+                if ($schedule->orderItem && $schedule->orderItem->order) {
+                    $schedule->orderItem->order->refreshCompletionStatus();
+                }
+            }
 
             return success(new ProductAvailableScheduleResource($schedule));
         } catch (Exception $e) {

@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Resources\OrderResource;
 use App\Models\Cart;
 use App\Models\Customer;
+use App\Models\EntranceTicket;
+use App\Models\EntranceTicketVariation;
 use App\Models\Hotel;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\ProductAvailableSchedule;
 use App\Models\Promo;
 use App\Models\PromoUsage;
+use App\Models\Room;
 use App\Services\OrderManager;
 use App\Services\PartnerRoomRateService;
 use App\Services\SessionTracker;
@@ -69,6 +73,8 @@ class OrderController extends Controller
             ->response()
             ->getData(), 'Booking List');
     }
+
+
 
     /**
      * ပစ္စည်းခြင်းတောင်းမှ အော်ဒါသို့ ပြောင်းလဲခြင်း
@@ -327,6 +333,34 @@ class OrderController extends Controller
             }
 
             $order->items()->save($orderItem);
+
+            // Create a product available schedule for hotel / entrance_ticket items
+            // so an admin can confirm real availability.
+            if (in_array($orderItem->product_type, [Hotel::class, EntranceTicket::class])) {
+                $ownerableType = $orderItem->product_type;
+                $variableType = $ownerableType === Hotel::class
+                    ? Room::class            // adjust to your actual room/variation model
+                    : EntranceTicketVariation::class; // adjust to your actual variation model
+
+                $availableSchedule = ProductAvailableSchedule::create([
+                    'ownerable_id'      => $orderItem->product_id,
+                    'ownerable_type'    => $ownerableType,
+                    'variable_id'       => $orderItem->room_id ?? $orderItem->variation_id,
+                    'variable_type'     => $variableType,
+                    'quantity'          => $orderItem->quantity,
+                    'child_qty'         => $orderItem->child_quantity ?? 0,
+                    'customer_name'     => $order->customer->name ?? null,
+                    'customer_phnumber' => $order->customer->phone_number ?? null,
+                    'checkin_date'      => $orderItem->service_date,
+                    'checkout_date'     => $orderItem->checkout_date,
+                    'date'              => $orderItem->service_date,
+                    'created_by'        => auth()->id(),
+                    'status'            => 'pending',
+                ]);
+
+                $orderItem->update(['product_available_schedule_id' => $availableSchedule->id]);
+            }
+
 
             $createdItems[] = $orderItem;
 

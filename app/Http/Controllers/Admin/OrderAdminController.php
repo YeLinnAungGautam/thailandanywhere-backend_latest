@@ -101,6 +101,17 @@ class OrderAdminController extends Controller
         );
     }
 
+    public function show(Request $request, $id)
+    {
+
+        $order = Order::with(['items', 'customer', 'admin', 'payments', 'booking', 'user'])->findOrFail($id);
+
+        return $this->success([
+            'order' => new OrderResource($order),
+            'remaining_time' => $order->isExpired() ? 0 : Carbon::now()->diffInSeconds($order->expire_datetime),
+        ], 'Order details');
+    }
+
     public function addPayment(Request $request, $id)
     {
         // return response()->json(['messge' => $request->all()]);
@@ -194,14 +205,93 @@ class OrderAdminController extends Controller
         }
     }
 
+    // private function convertOrderToBooking(Order $order, Request $request)
+    // {
+    //     $bookingData = [
+    //         'customer_id' => $order->customer_id,
+    //         'user_id' => $order->user_id, // Current admin user
+    //         'sold_from' => $order->sold_from,
+    //         'payment_method' => $request->payment_method ?? 'bank_transfer',
+    //         'payment_status' => $request->payment_status ? 'partially_paid' : 'not_paid',
+    //         'payment_currency' => $request->payment_currency ?? 'THB',
+    //         'booking_date' => Carbon::now(),
+    //         'bank_name' => $request->bank_name ?? 'bank',
+    //         'transfer_code' => $request->transfer_code ?? null,
+    //         'money_exchange_rate' => $request->money_exchange_rate ?? 0,
+    //         'sub_total' => $order->sub_total,
+    //         'grand_total' => $order->grand_total,
+    //         'exclude_amount' => $request->exclude_amount ?? 0,
+    //         'deposit' => $request->deposit ?? $order->deposit_amount,
+    //         'balance_due' => $order->grand_total - $order->deposit_amount,
+    //         'balance_due_date' => $order->balance_due_date,
+    //         'discount' => $order->discount,
+    //         'comment' => $order->comment,
+    //         'created_by' => Auth::id(),
+    //         'reservation_status' => "pending",
+    //     ];
+
+    //     $booking = Booking::create($bookingData);
+
+    //     // if ($request->has('receipt_image')) {
+    //     //     foreach ($request->receipt_image as $receipt) {
+    //     //         $image = $receipt['file'];
+    //     //         $amount = $receipt['amount'];
+
+    //     //         $fileData = $this->uploads($image, 'images/');
+
+    //     //         BookingReceipt::create([
+    //     //             'booking_id' => $booking->id,
+    //     //             'image' => $fileData['fileName'],
+    //     //             'amount' => $amount
+    //     //         ]);
+    //     //     }
+    //     // }
+
+    //     $this->convertOrderItemsToBookingItems($order, $booking);
+
+
+
+    //     return $booking;
+    // }
+
     private function convertOrderToBooking(Order $order, Request $request)
     {
+        // Calculate deposit from the cash image data sent in the request
+        $depositAmount = 0;
+
+        if ($request->receipt_image) {
+            foreach ($request->receipt_image as $receipt) {
+                $is_internal_transfer = filter_var($receipt['is_internal_transfer'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+                if ($is_internal_transfer) {
+                    // only "to_files" count as money actually received
+                    if (isset($receipt['to_files']) && is_array($receipt['to_files'])) {
+                        foreach ($receipt['to_files'] as $toFile) {
+                            $depositAmount += (float) ($toFile['amount'] ?? 0);
+                        }
+                    }
+                } else {
+                    $depositAmount += (float) ($receipt['amount'] ?? 0);
+                }
+            }
+        }
+        $balanceDue = $order->grand_total - $depositAmount;
+
+        // Derive payment_status from deposit vs grand_total
+        if ($depositAmount <= 0) {
+            $paymentStatus = 'not_paid';
+        } elseif ($balanceDue <= 0) {
+            $paymentStatus = 'fully_paid';
+        } else {
+            $paymentStatus = 'partially_paid';
+        }
+
         $bookingData = [
             'customer_id' => $order->customer_id,
-            'user_id' => $order->user_id, // Current admin user
+            'user_id' => $order->user_id,
             'sold_from' => $order->sold_from,
             'payment_method' => $request->payment_method ?? 'bank_transfer',
-            'payment_status' => $request->payment_status ? 'partially_paid' : 'not_paid',
+            'payment_status' => $paymentStatus,
             'payment_currency' => $request->payment_currency ?? 'THB',
             'booking_date' => Carbon::now(),
             'bank_name' => $request->bank_name ?? 'bank',
@@ -210,8 +300,8 @@ class OrderAdminController extends Controller
             'sub_total' => $order->sub_total,
             'grand_total' => $order->grand_total,
             'exclude_amount' => $request->exclude_amount ?? 0,
-            'deposit' => $request->deposit ?? $order->deposit_amount,
-            'balance_due' => $order->grand_total - $order->deposit_amount,
+            'deposit' => $depositAmount,
+            'balance_due' => $balanceDue,
             'balance_due_date' => $order->balance_due_date,
             'discount' => $order->discount,
             'comment' => $order->comment,
@@ -219,26 +309,99 @@ class OrderAdminController extends Controller
             'reservation_status' => "pending",
         ];
 
+
         $booking = Booking::create($bookingData);
-
-        // if ($request->has('receipt_image')) {
-        //     foreach ($request->receipt_image as $receipt) {
-        //         $image = $receipt['file'];
-        //         $amount = $receipt['amount'];
-
-        //         $fileData = $this->uploads($image, 'images/');
-
-        //         BookingReceipt::create([
-        //             'booking_id' => $booking->id,
-        //             'image' => $fileData['fileName'],
-        //             'amount' => $amount
-        //         ]);
-        //     }
-        // }
 
         $this->convertOrderItemsToBookingItems($order, $booking);
 
+        // Create cash images for the booking from the cash image data in the request
+        if ($request->receipt_image) {
+            foreach ($request->receipt_image as $receipt) {
+                $is_internal_transfer = filter_var($receipt['is_internal_transfer'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
+                if ($is_internal_transfer) {
+                    $exchange_rate = $receipt['exchange_rate'] ?? 1;
+                    $note = $receipt['note'] ?? null;
+                    $transferId = $receipt['id'] ?? null;
+
+                    if ($transferId) {
+                        $internalTransfer = \App\Models\InternalTransfer::find($transferId);
+                        $internalTransfer->update([
+                            'exchange_rate' => $exchange_rate,
+                            'notes' => $note,
+                        ]);
+                    } else {
+                        $internalTransfer = \App\Models\InternalTransfer::create([
+                            'exchange_rate' => $exchange_rate,
+                            'notes' => $note,
+                        ]);
+                    }
+
+                    if (isset($receipt['from_files']) && is_array($receipt['from_files'])) {
+                        foreach ($receipt['from_files'] as $fromFile) {
+                            if (!isset($fromFile['file'])) continue;
+
+                            $fileDataFrom = $this->uploads($fromFile['file'], 'images/');
+
+                            $cashImageFrom = \App\Models\CashImage::create([
+                                'relatable_id' => $booking->id,
+                                'relatable_type' => Booking::class,
+                                'date' => $fromFile['date'] ?? now(),
+                                'sender' => $fromFile['sender'] ?? null,
+                                'receiver' => $fromFile['receiver'] ?? null,
+                                'amount' => $fromFile['amount'] ?? 0,
+                                'currency' => $fromFile['currency'] ?? 'THB',
+                                'interact_bank' => $fromFile['interact_bank'] ?? 'personal',
+                                'image' => $fileDataFrom['fileName'],
+                                'internal_transfer' => true,
+                            ]);
+
+                            $internalTransfer->cashImagesFrom()->attach($cashImageFrom->id, ['direction' => 'from']);
+                        }
+                    }
+
+                    if (isset($receipt['to_files']) && is_array($receipt['to_files'])) {
+                        foreach ($receipt['to_files'] as $toFile) {
+                            if (!isset($toFile['file'])) continue;
+
+                            $fileDataTo = $this->uploads($toFile['file'], 'images/');
+
+                            $cashImageTo = \App\Models\CashImage::create([
+                                'relatable_id' => $booking->id,
+                                'relatable_type' => Booking::class,
+                                'date' => $toFile['date'] ?? now(),
+                                'sender' => $toFile['sender'] ?? null,
+                                'receiver' => $toFile['receiver'] ?? null,
+                                'amount' => $toFile['amount'] ?? 0,
+                                'currency' => $toFile['currency'] ?? 'THB',
+                                'interact_bank' => $toFile['interact_bank'] ?? 'personal',
+                                'image' => $fileDataTo['fileName'],
+                                'internal_transfer' => true,
+                            ]);
+
+                            $internalTransfer->cashImagesTo()->attach($cashImageTo->id, ['direction' => 'to']);
+                        }
+                    }
+                } else {
+                    if (!isset($receipt['file'])) continue;
+
+                    $fileData = $this->uploads($receipt['file'], 'images/');
+
+                    \App\Models\CashImage::create([
+                        'relatable_id' => $booking->id,
+                        'relatable_type' => Booking::class,
+                        'date' => $receipt['date'] ?? now(),
+                        'sender' => $receipt['sender'] ?? null,
+                        'receiver' => $receipt['reciever'] ?? null,
+                        'amount' => $receipt['amount'] ?? 0,
+                        'currency' => $receipt['currency'] ?? 'THB',
+                        'interact_bank' => $receipt['interact_bank'] ?? 'personal',
+                        'image' => $fileData['fileName'],
+                        'internal_transfer' => false,
+                    ]);
+                }
+            }
+        }
 
         return $booking;
     }
@@ -298,7 +461,6 @@ class OrderAdminController extends Controller
                 'infant_total_selling_price' => $item->infant_total_selling_price ?? null,
                 'infant_total_cost' => $item->infant_total_cost ?? null,
                 'infant_quantity' => $item->infant_quantity ?? null,
-
             ];
 
             BookingItem::create($data);
