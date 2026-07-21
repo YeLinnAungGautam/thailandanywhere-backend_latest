@@ -1,0 +1,42 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            # Navigate to the project directory
+            cd /var/www/production/thailandanywhere-backend_latest
+
+            # Pull the latest changes from the main branch
+            git pull origin main
+
+            # Install PHP dependencies
+            # composer install --no-interaction --prefer-dist --optimize-autoloader
+
+            # Run database migrations
+            php artisan migrate --force
+
+            # Optimize Laravel
+            # php artisan config:cache
+            # php artisan route:cache
+            # php artisan view:cache
+
+            # Optionally restart queues (uncomment if you use queues)
+            php artisan queue:restart
