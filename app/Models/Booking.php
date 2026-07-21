@@ -268,6 +268,12 @@ class Booking extends Model
             ->where('case_type', 'sale');
     }
 
+    // App\Models\Booking.php
+    public function memories()
+    {
+        return $this->hasMany(Memory::class);
+    }
+
     // New: Many-to-many relationship
     public function cashImagesPivot()
     {

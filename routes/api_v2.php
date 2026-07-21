@@ -27,6 +27,7 @@ use App\Http\Controllers\API\V2\ProfileController;
 use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
+use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PromoV2Controller;
 use Illuminate\Support\Facades\Route;
@@ -123,6 +124,9 @@ Route::group([], function () {
 
     Route::get('/bookings-scan/{id}/detail', [BookingController::class, 'getBookingDetail']);
 
+    Route::get('memories/', [MemoryController::class, 'index']);
+    Route::get('memories/{id}', [MemoryController::class, 'show']);
+
     Route::middleware(['auth:sanctum'])->group(function () {
         // for nodejs verify token
         Route::post('/verify-token', [LoginController::class, 'verifyToken']);
@@ -159,6 +163,15 @@ Route::group([], function () {
         Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
 
+        Route::get('memory/existing', [MemoryController::class, 'existingForBooking']); // NEW - must be above memories/{id}
+        Route::get('memories', [MemoryController::class, 'index']);
+        Route::get('memories/{id}', [MemoryController::class, 'show']);
+        Route::post('memories', [MemoryController::class, 'store']);
+        Route::put('memories/{id}', [MemoryController::class, 'update']);
+        Route::delete('memories/{id}', [MemoryController::class, 'destroy']);
 
+        Route::post('memories/{memoryId}/images', [MemoryController::class, 'addImage']);
+        Route::post('memories/{memoryId}/images/{imageId}', [MemoryController::class, 'updateImage']); // called with _method=PUT
+        Route::delete('memories/{memoryId}/images/{imageId}', [MemoryController::class, 'destroyImage']);
     });
 });
