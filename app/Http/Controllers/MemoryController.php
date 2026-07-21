@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\MemoryResource;
 use App\Models\Booking;
 use App\Models\BookingItem;
 use App\Models\Memory;
@@ -28,12 +29,12 @@ class MemoryController extends Controller
             'booking_id' => 'sometimes|integer',
             'product_id' => 'sometimes|integer',
             'limit'      => 'sometimes|integer|min:1',
-            'sort'       => 'sometimes|in:asc,desc', // created_at direction
+            'sort'       => 'sometimes|in:asc,desc',
             'page'       => 'sometimes|integer|min:1',
         ]);
 
         $limit = $validated['limit'] ?? 10;
-        $sort  = $validated['sort'] ?? 'asc'; // default: oldest first
+        $sort  = $validated['sort'] ?? 'asc';
 
         $memories = Memory::query()
             ->where('status', 'published')
@@ -42,22 +43,42 @@ class MemoryController extends Controller
             ->when($request->filled('product_id'), function ($q) use ($request) {
                 $q->whereHas('bookingItem', fn ($sub) => $sub->where('product_id', $request->product_id));
             })
-            ->with(['images', 'user:id,name', 'bookingItem.product', 'booking:id,crm_id'])
+            ->with([
+                'images',
+                'user:id,name',
+                'booking:id,crm_id',
+                'bookingItem:id,booking_id,product_id',
+                'bookingItem.product:id,name',
+            ])
             ->orderBy('created_at', $sort)
             ->paginate($limit);
 
-        return $this->success($memories, 'Memories retrieved');
+        // return $this->success(MemoryResource::collection($memories), 'Memories retrieved');
+        return $this->success(MemoryResource::collection($memories)
+        ->additional([
+            'meta' => [
+                'total_page' => (int) ceil($memories->total() / $memories->perPage()),
+            ],
+        ])
+        ->response()
+        ->getData(), 'Memories List');
     }
 
     public function show(string $id)
     {
-        $memory = Memory::with(['images', 'user:id,name', 'bookingItem.product', 'booking:id,crm_id'])->find($id);
+        $memory = Memory::with([
+            'images',
+            'user:id,name',
+            'booking:id,crm_id',
+            'bookingItem:id,booking_id,product_id',
+            'bookingItem.product:id,name',
+        ])->find($id);
 
         if (!$memory) {
             return $this->error(null, 'Memory not found', 404);
         }
 
-        return $this->success($memory, 'Memory retrieved');
+        return $this->success(new MemoryResource($memory), 'Memory retrieved');
     }
 
     /**
@@ -73,7 +94,7 @@ class MemoryController extends Controller
             'booking_item_id' => 'nullable|exists:booking_items,id',
         ]);
 
-        $memory = Memory::with(['images'])
+        $memory = Memory::with(['images', 'booking:id,crm_id', 'bookingItem:id,booking_id,product_id', 'bookingItem.product:id,name'])
             ->where('booking_id', $validated['booking_id'])
             ->where('user_id', Auth::id())
             ->when(
@@ -83,7 +104,10 @@ class MemoryController extends Controller
             )
             ->first();
 
-        return $this->success($memory, $memory ? 'Existing memory found' : 'No memory yet');
+        return $this->success(
+            $memory ? new MemoryResource($memory) : null,
+            $memory ? 'Existing memory found' : 'No memory yet'
+        );
     }
 
     /**
@@ -124,7 +148,12 @@ class MemoryController extends Controller
         }
 
         // Enforce: only one memory per booking_id + booking_item_id per user.
-        $existing = Memory::with('images')
+        $existing = Memory::with([
+            'images',
+            'booking:id,crm_id',
+            'bookingItem:id,booking_id,product_id',
+            'bookingItem.product:id,name',
+        ])
             ->where('booking_id', $booking->id)
             ->where('user_id', Auth::id())
             ->when(
@@ -136,7 +165,7 @@ class MemoryController extends Controller
 
         if ($existing) {
             return $this->error(
-                ['memory' => $existing],
+                ['memory' => new MemoryResource($existing)],
                 'You already added a memory for this trip item. Edit it instead of creating a new one.',
                 409
             );
@@ -165,9 +194,15 @@ class MemoryController extends Controller
             return $memory;
         });
 
-        $memory->load(['images', 'user:id,name', 'bookingItem.product', 'booking:id,crm_id']);
+        $memory->load([
+            'images',
+            'user:id,name',
+            'booking:id,crm_id',
+            'bookingItem:id,booking_id,product_id',
+            'bookingItem.product:id,name',
+        ]);
 
-        return $this->success($memory, 'Memory created successfully');
+        return $this->success(new MemoryResource($memory), 'Memory created successfully');
     }
 
     /**
@@ -192,7 +227,15 @@ class MemoryController extends Controller
 
         $memory->update($validated);
 
-        return $this->success($memory->fresh(['images']), 'Memory updated successfully');
+        $memory->load([
+            'images',
+            'user:id,name',
+            'booking:id,crm_id',
+            'bookingItem:id,booking_id,product_id',
+            'bookingItem.product:id,name',
+        ]);
+
+        return $this->success(new MemoryResource($memory), 'Memory updated successfully');
     }
 
     /**
@@ -225,7 +268,7 @@ class MemoryController extends Controller
 
         $memoryImage->update(['image' => $uploaded['filePath']]);
 
-        return $this->success($memoryImage->fresh(), 'Memory image updated successfully');
+        return $this->success(new \App\Http\Resources\MemoryImageResource($memoryImage->fresh()), 'Memory image updated successfully');
     }
 
     /**
@@ -259,7 +302,7 @@ class MemoryController extends Controller
             'sort_order' => $memory->images()->count(),
         ]);
 
-        return $this->success($memoryImage, 'Image added successfully');
+        return $this->success(new \App\Http\Resources\MemoryImageResource($memoryImage), 'Image added successfully');
     }
 
     public function destroyImage(string $memoryId, string $imageId)

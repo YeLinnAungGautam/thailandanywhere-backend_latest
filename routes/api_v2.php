@@ -163,7 +163,7 @@ Route::group([], function () {
         Route::post('orders/{id}/change-to-booking', [OrderAdminController::class, 'changeOrderToBooking']);
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
 
-        Route::get('memories/existing', [MemoryController::class, 'existingForBooking']); // NEW - must be above memories/{id}
+        Route::get('memory/existing', [MemoryController::class, 'existingForBooking']); // NEW - must be above memories/{id}
         Route::get('memories', [MemoryController::class, 'index']);
         Route::get('memories/{id}', [MemoryController::class, 'show']);
         Route::post('memories', [MemoryController::class, 'store']);
