@@ -110,27 +110,48 @@ class BookingController extends Controller
 
     public function store(Request $request, $id)
     {
-        $booking = Booking::find($id);
+        $booking = Booking::with('customer')->find($id);
         if (!$booking) {
             return failedMessage('Booking not found');
         }
 
         $request->validate([
-            'user_id' => 'required',
+            'customer_name' => 'required|string',
+            'phone_number'  => 'required|string',
         ]);
 
-        // Check if the booking already has a user_id assigned
-        if($booking->user_id == Auth::user()->id) {
+        // Already handled by this account?
+        if ($booking->user_id == Auth::user()->id) {
             return failedMessage('This booking is already assigned with your account, Go to Trip to see booking details');
         }
+
+        // Already claimed by someone else?
         if ($booking->user_id) {
             return failedMessage('This booking is already assigned to a user');
         }
 
-        $booking->user_id = $request->user_id;
+        $customer = $booking->customer;
+        if (!$customer) {
+            return failedMessage('Customer information not found for this booking');
+        }
+
+        // Normalize before comparing so formatting differences don't block a real match
+        $normalizePhone = fn ($v) => preg_replace('/[^0-9]/', '', (string) $v);
+        $normalizeName  = fn ($v) => strtolower(trim((string) $v));
+
+        $nameMatches  = $normalizeName($customer->name) === $normalizeName($request->customer_name);
+        $phoneDigits  = $normalizePhone($request->phone_number);
+        $phoneMatches = $phoneDigits !== '' && str_ends_with($normalizePhone($customer->phone_number), $phoneDigits);
+        // str_ends_with handles cases like customer has "+959..." but user typed without country code
+
+        if (!$nameMatches || !$phoneMatches) {
+            return failedMessage('Customer name or phone number does not match our records');
+        }
+
+        $booking->user_id = Auth::user()->id;
         $booking->save();
 
-        return success(new BookingResource($booking), 'Booking Add User successfully');
+        return $this->success(new BookingResource($booking), 'Booking connected to your account successfully');
     }
 
     public function checkBookingHasUser($id)
@@ -272,6 +293,7 @@ class BookingController extends Controller
             'crm_id' => $booking->crm_id,
             'payment_status' => $booking->payment_status,
             'customer_name' => $booking->customer->name ?? '-',
+            'has_user' => !is_null($booking->user), // NEW: tell frontend if already connected
             'sales_date' => $booking->booking_date
                 ? Carbon::parse($booking->booking_date)->format('d F Y')
                 : null,
