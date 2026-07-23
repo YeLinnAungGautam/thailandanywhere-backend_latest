@@ -39,14 +39,8 @@ class BookingController extends Controller
                 $column = $userType === 'user' ? 'user_id' : 'created_by';
                 $q->where($column, Auth::user()->id);
             })
-            ->when($appShowStatus == 'upcoming', function($q) {
-                $q->where(function($subQuery) {
-                    $subQuery->where('app_show_status', 'upcoming')
-                        ->orWhereNull('app_show_status');
-                });
-            })
-            ->when($appShowStatus && $appShowStatus != 'upcoming', function($q) use ($appShowStatus) {
-                $q->where('app_show_status', $appShowStatus);
+            ->when($appShowStatus, function($q) use ($appShowStatus) {
+                $q->filterByShowStatus($appShowStatus);
             })
             ->when($convertedOnly == 'true', function($q) {
                 $q->whereHas('orders', function($subQuery) {
@@ -334,4 +328,6 @@ class BookingController extends Controller
 
         return $image ? Storage::url('images/' . $image) : null;
     }
+
+
 }

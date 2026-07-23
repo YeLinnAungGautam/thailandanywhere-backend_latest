@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasCashImages;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -292,5 +293,78 @@ class Booking extends Model
         return $this->cashImages->merge($this->cashImagesPivot)->unique('id');
     }
 
+    public function scopeFilterByShowStatus($query, string $status)
+    {
+        $now = Carbon::now();
 
+        return $query->where(function ($q) use ($status, $now) {
+            switch ($status) {
+                case 'cancelled':
+                    $q->where('payment_status', 'cancelled');
+                    break;
+
+                case 'upcoming':
+                    $q->where('payment_status', '!=', 'cancelled')
+                      ->where(function ($sub) use ($now) {
+                          $sub->whereDoesntHave('items')
+                              ->orWhere(function ($sub2) use ($now) {
+                                  $sub2->whereHas('items', fn($i) => $i->where('service_date', '>=', $now))
+                                       ->whereDoesntHave('items', fn($i) => $i->where('service_date', '<', $now));
+                              });
+                      });
+                    break;
+
+                case 'completed':
+                    $q->where('payment_status', '!=', 'cancelled')
+                      ->where('payment_status', '!=', 'not_paid')
+                      ->whereHas('items')
+                      ->whereHas('items', fn($i) => $i->where('service_date', '<', $now))
+                      ->whereDoesntHave('items', fn($i) => $i->where('service_date', '>=', $now));
+                    break;
+
+                case 'ongoing':
+                    $q->where('payment_status', '!=', 'cancelled')
+                      ->where(function ($sub) use ($now) {
+                          $sub->where(function ($mixed) use ($now) {
+                              $mixed->whereHas('items', fn($i) => $i->where('service_date', '>=', $now))
+                                    ->whereHas('items', fn($i) => $i->where('service_date', '<', $now));
+                          })
+                          ->orWhere(function ($unpaid) use ($now) {
+                              $unpaid->where('payment_status', 'not_paid')
+                                  ->whereHas('items')
+                                  ->whereHas('items', fn($i) => $i->where('service_date', '<', $now))
+                                  ->whereDoesntHave('items', fn($i) => $i->where('service_date', '>=', $now));
+                          });
+                      });
+                    break;
+            }
+        });
+    }
+
+    public function getComputedShowStatusAttribute(): string
+    {
+        if ($this->payment_status === 'cancelled') {
+            return 'cancelled';
+        }
+
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        if ($items->isEmpty()) {
+            return 'upcoming';
+        }
+
+        $now = Carbon::now();
+        $allUpcoming = $items->every(fn ($item) => $item->service_date >= $now);
+        $allCompleted = $items->every(fn ($item) => $item->service_date < $now);
+
+        if ($allUpcoming) {
+            return 'upcoming';
+        }
+
+        if ($allCompleted && $this->payment_status !== 'not_paid') {
+            return 'completed';
+        }
+
+        return 'ongoing';
+    }
 }
