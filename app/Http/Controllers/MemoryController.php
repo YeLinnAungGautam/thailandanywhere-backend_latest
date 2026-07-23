@@ -133,7 +133,9 @@ class MemoryController extends Controller
             return $this->error(null, 'You are not allowed to add a memory to this booking', 403);
         }
 
-        if ($booking->app_show_status !== 'completed') {
+        $booking->loadMissing('items');
+
+        if ($booking->computed_show_status !== 'completed') {
             return $this->error(null, 'You can only add a memory once this trip is completed', 422);
         }
 
