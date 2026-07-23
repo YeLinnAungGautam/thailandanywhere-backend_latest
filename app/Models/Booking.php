@@ -315,12 +315,11 @@ class Booking extends Model
                     break;
 
                 case 'completed':
-                    $q->where('payment_status', '!=', 'cancelled')
-                      ->where('payment_status', '!=', 'not_paid')
-                      ->whereHas('items')
-                      ->whereHas('items', fn($i) => $i->where('service_date', '<', $now))
-                      ->whereDoesntHave('items', fn($i) => $i->where('service_date', '>=', $now));
-                    break;
+                $q->where('payment_status', '!=', 'cancelled')
+                  ->whereHas('items')
+                  ->whereHas('items', fn($i) => $i->where('service_date', '<', $now))
+                  ->whereDoesntHave('items', fn($i) => $i->where('service_date', '>=', $now));
+                break;
 
                 case 'ongoing':
                     $q->where('payment_status', '!=', 'cancelled')
@@ -361,7 +360,7 @@ class Booking extends Model
             return 'upcoming';
         }
 
-        if ($allCompleted && $this->payment_status !== 'not_paid') {
+        if ($allCompleted) {
             return 'completed';
         }
 
