@@ -249,6 +249,7 @@ class LoginController extends Controller
             }
 
             $user->password = Hash::make($request->password);
+            $user->is_password_set = true;
             $user->save();
 
             DB::table('password_reset_tokens')
@@ -287,7 +288,7 @@ class LoginController extends Controller
             }
 
             $user->password = Hash::make($request->password);
-
+            $user->is_password_set = true;
             $user->save();
 
             return success(null, 'Password set successfully.');
