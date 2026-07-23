@@ -12,6 +12,7 @@
 
         window.opener.postMessage({
             token: "{{ $token }}",
+            needsPassword: @json($needsPassword),
             message: "{{ $message ?? '' }}"
         }, "*");
         window.close()

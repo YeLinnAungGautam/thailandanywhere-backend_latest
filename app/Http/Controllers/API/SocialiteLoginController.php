@@ -37,13 +37,14 @@ class SocialiteLoginController extends Controller
 
             $token = $user->createToken('UserToken')->plainTextToken;
 
-            $message = isset($user->was_recently_restored) && $user->was_recently_restored 
-                ? 'Welcome back! Your account has been restored.' 
+            $message = isset($user->was_recently_restored) && $user->was_recently_restored
+                ? 'Welcome back! Your account has been restored.'
                 : 'Successfully logged in.';
 
             return view('oauth/callback', [
                 'token' => $token,
                 'message' => $message,
+                'needsPassword' => !$user->is_password_set,
             ]);
 
             // return redirect()->away("https://thanywhere.com/home?token={$token}");
@@ -96,6 +97,7 @@ class SocialiteLoginController extends Controller
             'email_verified_at' => now(),
             'password' => bcrypt(Str::random(10)),
             'is_active' => true,
+            'is_password_set' => false,
         ]);
 
         $user->oauthProviders()->create([
