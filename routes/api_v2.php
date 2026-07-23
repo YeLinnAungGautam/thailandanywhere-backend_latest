@@ -127,6 +127,10 @@ Route::group([], function () {
     Route::get('memories/', [MemoryController::class, 'index']);
     Route::get('memories/{id}', [MemoryController::class, 'show']);
 
+    Route::get('promos/search', [PromoV2Controller::class, 'search']);
+    Route::get('promos/search-by-date', [PromoV2Controller::class, 'searchByDate']);
+    Route::get('promos/available', [PromoV2Controller::class, 'searchAvailable']);
+
     Route::middleware(['auth:sanctum'])->group(function () {
         // for nodejs verify token
         Route::post('/verify-token', [LoginController::class, 'verifyToken']);
@@ -137,9 +141,7 @@ Route::group([], function () {
         Route::put('profile', [ProfileController::class, 'updateProfile']);
         Route::post('change-password', [ProfileController::class, 'changePassword']);
 
-        Route::get('promos/search', [PromoV2Controller::class, 'search']);
-        Route::get('promos/search-by-date', [PromoV2Controller::class, 'searchByDate']);
-        Route::get('promos/available', [PromoV2Controller::class, 'searchAvailable']);
+
 
         # Bookings
         Route::get('bookings', [BookingController::class, 'index']);
@@ -164,8 +166,8 @@ Route::group([], function () {
         Route::put('orders/{id}/update', [OrderController::class, 'update']);
 
         Route::get('memory/existing', [MemoryController::class, 'existingForBooking']); // NEW - must be above memories/{id}
-        Route::get('memories', [MemoryController::class, 'index']);
-        Route::get('memories/{id}', [MemoryController::class, 'show']);
+        // Route::get('memories', [MemoryController::class, 'index']);
+        // Route::get('memories/{id}', [MemoryController::class, 'show']);
         Route::post('memories', [MemoryController::class, 'store']);
         Route::put('memories/{id}', [MemoryController::class, 'update']);
         Route::delete('memories/{id}', [MemoryController::class, 'destroy']);
