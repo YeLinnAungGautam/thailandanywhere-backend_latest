@@ -28,6 +28,7 @@ use App\Http\Controllers\API\V2\ReservationController;
 use App\Http\Controllers\API\V2\RestaurantController;
 use App\Http\Controllers\API\V2\RoomController;
 use App\Http\Controllers\MemoryController;
+use App\Http\Controllers\MemoryLikeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PromoV2Controller;
 use Illuminate\Support\Facades\Route;
@@ -141,7 +142,8 @@ Route::group([], function () {
         Route::put('profile', [ProfileController::class, 'updateProfile']);
         Route::post('change-password', [ProfileController::class, 'changePassword']);
 
-
+        Route::post('/memories/{memory}/react', [MemoryLikeController::class, 'react']);
+        Route::get('/memories/{memory}/reactions', [MemoryLikeController::class, 'index']);
 
         # Bookings
         Route::get('bookings', [BookingController::class, 'index']);
