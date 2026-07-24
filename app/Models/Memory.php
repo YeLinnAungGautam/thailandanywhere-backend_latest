@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class Memory extends Model
 {
@@ -36,5 +37,32 @@ class Memory extends Model
     public function getProductAttribute()
     {
         return $this->bookingItem?->product;
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(MemoryLike::class);
+    }
+
+    // Reaction counts grouped by type, e.g. ['like' => 3, 'love' => 1]
+    public function getReactionCountsAttribute()
+    {
+        return $this->likes()
+            ->selectRaw('type, count(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type')
+            ->toArray() ?: (object) []; // force {} instead of [] when empty
+    }
+
+    // The current authenticated user's reaction on this memory, if any
+    public function getUserReactionAttribute()
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        return $this->likes()
+            ->where('user_id', Auth::id())
+            ->value('type');
     }
 }

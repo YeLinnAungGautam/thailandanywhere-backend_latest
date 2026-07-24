@@ -19,9 +19,7 @@ class MemoryResource extends JsonResource
             'title'          => $this->title,
             'caption'        => $this->caption,
             'status'         => $this->status,
-            'location'       => $this->location ?? null,
-            'likes_count'    => $this->likes_count ?? 0,
-            'comments_count' => $this->comments_count ?? 0,
+
             'created_at'     => $this->created_at,
             'updated_at'     => $this->updated_at,
 
@@ -47,6 +45,10 @@ class MemoryResource extends JsonResource
                     ]
                     : null,
             ] : null),
+
+
+            // MemoryResource.php
+            'reaction_counts' => (object) ($this->reaction_counts ?: []),
         ];
     }
 }
